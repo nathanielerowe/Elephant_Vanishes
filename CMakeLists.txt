@@ -40,6 +40,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(lbfgspp)
 
 
+FetchContent_Declare(
+    tinyxml2
+    GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git 
+    GIT_TAG        9.0.0
+    )
+FetchContent_MakeAvailable(tinyxml2)
+
+
 ###### ROOT ROOT ##############33
 
 FIND_PACKAGE(ROOT COMPONENTS MathCore MathMore)
