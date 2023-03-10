@@ -22,17 +22,20 @@ namespace PROfit{
 
         public:
 
-
             //Constructors
             PROspec() {};
             PROspec(PROconfig const & configin); //Load in config file EMPTY hists
             //PROspec(std::string &xmlname); //Load directly from XML 
 
-            PROconfig config;
+            PROconfig configName;
 
             //Base
             Eigen::VectorXd spec;
             Eigen::VectorXd error;
+
+
+            //Useful Plotting routines
+            TH1D toTH1D();
 
     };
 

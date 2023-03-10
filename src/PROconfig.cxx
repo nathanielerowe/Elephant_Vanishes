@@ -17,7 +17,6 @@ PROconfig::PROconfig(const std::string &xml){
 
 int PROconfig::LoadFromXML(const char * filedata){
 
-
     //Setup TiXml documents
     tinyxml2::XMLDocument doc;
     bool loadOkay = doc.Parse(filedata, 0);

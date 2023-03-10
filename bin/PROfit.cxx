@@ -22,6 +22,10 @@ int main(int argc, char* argv[])
 
 
 
+    PROconfig myConf(xmlname);
+    PROspec mySpec(myConf);
+
+    TH1D hmm = mySpec.toTH1D();
 
 
     return 0;
