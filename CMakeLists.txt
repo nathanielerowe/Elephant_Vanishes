@@ -31,7 +31,6 @@ FetchContent_Declare(
     )
 FetchContent_MakeAvailable(eigen)
 
-
 FetchContent_Declare(
     lbfgspp
     GIT_REPOSITORY https://github.com/yixuan/LBFGSpp.git 
@@ -47,6 +46,7 @@ FetchContent_Declare(
     )
 FetchContent_MakeAvailable(tinyxml2)
 
+find_package(Boost REQUIRED)
 
 ###### ROOT ROOT ##############33
 

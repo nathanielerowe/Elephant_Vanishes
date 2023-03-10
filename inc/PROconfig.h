@@ -13,6 +13,9 @@
 #include "tinyxml2.h"
 
 
+//PROfit
+#include "PROlog.h"
+
 namespace PROfit{
 
     class PROconfig {
