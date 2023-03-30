@@ -27,15 +27,14 @@ namespace PROfit{
             PROspec(PROconfig const & configin); //Load in config file EMPTY hists
             //PROspec(std::string &xmlname); //Load directly from XML 
 
-            PROconfig configName;
-
             //Base
             Eigen::VectorXd spec;
             Eigen::VectorXd error;
+            Eigen::VectorXd bins;
 
 
             //Useful Plotting routines
-            TH1D toTH1D();
+            TH1D toTH1D(PROconfig const & configin);
 
     };
 
