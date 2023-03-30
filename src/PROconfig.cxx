@@ -2,15 +2,14 @@
 using namespace PROfit;
 
 PROconfig::PROconfig(const std::string &xml){
-    xmlname = xml;
+    m_xmlname = xml;
+    PROconfig::LoadFromXML(m_xmlname);
 
-    PROconfig::LoadFromXML(xmlname);
-
-    num_modes = 1;
-    num_detectors=1;
-    num_channels = 2;
-    num_bins_total = 100;
-    num_bins_total_collapsed = 10;
+    m_num_modes = 1;
+    m_num_detectors=1;
+    m_num_channels = 2;
+    m_num_bins_total = 100;
+    m_num_bins_total_collapsed = 10;
 
     //A matrix for collapsing the full-vector
     //left multiply this matrix by the full-vector to get collapsed vector

@@ -34,12 +34,11 @@ namespace PROfit{
 
             std::vector<std::string> fullnames;
 
-            int num_detectors;
-            int num_channels;
-            int num_modes;
+            int m_num_detectors;
+            int m_num_channels;
+            int m_num_modes;
 
-            std::vector<int> num_subchannels; 
-            std::vector<int> num_bins;
+            std::vector<int> m_num_bins;
 
             bool m_has_oscillation_patterns;
 
@@ -70,15 +69,15 @@ namespace PROfit{
 
 
 
-            int num_bins_detector_block;
-            int num_bins_mode_block;
-            int num_bins_total;
+            int m_num_bins_detector_block;
+            int m_num_bins_mode_block;
+            int m_num_bins_total;
 
-            int num_bins_detector_block_collapsed;
-            int num_bins_mode_block_collapsed;
-            int num_bins_total_collapsed;
+            int m_num_bins_detector_block_collapsed;
+            int m_num_bins_mode_block_collapsed;
+            int m_num_bins_total_collapsed;
 
-            std::string xmlname;	
+            std::string m_xmlname;	
 
             Eigen::MatrixXd collapsingVector;
 

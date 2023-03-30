@@ -4,9 +4,9 @@ using namespace PROfit;
 
 PROspec::PROspec(PROconfig const & inConfig){
 
-    spec = Eigen::VectorXd::Zero(inConfig.num_bins_total);
-    error = Eigen::VectorXd::Zero(inConfig.num_bins_total);
-    bins = Eigen::VectorXd::Zero(inConfig.num_bins_total+1);
+    spec = Eigen::VectorXd::Zero(inConfig.m_num_bins_total);
+    error = Eigen::VectorXd::Zero(inConfig.m_num_bins_total);
+    bins = Eigen::VectorXd::Zero(inConfig.m_num_bins_total+1);
     
     std::cout<<spec[0]<<std::endl;
 
