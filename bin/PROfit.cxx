@@ -1,5 +1,6 @@
 #include "PROconfig.h"
 #include "PROspec.h"
+#include "PROcovariancegen.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -49,8 +50,8 @@ int main(int argc, char* argv[])
 
     
     PROconfig myConf(xmlname);
-    PROspec mySpec(myConf);
-
+    
+    //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
     
 
@@ -74,6 +75,7 @@ int main(int argc, char* argv[])
     double fx;
     int niter = solver.minimize(fun, x, fx, lb, ub);
     
+
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n" << x.transpose() << std::endl;
     std::cout << "f(x) = " << fx << std::endl;
