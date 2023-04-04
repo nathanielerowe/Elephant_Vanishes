@@ -8,6 +8,7 @@ project (
     LANGUAGES CXX)
 
 include(FetchContent)
+include(ExternalProject)
 
 
 #Allow for nice support folders in IDEs like VScode
@@ -46,6 +47,15 @@ FetchContent_Declare(
     )
 FetchContent_MakeAvailable(tinyxml2)
 
+ExternalProject_Add(
+    sbnanaobj
+    GIT_REPOSITORY https://github.com/SBNSoftware/sbnanaobj.git 
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+    )
+
+
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
     include_directories (SYSTEM ${Boost_INCLUDE_DIR})
@@ -70,7 +80,7 @@ ENDIF()
 #execute_process(COMMAND root-config --cflags --libs OUTPUT_VARIABLE ROOT_DICT_FLAGS)
 #execute_process(COMMAND g++ PROfit_dict.cxx -o libPROfit_dict.so -shared -fPIC -I${ROOTSYS}/include -I${CMAKE_SOURCE_DIR}/sbnanaobj ${ROOT_DICT_FLAGS})
 
-execute_process(COMMAND ${CMAKE_SOURCE_DIR}/gen_dict.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+#execute_process(COMMAND ${CMAKE_SOURCE_DIR}/gen_dict.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # The compiled library code lives inside here
 add_subdirectory(src)
