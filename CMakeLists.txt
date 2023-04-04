@@ -125,11 +125,13 @@ set(libraries ${libraries} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
 message("MPI libraries: ${libraries}")
 message("MPI include path: ${MPI_INCLUDE_PATH}")
 
-#file(GLOB SRHeaders ${CMAKE_SOURCE_DIR}/sbnanaobj/sbnanaobj/StandardRecord/*.h)
-#execute_process(COMMAND rootcling -f PROfit_dict.cxx -c ${SRHeaders} ${CMAKE_SOURCE_DIR}/LinkDef.h)
-#execute_process(COMMAND root-config --cflags --libs OUTPUT_VARIABLE ROOT_DICT_FLAGS)
-#execute_process(COMMAND g++ PROfit_dict.cxx -o libPROfit_dict.so -shared -fPIC -I${ROOTSYS}/include -I${CMAKE_SOURCE_DIR}/sbnanaobj ${ROOT_DICT_FLAGS})
-#execute_process(COMMAND ${CMAKE_SOURCE_DIR}/gen_dict.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+#file(GLOB SRHeaders ${SBNANAOBJ_INCLUDE_DIR}/sbnanaobj/StandardRecord/*.h)
+#execute_process(COMMAND rootcling -f ${CMAKE_BINARY_DIR}/PROfit_dict.cxx -c ${SRHeaders} ${CMAKE_SOURCE_DIR}/dict/LinkDef.h -I${SBNANAOBJ_INCLUDE_DIR})
+#add_library(PROfit_dict ${CMAKE_BINARY_DIR}/PROfit_dict.cxx)
+#target_include_directories(PROfit_dict PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
+#target_link_directories(PROfit_dict PRIVATE ${CMAKE_SOURCE_DIR})
+#target_link_libraries(PROfit_dict PRIVATE ${ROOT_LIBRARIES})
+
 
 # The compiled library code lives inside here
 add_subdirectory(src)

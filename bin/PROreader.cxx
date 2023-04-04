@@ -34,23 +34,23 @@ int main(int argc, char* argv[])
     //auto global = std::make_unique<SRGlobal>();
     caf::SRGlobal* global = NULL;
     globalTree->SetBranchAddress("global", &global);
-
     globalTree->GetEntry(0);
 
     for(const auto& pset: global->wgts) {
-    //for(unsigned int i = 0; i < global->wgts.size(); ++i) {
-        //const caf::SRWeightPSet& pset = global->wgts[i];
-        //std::cout << "i is: " << i << std::endl;
+            //for(unsigned int i = 0; i < global->wgts.size(); ++i) {
+            //const caf::SRWeightPSet& pset = global->wgts[i];
+            //std::cout << "i is: " << i << std::endl;
         if(pset.map.size() != 1) continue;
         std::cout << pset.name << " (type " << pset.type << "): with " << pset.nuniv << " universes\n";
         std::cout << pset.map.at(0).param.name << std::endl;
+        std::cout << " Mean: "<<pset.map.at(0).param.mean <<" Width: "<<pset.map.at(0).param.width <<  std::endl;
+        
         for(const auto& val: pset.map.at(0).vals) {
             std::cout << val << ' ';
         }
         std::cout << std::endl;
     }
     
-
 }
 
 
