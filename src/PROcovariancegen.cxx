@@ -22,9 +22,9 @@ int generateFracCovarianceFromXML(const PROconfig &inconfig, Eigen::MatrixXd &ou
 
     double FIX_plot_pot = 1;
 
-    std::cout << " -------------------------------------------------------------" << std::endl;
-    std::cout << " Initilizing " << universes_used << " universes." << std::endl;
-    std::cout << " -------------------------------------------------------------" << std::endl;
+    //std::cout << " -------------------------------------------------------------" << std::endl;
+    //std::cout << " Initilizing " << universes_used << " universes." << std::endl;
+    //std::cout << " -------------------------------------------------------------" << std::endl;
 
     std::vector<double> base_vec (inconfig.m_num_bins_total,0.0);
 
@@ -32,10 +32,10 @@ int generateFracCovarianceFromXML(const PROconfig &inconfig, Eigen::MatrixXd &ou
 
     std::vector<std::vector<double>> multi_vecspec; ///FIX REplace with Eigen
     multi_vecspec.clear();
-    multi_vecspec.resize(universes_used,base_vec);
+    //multi_vecspec.resize(universes_used,base_vec);
 
-    std::cout << " multi_vecspec now initilized of size :" << multi_vecspec.size() << std::endl;
-    std::cout << " Reading the data files" << std::endl;
+    //std::cout << " multi_vecspec now initilized of size :" << multi_vecspec.size() << std::endl;
+    //std::cout << " Reading the data files" << std::endl;
     //watch.Reset();
     //watch.Start();
 

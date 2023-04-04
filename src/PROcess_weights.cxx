@@ -1,4 +1,7 @@
 #include "PROcess_weights.h"
+#include "TTree.h"
+#include "TFile.h"
+
 using namespace PROfit;
 
 int PROcess(const PROconfig &inconfig){
@@ -6,10 +9,11 @@ int PROcess(const PROconfig &inconfig){
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
 
     int universes_used = 0;
-    double abnormally_large_weight = 1e3;//1e20;//20.0;
-
     //Is there a Global weight to be applied to ALL weights, CV and otherwise, inside the eventweight class? 
     std::string bnbcorrection_str = "NAN";//this has mainly beeen superseeded by XML creation
+
+    std::vector<std::string> variations;
+    std::vector<std::string> variations_tmp;
 
     int num_files = inconfig.m_num_mcgen_files;
 
@@ -67,7 +71,7 @@ int PROcess(const PROconfig &inconfig){
             int is_valid_subchannel = 0;
             for(const auto &name: inconfig.m_fullnames){
                 if(branch_variable->associated_hist==name){
-                    std::cout<<" Found a valid subchannel for this branch: " <<name<<std::endl;
+                    log<LOG_DEBUG>(L"%1% || Found a valid subchannel for this branch %2%") % __func__  % name;
                     is_valid_subchannel++;
                 }
             }
@@ -244,7 +248,7 @@ int PROcess(const PROconfig &inconfig){
     std::vector<SystStruct> syst_vector;
     for(int v=0; v< variations.size(); v++){
         // Check to see if pattern is in this variation
-        syst_vector.emplace_back(variations[v], map_var_to_num_universe[v], variation_modes[v], s_formulas[v]);
+        syst_vector.emplace_back(variations[v], map_var_to_num_universe[variations[v]], variation_modes[v], s_formulas[v]);
     }
 
     std::cout << " -------------------------------------------------------------" << std::endl;
@@ -271,9 +275,8 @@ int PROcess(const PROconfig &inconfig){
         for(int i=0; i < nevents; i++) {
             if(i%100==0)std::cout<<" -- uni :"<<i<<" / "<<nevents<<std::endl;
             nbytes+= trees[j]->GetEntry(i);
-            //ProcessEvent(*(f_weights[j]),j,i);
+            ProcessEvent(inconfig, *(f_weights[j]),j,i);
             //INPUT PROCESS FIX
-
 
         } //end of entry loop
         std::cout << " nbytes read=" << nbytes << std::endl;
@@ -300,4 +303,167 @@ int PROcess(const PROconfig &inconfig){
 
     return 0;
 }
+
+
+/*
+void ProcessEvent(const PROconfig &inconfig,
+        const std::map<std::string, 
+        std::vector<eweight_type> >& thisfWeight,
+        size_t fileid,
+        int entryid) {
+
+    double abnormally_large_weight = 1e3;//1e20;//20.0;
+    double global_weight = 1.0;
+
+    if( montecarlo_additional_weight_bool[fileid]){
+        montecarlo_additional_weight_formulas[fileid]->GetNdata();
+        global_weight = montecarlo_additional_weight_formulas[fileid]->EvalInstance();
+    };//this will be 1.0 unless specifi
+    global_weight *= montecarlo_scale[fileid];
+
+    double additional_CV_weight = 1.0;
+
+    const auto bnbcorr_iter = thisfWeight.find(bnbcorrection_str);
+    if (bnbcorr_iter != thisfWeight.end())    additional_CV_weight *= (*bnbcorr_iter).second.front();
+
+    if(std::isinf(global_weight) or (global_weight != global_weight)){
+        std::stringstream ss;
+        ss << "ProcessEvent\t||\tERROR  error @ " << entryid
+            << " in File " << montecarlo_file.at(fileid) 
+            << " as its either inf/nan: " << global_weight << std::endl;
+        throw std::runtime_error(ss.str());
+    }
+
+    if(!EventSelection(fileid)) return;
+
+    // precompute the weight size
+    std::vector<double> weights(universes_used,global_weight);
+
+    //Loop over all variations
+    std::map<std::string, std::vector<eweight_type> >::const_iterator var_iter;
+    int woffset = 0;
+    int vid = 0;
+    for(const auto& var : variations){
+
+
+        //check if variation is in this file, if it isn't: then just push back 1's of appropiate number to keep universes consistent
+        //this is of length of whatever the maximum length that was found in ANY file
+        auto expected_num_universe_sz = map_var_to_num_universe.at(var); 
+
+        //is  
+        var_iter = thisfWeight.find(var);
+        int quick_fix = 0;
+	double indiv_variation_weight = 1.0;
+
+        if (var_iter == thisfWeight.end()) {
+            //This we need to drop this for new version (where we add 1's)
+            //std::cout<<var<<" is not in this universe, adding "<<expected_num_universe_sz<<" to woffset "<<woffset<<std::endl;
+            //woffset += expected_num_universe_sz;
+            //continue;
+        }else {
+            //first one is what we expect, second is whats directly inside the map.
+
+            if (expected_num_universe_sz != (*var_iter).second.size()) {
+                std::stringstream ss;
+                //std::cout<< "Number of universes is not the max in this file" << std::endl;
+                //throw std::runtime_error(ss.str());
+
+                if( (*var_iter).second.size() > expected_num_universe_sz && var_iter != thisfWeight.end()){
+                    ss << ". REALLY BAD!!  iter.size() " <<(*var_iter).second.size()<<" expected "<<expected_num_universe_sz<<" on var "<<var<<std::endl;
+                    throw std::runtime_error(ss.str());
+                }
+            }
+            //so if this file contains smaller number of variations
+            quick_fix = (*var_iter).second.size();
+            //std::cout<< "So setting quick fix to the true number of universes in this varaiion : "<<quick_fix<< std::endl;
+
+	    if(!montecarlo_fake[fileid]){
+            	//Grab newwer variation specfic weights;
+             	m_variation_weight_formulas[fileid][vid]->GetNdata();
+            	indiv_variation_weight = m_variation_weight_formulas[fileid][vid]->EvalInstance();
+            	if((indiv_variation_weight!= indiv_variation_weight || indiv_variation_weight <0) && !montecarlo_fake[fileid]){
+		    	std::cout << "varaition: " << var << std::endl;
+                    	std::cout<<"ERROR! the additional wight is nan or negative "<<indiv_variation_weight<<" Breakign!"<<std::endl;
+                    	exit(EXIT_FAILURE);
+            	}
+  	    }
+            //std::cout<<var<<" "<<indiv_variation_weight<<" "<<fileid<<" "<<vid<<std::endl;
+
+        }
+
+        if (woffset >= weights.size()) {
+            std::stringstream ss;
+            ss << "woffset=" << woffset << " weights sz=" << weights.size() << " !" << std::endl;
+            throw std::runtime_error(ss.str());
+        }
+
+        for(size_t wid0 = 0, wid1 = woffset; wid1 < (woffset + expected_num_universe_sz); ++wid0, ++wid1) {
+            double wei = 1.0;
+            //            std::cout<<"wid0 "<<wid0<<"/ "<<expected_num_universe_sz<<"  wid1 "<<wid1<<" / "<<weights.size()<<" woffset "<<woffset<<" quick_fix "<<quick_fix<<std::endl;
+
+            if(wid0<quick_fix){
+                wei = (*var_iter).second[wid0];
+            }
+       
+            bool is_inf = std::isinf(wei);
+            bool is_nan = (wei != wei);
+
+            if(is_inf or is_nan){
+                std::stringstream ss;
+                ss << "ProcessEvent\t||\t ERROR! Killing :: event # " << entryid
+                    << " in File " << montecarlo_file.at(fileid) << " weight: " << wei << " global bnb: " << global_weight << " in " << var << std::endl;
+                //                throw std::runtime_error(ss.str());
+                wei = 1.0;                
+            }
+
+            if(wei > abnormally_large_weight){
+                std::cout<<"ProcessEvent\t||\tATTENTION!! HUGE weight: "<<wei<<" at "<<var<<" event "<<entryid<<" file "<<fileid<<std::endl;
+                wei=1.0;
+            }
+		
+
+	    weights[wid1] *= wei*indiv_variation_weight;
+        }
+
+        woffset += expected_num_universe_sz;
+        vid++;
+    }//end of all variations
+
+    if (woffset != weights.size()) {
+        std::stringstream ss;
+        ss << "woffset=" << woffset << " weights sz=" << weights.size() << " !" << std::endl;
+        throw std::runtime_error(ss.str());
+    }
+
+    //So the size of weights must equal global universes ya?
+    if(universes_used != num_universes_per_variation.size()){
+        std::stringstream ss;
+        ss <<otag<<" ERROR "<<std::endl;
+        ss <<"weights.size() "<<weights.size()<<std::endl;
+        ss <<"universes_used "<<universes_used<<std::endl;
+        ss <<"multi_vecspec.size() "<<multi_vecspec.size()<<std::endl;
+        ss <<"num_universes_per_variation.size() "<<num_universes_per_variation.size()<<std::endl;
+        throw std::runtime_error(ss.str());
+    }
+    for(int t=0; t < branch_variables[fileid].size(); t++) {
+
+
+        const auto branch_var_jt = branch_variables[fileid][t];
+        int ih = spec_central_value.map_hist.at(branch_var_jt->associated_hist);
+
+        branch_var_jt->GetFormula()->GetNdata();
+        double reco_var = branch_var_jt->GetFormula()->EvalInstance();
+        // double reco_varold = *(static_cast<double*>(branch_var_jt->GetValue()));
+        int reco_bin = spec_central_value.GetGlobalBinNumber(reco_var,ih);
+        spec_central_value.hist[ih].Fill(reco_var, global_weight*additional_CV_weight);
+        //std::cout<<reco_var<<" "<<reco_bin<<" "<<ih<<std::endl;
+
+        for(int m=0; m<weights.size(); m++){
+            if(reco_bin<0) continue;
+            multi_vecspec[m][reco_bin] += weights[m];
+        }
+    }
+
+    return;*/
+//}
 

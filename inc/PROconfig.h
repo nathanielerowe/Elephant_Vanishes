@@ -25,6 +25,13 @@
 //ROOT
 #include "TTreeFormula.h"
 
+//#define TYPE_FLOAT
+#ifdef TYPE_FLOAT  
+    typedef float eweight_type;
+#else
+    typedef double eweight_type;
+#endif
+        
 namespace PROfit{
 
     struct BranchVariable{

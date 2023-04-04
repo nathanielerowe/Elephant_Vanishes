@@ -20,6 +20,7 @@
 
 //PROfit
 #include "PROlog.h"
+#include "PROconfig.h"
 
 namespace PROfit{
 
@@ -39,7 +40,11 @@ namespace PROfit{
     };
 
 
-    PROcess(const PROconfig &inconfig);
-
+    int PROcess(const PROconfig &inconfig);
+    void ProcessEvent(const PROconfig &inconfig,
+        const std::map<std::string, 
+        std::vector<eweight_type> >& thisfWeight,
+        size_t fileid,
+        int entryid);
     };
 #endif

@@ -1,5 +1,5 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/inc/*.h")
-add_library(PROfitLib PROconfig.cxx PROspec.cxx PROcovariancegen.cxx ${HEADER_LIST})
+add_library(PROfitLib PROconfig.cxx PROspec.cxx PROcovariancegen.cxx PROcess_weights.cxx ${HEADER_LIST})
 
 # We need this directory, and users of our library will need it too
 target_include_directories(PROfitLib PUBLIC ${PROJECT_SOURCE_DIR}/inc)
