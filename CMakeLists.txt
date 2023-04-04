@@ -50,10 +50,12 @@ FetchContent_MakeAvailable(tinyxml2)
 ExternalProject_Add(
     sbnanaobj
     GIT_REPOSITORY https://github.com/SBNSoftware/sbnanaobj.git 
+    GIT_TAG v09_20_05
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
-    )
+    UPDATE_COMMAND ""
+)
 
 
 find_package(Boost REQUIRED)
