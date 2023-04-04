@@ -80,12 +80,12 @@ ELSE()
     message("ROOT cxx flags set to: ${ROOT_CXX_FLAGS}")
 ENDIF()
 
-#file(GLOB SRHeaders ${CMAKE_SOURCE_DIR}/sbnanaobj/sbnanaobj/StandardRecord/*.h)
-#execute_process(COMMAND rootcling -f PROfit_dict.cxx -c ${SRHeaders} ${CMAKE_SOURCE_DIR}/LinkDef.h)
-#execute_process(COMMAND root-config --cflags --libs OUTPUT_VARIABLE ROOT_DICT_FLAGS)
-#execute_process(COMMAND g++ PROfit_dict.cxx -o libPROfit_dict.so -shared -fPIC -I${ROOTSYS}/include -I${CMAKE_SOURCE_DIR}/sbnanaobj ${ROOT_DICT_FLAGS})
-
-#execute_process(COMMAND ${CMAKE_SOURCE_DIR}/gen_dict.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+file(GLOB SRHeaders ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src/sbnanaobj/StandardRecord/*.h)
+execute_process(COMMAND rootcling -f ${CMAKE_SOURCE_DIR}/PROfit_dict.cxx -c ${SRHeaders} ${CMAKE_SOURCE_DIR}/LinkDef.h)
+add_library(PROfit_dict ${CMAKE_SOURCE_DIR}/PROfit_dict.cxx)
+target_include_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src)
+target_link_directories(PROfit_dict PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(PROfit_dict PRIVATE ${ROOT_LIBRARIES})
 
 # The compiled library code lives inside here
 add_subdirectory(src)
