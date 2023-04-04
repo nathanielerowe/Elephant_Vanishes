@@ -63,6 +63,7 @@ ExternalProject_Add(mfa
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/mfa_build/
+    SBNANAOBJ_INCLUDE_DIR
     INSTALL_COMMAND ""
     )
 ExternalProject_Get_Property(mfa install_dir)
@@ -86,15 +87,24 @@ if                          (MFA_INCLUDE_DIR)
 endif  ()
 
 
-#FetchContent_Declare( got thorugh MFA
-#    diy
-#    GIT_REPOSITORY https://github.com/diatomic/diy.git 
-#    GIT_TAG        ef460f828c36e8f533ccec1f551024f4da896165
-#    )
-#FetchContent_MakeAvailable(diy)
+ExternalProject_Add(
+    sbnanaobj
+    GIT_REPOSITORY https://github.com/SBNSoftware/sbnanaobj.git 
+    GIT_TAG v09_20_05
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+    UPDATE_COMMAND ""
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-inc
+)
+set(SBNANAOBJ_INCLUDE_DIR "${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src/")
 
 
 find_package(Boost REQUIRED)
+if(Boost_FOUND)
+    include_directories (SYSTEM ${Boost_INCLUDE_DIR})
+endif()
 
 ###### ROOT ROOT ##############33
 
@@ -115,7 +125,11 @@ set(libraries ${libraries} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
 message("MPI libraries: ${libraries}")
 message("MPI include path: ${MPI_INCLUDE_PATH}")
 
-
+#file(GLOB SRHeaders ${CMAKE_SOURCE_DIR}/sbnanaobj/sbnanaobj/StandardRecord/*.h)
+#execute_process(COMMAND rootcling -f PROfit_dict.cxx -c ${SRHeaders} ${CMAKE_SOURCE_DIR}/LinkDef.h)
+#execute_process(COMMAND root-config --cflags --libs OUTPUT_VARIABLE ROOT_DICT_FLAGS)
+#execute_process(COMMAND g++ PROfit_dict.cxx -o libPROfit_dict.so -shared -fPIC -I${ROOTSYS}/include -I${CMAKE_SOURCE_DIR}/sbnanaobj ${ROOT_DICT_FLAGS})
+#execute_process(COMMAND ${CMAKE_SOURCE_DIR}/gen_dict.sh WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # The compiled library code lives inside here
 add_subdirectory(src)
