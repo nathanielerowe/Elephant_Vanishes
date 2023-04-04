@@ -8,6 +8,7 @@ project (
     LANGUAGES CXX)
 
 include(FetchContent)
+include(ExternalProject)
 
 
 #Allow for nice support folders in IDEs like VScode
@@ -38,7 +39,6 @@ FetchContent_Declare(
     )
 FetchContent_MakeAvailable(lbfgspp)
 
-
 FetchContent_Declare(
     tinyxml2
     GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git 
@@ -46,12 +46,60 @@ FetchContent_Declare(
     )
 FetchContent_MakeAvailable(tinyxml2)
 
+#./configure --prefix=$MPICH_DIR/mpich-install --disable-f08 --disable-collalgo-tests
+#ExternalProject_Add(mpich
+#    DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
+#    URL https://www.mpich.org/static/downloads/4.0.3/mpich-4.0.3.tar.gz
+#    UPDATE_COMMAND ""
+#    BUILD_IN_SOURCE 1
+#    CONFIGURE_COMMAND ./configure  --disable-f08 --disable-collalgo-tests
+#    INSTALL_COMMAND ""
+#    )
+
+ExternalProject_Add(mfa
+    GIT_REPOSITORY https://markrosslonergan@github.com/markrosslonergan/mfa4profit.git
+    GIT_TAG 0e0cc41e027603668a9ca67b9a9195b3d6be50a3
+    USES_TERMINAL_DOWNLOAD ON 
+    UPDATE_COMMAND ""
+    BUILD_IN_SOURCE 1
+    CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/mfa_build/
+    INSTALL_COMMAND ""
+    )
+ExternalProject_Get_Property(mfa install_dir)
+
+message("MFA installed to: ${install_dir}")
+
+set(MFA_INCLUDE_DIR ${install_dir}/src/mfa/include)
+set(DIY_INCLUDE_DIR ${MFA_INCLUDE_DIR}/diy/include)
+set(FMT_LIBRARY_PATH ${MFA_INCLUDE_DIR}/fmt)
+set(FMT_INCLUDE_DIR ${FMT_LIBRARY_PATH}/include)
+
+message("MFA include dir: ${MFA_INCLUDE_DIR}")
+message("DIY include dir: ${DIY_INCLUDE_DIR}")
+
+if                          (MFA_INCLUDE_DIR)
+    include_directories     (SYSTEM ${MFA_INCLUDE_DIR} ${DIY_INCLUDE_DIR} ${FMT_INCLUDE_DIR})
+    message                 ("MFA_INCLUDE_DIR = " ${MFA_INCLUDE_DIR})
+    add_definitions         (-DMFA_NO_WEIGHTS)
+    add_definitions         (-DMFA_SERIAL)
+    message                 ("Weights are disabled for MFA")
+endif  ()
+
+
+#FetchContent_Declare( got thorugh MFA
+#    diy
+#    GIT_REPOSITORY https://github.com/diatomic/diy.git 
+#    GIT_TAG        ef460f828c36e8f533ccec1f551024f4da896165
+#    )
+#FetchContent_MakeAvailable(diy)
+
+
 find_package(Boost REQUIRED)
 
 ###### ROOT ROOT ##############33
 
 FIND_PACKAGE(ROOT COMPONENTS MathCore MathMore)
-  
+
 if(ROOT_FOUND)
     message("Found ROOT using CMAKE FIND_PACKAGE")
     include(${ROOT_USE_FILE})
@@ -62,7 +110,10 @@ ELSE()
     message("ROOT cxx flags set to: ${ROOT_CXX_FLAGS}")
 ENDIF()
 
-
+find_package(MPI REQUIRED)
+set(libraries ${libraries} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+message("MPI libraries: ${libraries}")
+message("MPI include path: ${MPI_INCLUDE_PATH}")
 
 
 
