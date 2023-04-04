@@ -47,6 +47,7 @@ FetchContent_Declare(
     )
 FetchContent_MakeAvailable(tinyxml2)
 
+
 ExternalProject_Add(
     sbnanaobj
     GIT_REPOSITORY https://github.com/SBNSoftware/sbnanaobj.git 
@@ -55,11 +56,10 @@ ExternalProject_Add(
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
     UPDATE_COMMAND ""
-    SOURCE_DIR ${PROJECT_BUILD_DIR}/_deps/sbnanaobj-src
-    INSTALL_DIR ${PROJECT_BUILD_DIR}/_deps/sbnanaobj-inc
-    BINARY_DIR ${PROJECT_BUILD_DIR}/_deps/sbnanaobj-build
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-inc
 )
-
+set(SBNANAOBJ_INCLUDE_DIR "${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src/")
 
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
