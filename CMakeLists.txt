@@ -55,6 +55,9 @@ ExternalProject_Add(
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
     UPDATE_COMMAND ""
+    SOURCE_DIR ${PROJECT_BUILD_DIR}/_deps/sbnanaobj-src
+    INSTALL_DIR ${PROJECT_BUILD_DIR}/_deps/sbnanaobj-inc
+    BINARY_DIR ${PROJECT_BUILD_DIR}/_deps/sbnanaobj-build
 )
 
 
