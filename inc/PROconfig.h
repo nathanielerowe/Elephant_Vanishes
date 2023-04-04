@@ -133,25 +133,25 @@ namespace PROfit{
 
     class PROconfig {
         protected:
-	
-	    //indicator of whether each channel/detector/subchannel is used
-	    std::vector<bool> m_mode_bool;
-	    std::vector<bool> m_detector_bool;
-    	    std::vector<bool> m_channel_bool;
+
+            //indicator of whether each channel/detector/subchannel is used
+            std::vector<bool> m_mode_bool;
+            std::vector<bool> m_detector_bool;
+            std::vector<bool> m_channel_bool;
             std::vector<std::vector<bool>>  m_subchannel_bool;
 
 
-	    //---- PRIVATE FUNCTION ------
+            //---- PRIVATE FUNCTION ------
 
 
-	    /* Function: remove any mode/detector/channel/subchannels in the configuration xml that are not used from consideration
- 	     */
-	    void remove_unused_channel();
+            /* Function: remove any mode/detector/channel/subchannels in the configuration xml that are not used from consideration
+            */
+            void remove_unused_channel();
 
 
-	    /* Function: ignore any file that is associated with unused channels 
- 	     */
-	    void remove_unused_files();
+            /* Function: ignore any file that is associated with unused channels 
+            */
+            void remove_unused_files();
 
         public:
 
@@ -177,7 +177,7 @@ namespace PROfit{
 
 
 
-	    
+
             //the xml names are the way we track which channels and subchannels we want to use later
             std::vector<std::string> m_mode_names; 			
             std::vector<std::string> m_mode_plotnames; 			
@@ -245,15 +245,15 @@ namespace PROfit{
             //FIX skepic
             std::vector<std::string> systematic_name;
 
-	    double m_plot_pot;
+            double m_plot_pot;
 
-	   //----- PUBLIC FUNCTIONS ------
-	   //
+            //----- PUBLIC FUNCTIONS ------
+            //
 
-	   /* Function: Calculate how big each mode block and decector block are, for any given number of channels/subchannels, before and after the collapse
- 	    * Note: only consider mode/detector/channel/subchannels that are actually used 
- 	    */
-	   void CalcTotalBins();
+            /* Function: Calculate how big each mode block and decector block are, for any given number of channels/subchannels, before and after the collapse
+             * Note: only consider mode/detector/channel/subchannels that are actually used 
+             */
+            void CalcTotalBins();
 
     };
 
