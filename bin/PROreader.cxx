@@ -18,6 +18,7 @@ log_level_t GLOBAL_LEVEL = LOG_DEBUG;
 int main(int argc, char* argv[])
 {
 
+    //gSystem->Load("libPROfit_dict");
     CLI::App app{"Test for PROfit"}; 
 
     // Define options

@@ -80,6 +80,14 @@ ELSE()
     message("ROOT cxx flags set to: ${ROOT_CXX_FLAGS}")
 ENDIF()
 
+#file(GLOB SRHeaders ${SBNANAOBJ_INCLUDE_DIR}/sbnanaobj/StandardRecord/*.h)
+#execute_process(COMMAND rootcling -f ${CMAKE_BINARY_DIR}/PROfit_dict.cxx -c ${SRHeaders} ${CMAKE_SOURCE_DIR}/dict/LinkDef.h -I${SBNANAOBJ_INCLUDE_DIR})
+#add_library(PROfit_dict ${CMAKE_BINARY_DIR}/PROfit_dict.cxx)
+#target_include_directories(PROfit_dict PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
+#target_link_directories(PROfit_dict PRIVATE ${CMAKE_SOURCE_DIR})
+#target_link_libraries(PROfit_dict PRIVATE ${ROOT_LIBRARIES})
+
+
 # The compiled library code lives inside here
 add_subdirectory(src)
 
