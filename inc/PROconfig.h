@@ -10,6 +10,9 @@
 #include <fstream>
 #include <memory>
 #include <map>
+#include <unordered_set>
+#include <climits>
+#include <cstdlib>
 
 // TINYXML2
 #include "tinyxml2.h"
@@ -50,8 +53,8 @@ namespace PROfit{
         double true_value_d;
         double true_L_d;
 
-        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a) {oscillate=false; associated_systematic=""; central_value =false;};
-        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst) { oscillate=false; central_value=cv;};
+        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a) {oscillate=false; associated_systematic=""; central_value =false;}
+        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst) { oscillate=false; central_value=cv;}
         virtual void* GetValue(){};
         virtual void* GetTrueValue(){};
         virtual void* GetTrueL(){};
@@ -60,8 +63,8 @@ namespace PROfit{
             return branch_formula;
         }
 
-        int SetOscillate(bool inbool){ oscillate = inbool;};
-        bool GetOscillate(){ return oscillate;};
+        void SetOscillate(bool inbool){ oscillate = inbool; return;}
+        bool GetOscillate(){ return oscillate;}
 
     };
 
@@ -130,6 +133,26 @@ namespace PROfit{
 
     class PROconfig {
         protected:
+	
+	    //indicator of whether each channel/detector/subchannel is used
+	    std::vector<bool> m_mode_bool;
+	    std::vector<bool> m_detector_bool;
+    	    std::vector<bool> m_channel_bool;
+            std::vector<std::vector<bool>>  m_subchannel_bool;
+
+
+	    //---- PRIVATE FUNCTION ------
+
+
+	    /* Function: remove any mode/detector/channel/subchannels in the configuration xml that are not used from consideration
+ 	     */
+	    void remove_unused_channel();
+
+
+	    /* Function: ignore any file that is associated with unused channels 
+ 	     */
+	    void remove_unused_files();
+
         public:
 
 
@@ -143,15 +166,18 @@ namespace PROfit{
             int m_num_detectors;
             int m_num_channels;
             int m_num_modes;
+            //vectors of length num_channels
+            std::vector<int> m_num_subchannels; 
 
-            std::vector<int> m_num_bins;
+            std::vector<int> m_channel_num_bins;
+            std::vector<std::vector<double> > m_channel_bin_edges;
+            std::vector<std::vector<double> > m_channel_bin_widths;
 
             bool m_has_oscillation_patterns;
 
 
-            //vectors of length num_channels
-            std::vector<int> m_num_subchannels; 
 
+	    
             //the xml names are the way we track which channels and subchannels we want to use later
             std::vector<std::string> m_mode_names; 			
             std::vector<std::string> m_mode_plotnames; 			
@@ -162,9 +188,6 @@ namespace PROfit{
             std::vector<std::string> m_channel_names; 		
             std::vector<std::string> m_channel_plotnames; 		
             std::vector<std::string> m_channel_units; 		
-            std::vector<int> m_channel_num_bins;
-            std::vector<std::vector<double> > m_channel_bin_edges;
-            std::vector<std::vector<double> > m_channel_bin_widths;
 
 
             std::vector<std::vector<std::string >> m_subchannel_names; 
@@ -195,15 +218,15 @@ namespace PROfit{
             int m_num_mcgen_files;
             std::vector<std::string> m_mcgen_tree_name;	
             std::vector<std::string> m_mcgen_file_name;	
-            std::vector<std::string> m_mcgen_additional_weight_name;
-            std::vector<bool> m_mcgen_additional_weight_bool;
-            std::vector<double> m_mcgen_additional_weight;
-            std::vector<int> m_mcgen_maxevents;	
+            std::vector<long int> m_mcgen_maxevents;	
             std::vector<double> m_mcgen_pot;	
             std::vector<double> m_mcgen_scale;	
             std::vector<bool> m_mcgen_fake;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_map;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_treename_map;
+            std::vector<std::vector<std::string>> m_mcgen_additional_weight_name;
+            std::vector<std::vector<bool>> m_mcgen_additional_weight_bool;
+            std::vector<std::vector<std::shared_ptr<BranchVariable>>> m_branch_variables;
 
 
             //specific bits for covariancegeneration
@@ -212,18 +235,25 @@ namespace PROfit{
             std::vector<std::string> m_mcgen_weightmaps_uses;
             std::vector<std::string> m_mcgen_weightmaps_patterns;
             std::vector<std::string> m_mcgen_weightmaps_mode;
-            std::map<std::string,bool> m_mcgen_variation_allowlist;
-            std::map<std::string,bool> m_mcgen_variation_denylist;
+            std::unordered_set<std::string> m_mcgen_variation_allowlist;
+            std::unordered_set<std::string> m_mcgen_variation_denylist;
             std::map<std::string, std::vector<std::string>> m_mcgen_shapeonly_listmap; //a map of shape-only systematic and corresponding subchannels
 
-            std::vector<std::vector<BranchVariable*>> m_branch_variables;
 
 
 
             //FIX skepic
             std::vector<std::string> systematic_name;
 
+	    double m_plot_pot;
 
+	   //----- PUBLIC FUNCTIONS ------
+	   //
+
+	   /* Function: Calculate how big each mode block and decector block are, for any given number of channels/subchannels, before and after the collapse
+ 	    * Note: only consider mode/detector/channel/subchannels that are actually used 
+ 	    */
+	   void CalcTotalBins();
 
     };
 
