@@ -40,67 +40,64 @@ int main(int argc, char* argv[])
     globalTree->GetEntry(0);
 
     int i = 0;
-
-    std::vector<float> vals;
-
     for(const auto& pset: global->wgts) {
         //for(unsigned int i = 0; i < global->wgts.size(); ++i) {
         //const caf::SRWeightPSet& pset = global->wgts[i];
         //std::cout << "i is: " << i << std::endl;
-        vals.clear();
 
         if(pset.map.size() != 1) continue;
-        std::cout << pset.name << " (type " << pset.type << "): with " << pset.nuniv << " universes and index: "<<i<<"\n";
+        std::cout << pset.name << " (type " << pset.type << "): with " << pset.nuniv << " universes\n";
         std::cout << pset.map.at(0).param.name << std::endl;
         std::cout << " Mean: "<<pset.map.at(0).param.mean <<" Width: "<<pset.map.at(0).param.width <<  std::endl;
 
         for(const auto& val: pset.map.at(0).vals) {
             std::cout << val << ' ';
-            vals.push_back(val);
         }
         std::cout <<" On psetinext i "<<i<< std::endl;
-        if(i==35)break;
+        if(i>0)break;
         i++;
     }
 
+
     TTree* recTree = (TTree*)file->Get("recTree");
 
-    int i_wgt_univ_size = 0; //rec.mc.nu.wgt.univ..totarraysize
+    int i_wgt_univ_size = 0; //rec.slc.truth.wgt.univ..totarraysize
     int i_wgt_size = 0; //rec.slc..length
-    int i_wgt_totsize = 0; //rec.mc.nu.wgt..totalarraysize
+    int i_wgt_totsize = 0; //rec.slc.truth.wgt..totalarraysize
 
-    float v_wgt_univ[30000];
-    int v_wgt_univ_idx[30000];
+    float v_wgt_univ[20000];
+    int v_wgt_univ_idx[20000];
     int v_wgt_idx[2000];
     int v_wgt_univ_length[2000];
-    int v_truth_index[100] ;
+    int v_truth_index[2000] ;
 
-    recTree->SetBranchAddress("rec.mc.nu.wgt.univ..totarraysize", &i_wgt_univ_size);
-    recTree->SetBranchAddress("rec.mc.nu..length", &i_wgt_size);
-    recTree->SetBranchAddress("rec.mc.nu.wgt..totarraysize",&i_wgt_totsize);
+    recTree->SetBranchAddress("rec.slc.truth.wgt.univ..totarraysize", &i_wgt_univ_size);
+    recTree->SetBranchAddress("rec.slc..length", &i_wgt_size);
+    recTree->SetBranchAddress("rec.slc.truth.wgt..totarraysize",&i_wgt_totsize);
 
-    recTree->SetBranchAddress("rec.mc.nu.wgt.univ", v_wgt_univ);
-    recTree->SetBranchAddress("rec.mc.nu.wgt.univ..idx", v_wgt_univ_idx);
-    recTree->SetBranchAddress("rec.mc.nu.wgt..idx",v_wgt_idx);
-    recTree->SetBranchAddress("rec.mc.nu.wgt.univ..length",v_wgt_univ_length);
-    recTree->SetBranchAddress("rec.mc.nu.index", v_truth_index);
+    recTree->SetBranchAddress("rec.slc.truth.wgt.univ", v_wgt_univ);
+    recTree->SetBranchAddress("rec.slc.truth.wgt.univ..idx", v_wgt_univ_idx);
+    recTree->SetBranchAddress("rec.slc.truth.wgt..idx",v_wgt_idx);
+    recTree->SetBranchAddress("rec.slc.truth.wgt.univ..length",v_wgt_univ_length);
+    recTree->SetBranchAddress("rec.slc.truth.index", v_truth_index);
     recTree->GetEntry(num);
 
 
-    std::cout<<"  rec.mc.nu.wgt.univ (val):  "<<v_wgt_univ[0]<<" (rec.mc.nu.wgt.univ..idx) (indx): "<<v_wgt_univ_idx[0]<<" both of length be: "<<i_wgt_univ_size<<" (rec.mc.nu.wgt..totarraysize )"<<std::endl; 
-    std::cout<<"  rec.mc.nu.wgt..idx (idx):  "<<v_wgt_idx[0]<<" of length be: "<<i_wgt_size<<" (rec.slc..length)"<<std::endl; 
+    std::cout<<"  rec.slc.truth.wgt.univ (val):  "<<v_wgt_univ[0]<<" (rec.slc.truth.wgt.univ..idx) (indx): "<<v_wgt_univ_idx[0]<<" both of length be: "<<i_wgt_univ_size<<" (rec.slc.truth.wgt..totarraysize )"<<std::endl; 
+    std::cout<<"  rec.slc.truth.wgt..idx (idx):  "<<v_wgt_idx[0]<<" of length be: "<<i_wgt_size<<" (rec.slc..length)"<<std::endl; 
     for(int k=0; k< i_wgt_size; k++)std::cout<<v_wgt_idx[k]<<" ";
     std::cout<<std::endl;
 
-    std::cout<<"  rec.mc.nu.wgt.univ..length (val):  "<<v_wgt_univ_length[0]<<" of length be: "<<i_wgt_totsize<<" (rec.mc.nu.wgt..totarraysize)" <<std::endl; 
+    std::cout<<"  rec.slc.truth.wgt.univ..length (val):  "<<v_wgt_univ_length[0]<<" of length be: "<<i_wgt_totsize<<" (rec.slc.truth.wgt..totarraysize)" <<std::endl; 
 
-    //rec.mc.nu.wgh.univ[rec.mc.nu.wgt..idx[SLC]+I]+6
+    std::vector<double> ll = {-1, 1 ,-2, 2, -3, 3};
+    //rec.slc.truth.wgh.univ[rec.slc.truth.wgt..idx[SLC]+I]+6
     for(int s = 0; s<i_wgt_size;s++){
         if(v_truth_index[s]==0){
-            std::cout<<"Nu "<<s<<", truth "<<v_truth_index[s]<<", on pset "<<i<<"   ";
+            std::cout<<"Slice "<<s<<", truth "<<v_truth_index[s]<<", on pset "<<i<<"   ";
             int how_many =v_wgt_univ_length[i];
             for(int k=0; k<how_many; k++){ 
-                std::cout<<"("<<vals[k]<<" , "<<v_wgt_univ[v_wgt_idx[s]+v_wgt_univ_idx[i]+k]<<")  ";
+                std::cout<<"("<<ll[k]<<" , "<<v_wgt_univ[v_wgt_idx[s]+i+k]<<")  ";
             }std::cout<<std::endl;
         }
     }
