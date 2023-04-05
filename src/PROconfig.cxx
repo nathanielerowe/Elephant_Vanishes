@@ -1,6 +1,7 @@
 #include "PROconfig.h"
 using namespace PROfit;
 
+
 PROconfig::PROconfig(const std::string &xml): 
     m_xmlname(xml), 
     m_num_modes(0),
@@ -574,10 +575,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     m_mcgen_weightmaps_formulas.push_back(std::string(w_formula));
                 }
 
-                if(w_use== NULL){
-                    m_mcgen_weightmaps_uses.push_back("true");
+                if(w_use== NULL || std::string(w_use) == "true"){
+                    m_mcgen_weightmaps_uses.push_back(true);
                 }else{
-                    m_mcgen_weightmaps_uses.push_back(std::string(w_use));
+                    m_mcgen_weightmaps_uses.push_back(false);
                 }
 
                 if(w_mode== NULL){
@@ -693,6 +694,15 @@ int PROconfig::LoadFromXML(const std::string &filename){
     return 0;
 }
 
+long int PROconfig::Fullname_Find_Global_Index_Start(const std::string& fullname) const{
+    return m_map_fullname_global_index_start.at(fullname);
+}
+
+int PROconfig::Fullname_Find_Channel_Index(const std::string& fullname) const{
+    return m_map_fullname_channel_index.at(fullname);
+}
+
+
 void PROconfig::CalcTotalBins(){
     this->remove_unused_channel();
 
@@ -707,8 +717,36 @@ void PROconfig::CalcTotalBins(){
     m_num_bins_total = m_num_bins_mode_block * m_num_modes;
     m_num_bins_total_collapsed = m_num_bins_mode_block_collapsed * m_num_modes;
 
+    this->setup_name_bin_mapping();
     return;
 }
+
+void PROconfig::setup_name_bin_mapping(){
+
+    for(int im = 0; im < m_num_modes; im++){
+
+	long int mode_bin_start = im*m_num_bins_mode_block;
+
+        for(int id =0; id < m_num_detectors; id++){
+
+	    long int detector_bin_start = id*m_num_bins_detector_block;
+	    long int channel_bin_start = 0;
+
+            for(int ic = 0; ic < m_num_channels; ic++){
+                for(int sc = 0; sc < m_num_subchannels[ic]; sc++){
+
+                    std::string temp_name  = m_mode_names[im] +"_" +m_detector_names[id]+"_"+m_channel_names[ic]+"_"+m_subchannel_names[ic][sc];
+		    m_map_fullname_global_index_start[temp_name] = mode_bin_start + detector_bin_start + channel_bin_start + sc*m_channel_num_bins[ic]; 
+		    m_map_fullname_channel_index[temp_name] = ic; 
+                }
+		channel_bin_start += m_channel_num_bins[ic]*m_num_subchannels[ic]; 
+            }
+        }
+    }
+
+    return;
+}
+
 
 void PROconfig::remove_unused_channel(){
 
@@ -808,7 +846,7 @@ void PROconfig::remove_unused_channel(){
 
     }
 
-    //grab all used channels
+    //grab list of fullnames used.
     m_fullnames.clear();
     for(int im = 0; im < m_num_modes; im++){
         for(int id =0; id < m_num_detectors; id++){
@@ -827,6 +865,7 @@ void PROconfig::remove_unused_channel(){
     return;
 }
 
+
 void PROconfig::remove_unused_files(){
 
     //ignore any files not associated with used channels 
@@ -835,25 +874,25 @@ void PROconfig::remove_unused_files(){
     for(auto& br : m_branch_variables)
         num_all_branches += br.size();
 
-    std::unordered_set<std::string> set_all_names(m_fullnames.begin(), m_fullnames.end());
-
-    std::vector<std::string> temp_tree_name;
-    std::vector<std::string> temp_file_name;
-    std::vector<long int> temp_maxevents;
-    std::vector<double> temp_pot;
-    std::vector<double> temp_scale;
-    std::vector<bool> temp_fake;
-    std::map<std::string,std::vector<std::string>> temp_file_friend_map;
-    std::map<std::string,std::vector<std::string>> temp_file_friend_treename_map;
-    std::vector<std::vector<std::string>> temp_additional_weight_name;
-    std::vector<std::vector<bool>> temp_additional_weight_bool;
-    std::vector<std::vector<std::shared_ptr<BranchVariable>>> temp_branch_variables;
-    std::vector<std::vector<std::string>> temp_eventweight_branch_names;
-
 
     //update file info
     //loop over all branches, and ignore ones not used  
     if(num_all_branches != m_fullnames.size()){
+
+        std::unordered_set<std::string> set_all_names(m_fullnames.begin(), m_fullnames.end());
+
+    	std::vector<std::string> temp_tree_name;
+   	std::vector<std::string> temp_file_name;
+    	std::vector<long int> temp_maxevents;
+    	std::vector<double> temp_pot;
+    	std::vector<double> temp_scale;
+    	std::vector<bool> temp_fake;
+    	std::map<std::string,std::vector<std::string>> temp_file_friend_map;
+    	std::map<std::string,std::vector<std::string>> temp_file_friend_treename_map;
+    	std::vector<std::vector<std::string>> temp_additional_weight_name;
+    	std::vector<std::vector<bool>> temp_additional_weight_bool;
+    	std::vector<std::vector<std::shared_ptr<BranchVariable>>> temp_branch_variables;
+    	std::vector<std::vector<std::string>> temp_eventweight_branch_names;
 
         for(int i = 0; i != m_mcgen_file_name.size(); ++i){
             bool this_file_needed = false;

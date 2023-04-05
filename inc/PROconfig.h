@@ -170,6 +170,10 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             */
             void remove_unused_files();
 
+
+	    /* Function: set up one-to-one mapping between mode_detector_channel_subchannel name and corresponding global bin start, and corresponding channel index 
+ 	     */ 
+	    void setup_name_bin_mapping();
         public:
 
 
@@ -179,6 +183,8 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             int LoadFromXML(const std::string & filename);
 
             std::vector<std::string> m_fullnames;
+	    std::unordered_map<std::string, long int> m_map_fullname_global_index_start;
+	    std::unordered_map<std::string, int> m_map_fullname_channel_index;
 
             int m_num_detectors;
             int m_num_channels;
@@ -249,7 +255,7 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
 
             //specific bits for covariancegeneration
             std::vector<std::string> m_mcgen_weightmaps_formulas;
-            std::vector<std::string> m_mcgen_weightmaps_uses;
+            std::vector<bool> m_mcgen_weightmaps_uses;
             std::vector<std::string> m_mcgen_weightmaps_patterns;
             std::vector<std::string> m_mcgen_weightmaps_mode;
             std::unordered_set<std::string> m_mcgen_variation_allowlist;
@@ -272,6 +278,8 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
              */
             void CalcTotalBins();
 
+	    long int Fullname_Find_Global_Index_Start(const std::string& fullname) const;
+	    int Fullname_Find_Channel_Index(const std::string& fullname) const;
     };
 
 

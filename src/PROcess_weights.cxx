@@ -4,6 +4,27 @@
 
 using namespace PROfit;
 
+void SystStruct::CleanSpecs(){
+    multi_vecspec.clear();
+    return;
+}
+
+void void SetSpecDimension(int row, int col){
+}
+void SystStruct::SanityCheck() const{
+    if(mode == "minmax" && n_univ != 2){
+        log<LOG_ERROR>(L"%1% || Systematic variation %2% is tagged as minmax mode, but has %3% universes (can only be 2)") % __func__ % systname.c_str() % n_univ;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+
+    log<LOG_INFO>(L"%1% || Systematic variation %2% passed sanity check!!") % __func__ % systname.c_str();
+    log<LOG_INFO>(L"%1% || Systematic variation %2% has %3% universes, and is in %4% mode with weight formula: %5%") % __func__ % systname.c_str() % n_univ % mode.c_str() % weight_formula.c_str();
+    return;
+}
+
+
+
 int PROcess(const PROconfig &inconfig){
  
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
@@ -23,6 +44,7 @@ int PROcess(const PROconfig &inconfig){
     std::vector<std::unique_ptr<TFile>> files(num_files);
     std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
     std::vector<std::vector<std::map<std::string, std::vector<eweight_type>>* >> f_weights(num_files);
+    std::map<std::string, int> map_systematic_num_universe;
 
     //inconfig.m_mcgen_additional_weight.resize(num_files,1.0); its const, not allowed
 
@@ -120,56 +142,68 @@ int PROcess(const PROconfig &inconfig){
         } //end of branch loop
 
 
-        trees.at(fid)->GetEntry(good_event);
-
-        const auto f_weight = f_weights[fid];
-
-	//calculate how many "universes" the file has.
+	//calculate how many "universes" each systematoc has.
     	log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
-        std::cout<<"starting"<<std::endl;
-        for(const auto& it : *f_weight){
-            std::cout<<"On : "<<it.first<<std::endl;
-    	    log<LOG_INFO>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
+        trees.at(fid)->GetEntry(good_event);
+	for(int ib = 0; ib != num_branch; ++ib) {
+            const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
+	    auto& f_weight = f_weights[fid][ib];
 
-            if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
-    	    	log<LOG_INFO>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
-                continue;
-            }
+            for(const auto& it : *f_weight){
+    	    	log<LOG_INFO>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
 
-            if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
-    	    	log<LOG_INFO>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
-                continue;
-            }
+            	if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
+    	    	    log<LOG_INFO>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
+                    continue;
+                }
 
-            std::cout << it.first << " has " << it.second.size() << " montecarlos in file " << fid << std::endl;
-            used_montecarlos[fid] += it.second.size();
-            variations_tmp.push_back(it.first);
+            	if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
+    	    	    log<LOG_INFO>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
+                    continue;
+            	}
+
+            	log<LOG_INFO>(L"%1% || %2% has %3% montecarlo variations in branch %4%") % __func__ % it.first.c_str() % it.second.size() % branch_variable->associated_hist.c_str();
+
+		map_systematic_num_universe[it.first] = std::max(map_systematic_num_universe[it.first], it.second.size());
+	    }
         }
     } // end fid
 
-    std::sort(variations_tmp.begin(),variations_tmp.end());
-    auto unique_iter = std::unique(variations_tmp.begin(), variations_tmp.end());
-    variations.insert(variations.begin(),variations_tmp.begin(),unique_iter);
+    log<LOG_INFO>(L"%1% || Found %2% unique variations") % __func__ % map_systematic_num_universe.size();
+    log<LOG_INFO>(L"%1% || Now start to grab related weightmaps") % __func__;
 
-    //Variation Weight Maps Area
-    std::vector<std::string> variation_modes(variations.size(),0);
-    std::vector<std::string> s_formulas(variations.size(),"1"); 
-    int n_wei = inconfig.m_mcgen_weightmaps_patterns.size();
+    int total_num_systematics = map_systematic_num_universe.size();
+    std::vector<SystStruct> syst_vector;
+    for(auto& sys_pair : map_systematic_num_universe){
 
-    for(int i=0; i< n_wei; i++){
+	const std::string& sys_name = sys_pair.first;
+        syst_vector.emplace_back(sys_name, sys_pair.second);
 
-        for(int v=0; v< variations.size(); v++){
+            
+	// Check to see if pattern is in this variation
+	std::string sys_weight_formula = "1", sys_mode ="";
 
-            // Check to see if pattern is in this variation
-            if (variations[v].find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
-                std::cout << "Variation "<<variations[v]<<" is a match for pattern "<<inconfig.m_mcgen_weightmaps_patterns[i]<<std::endl;
-                s_formulas[v] = s_formulas[v] + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
-                std::cout<<" -- weight is thus "<<s_formulas[v]<<std::endl;
-                std::cout<<" -- mode is "<<inconfig.m_mcgen_weightmaps_mode[i]<<std::endl;
-                variation_modes[v]=inconfig.m_mcgen_weightmaps_mode[i];
+	for(int i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
+            if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
+                sys_weight_formula = sys_weight_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
+                sys_mode=inconfig.m_mcgen_weightmaps_mode[i];
+
+		log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for patten %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
+		log<LOG_INFO>(L"%1% || Corresponding weight is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_formulas[i].c_str();
+		log<LOG_INFO>(L"%1% || Corresponding mode is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_mode[i].c_str();
             }
-        }
+	}
+
+	if(sys_weight_formula != "1" || sys_mode !=""){
+	    syst_vector.back().SetWeightFormula(sys_weight_formula);
+	    syst_vector.back().SetMode(sys_mode);
+	}
     }
+
+
+    //sanity check 
+    for(const auto& s : syst_vector)
+	s.SanityCheck();
 
     std::vector<std::vector<std::unique_ptr<TTreeFormula>>> additional_weight_formulas(num_files);//(num_files, std::vector<std::unique_ptr<TTreeFormula>>(variations.size()));FIX why does this fail?
     for (auto& innerVector : additional_weight_formulas) {
@@ -183,8 +217,6 @@ int PROcess(const PROconfig &inconfig){
         }
     }
 
-    // make a map and start filling, before filling find if already in map, if it is check size.
-    std::cout <<" Found " << variations.size() << " unique variations: " << std::endl;
 
     //CHeck This FIX
     std::vector<int> num_universes_per_variation;
@@ -196,71 +228,10 @@ int PROcess(const PROconfig &inconfig){
     vec_universe_to_var.clear();
     num_universes_per_variation.clear();
 
-    for(size_t vid=0; vid<variations.size(); ++vid) {
-        const auto &v =  variations[vid];
-        int max_variation_length = 0;
-        int in_n_files = 0;
-
-        //Lets loop over all trees
-
-        for(size_t fid=0; fid<num_files; fid++){
-            trees[fid]->GetEntry(good_event);
-
-            //is this variation in this tree?
-            int is_found = (*(f_weights[fid])).count(v);
-
-            if(is_found==0){
-                std::cout<<"  WARNING @  variation " <<v<<"  in File " << inconfig.m_mcgen_file_name.at(fid)<<". Variation does not exist in file! "<<std::endl;
-            }else{
-                int thissize = (*(f_weights[fid])).at(v).size(); // map lookup
-                in_n_files++;       
-                max_variation_length = std::max(thissize,max_variation_length);
-
-            }
-
-        }
-
-        std::cout<<v<<" is of max length: "<<max_variation_length<<" and in "<<in_n_files<<" of "<<num_files<<" total files"<<std::endl;
-
-        for(int p=0; p < max_variation_length; p++){
-            map_universe_to_var[num_universes_per_variation.size()] = v;
-            vec_universe_to_var.push_back(vid);
-            num_universes_per_variation.push_back(max_variation_length);
-        }
-        map_var_to_num_universe[v] = max_variation_length;
-    }
-
-    std::cout << " File: 0 | " << inconfig.m_mcgen_file_name.at(0) << " has " << used_montecarlos.at(0) << " montecarlos" << std::endl;
-    for(int i=1; i<num_files; i++){
-        std::cout << " File: " << i <<" |  "<<inconfig.m_mcgen_file_name[i]<< " has " << used_montecarlos.at(i) << " montecarlos" << std::endl;
-        if(used_montecarlos.at(i)!= used_montecarlos.at(i-1)){
-            std::cerr << " Warning, number of universes for are different between files" << std::endl;
-            std::cerr << " The missing universes are Set to weights of 1. Make sure this is what you want!" << std::endl;
-            for(int j=0; j<num_files; j++){
-                if(universes_used < used_montecarlos.at(j)) 
-                    universes_used = used_montecarlos.at(j);
-                std::cerr <<"File " << j << " montecarlos: " << used_montecarlos.at(j) << std::endl;
-            }
-        }
-    }
-
-    ///Quick check on minmax
-    for(int v=0; v< variations.size(); v++){
-        if(variation_modes[v]=="minmax" && map_var_to_num_universe[variations[v]]!=2){
-            std::cerr <<"ERROR! variation "<<variations[v]<<" is tagged as minmax mode, but has "<<map_var_to_num_universe[variations[v]]<<" universes (can only be 2)."<<std::endl;
-            std::cout <<"ERROR! variation "<<variations[v]<<" is tagged as minmax mode, but has "<<map_var_to_num_universe[variations[v]]<<" universes (can only be 2)."<<std::endl;
-            exit(EXIT_FAILURE);
-        }
-    }
 
     //But in reality we want the max universes to be the sum of all max variaitons across all files, NOT the sum over all files max variations.
     universes_used = num_universes_per_variation.size();
 
-    std::vector<SystStruct> syst_vector;
-    for(int v=0; v< variations.size(); v++){
-        // Check to see if pattern is in this variation
-        syst_vector.emplace_back(variations[v], map_var_to_num_universe[variations[v]], variation_modes[v], s_formulas[v]);
-    }
 
     std::cout << " -------------------------------------------------------------" << std::endl;
     std::cout << " Initilizing " << universes_used << " universes." << std::endl;
