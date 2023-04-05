@@ -14,9 +14,8 @@ PROgress
 PROfane
 PROfanity
 PROlapse
+#PROtocoll
 
-
-    
   rec.slc.truth.wgt..length = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 130, 0, 0                                                         
   rec.slc.truth.wgt..totarraysize = 130                                                                
   rec.slc.truth.wgt.univ..length = 6,  6, 6, 6, 6, 6, 6, 6, 6, 6, 6,  6, 6, 6, 6, 6, 6, 6, 6, 6, rec.slc.truth.wgt.univ..length[rec.slc.truth.wgt..totarraysize

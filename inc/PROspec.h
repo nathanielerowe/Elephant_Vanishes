@@ -33,8 +33,8 @@ namespace PROfit{
             Eigen::VectorXd bins;
 
 
-            //Useful Plotting routines
-            TH1D toTH1D(PROconfig const & configin);
+            //Useful Plotting routines, move to 
+            //TH1D toTH1D(PROconfig const & configin);
 
     };
 
