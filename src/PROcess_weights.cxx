@@ -24,11 +24,10 @@ int PROcess(const PROconfig &inconfig){
 
     std::vector<std::unique_ptr<TFile>> files(num_files);
     std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
-    //std::vector<std::map<std::string, std::vector<eweight_type> >* > f_weights(num_files,nullptr);
-    std::vector<int> pset_indices_tmp;
-    std::vector<int> pset_indeices;
-    std::map<std::string, int> map_systematic_num_universe;
-    
+    std::vector<std::map<std::string, std::vector<eweight_type> >* > f_weights(num_files,nullptr);
+
+    //inconfig.m_mcgen_additional_weight.resize(num_files,1.0); its const, not allowed
+
     int good_event = 0;
 
     for(int fid=0; fid < num_files; ++fid) {
@@ -36,14 +35,7 @@ int PROcess(const PROconfig &inconfig){
 
         files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
         trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
-        TTree* globalTree = (TTree*)file->Get("globalTree");
         nentries[fid]= (int)trees.at(fid)->GetEntries();
-
-        for(unsigned int i = 0; i < global->wgts.size(); ++i) {
-            const caf::SRWeightPSet& pset = global->wgts[i];
-            pset_indices.push_back(i);
-            variations_tmp.push_back(pset.name);
-            map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
 
         //Some check to see if files open right?
 
@@ -71,8 +63,8 @@ int PROcess(const PROconfig &inconfig){
             }
         }
 
-        //Important step   this will no longer work as f_weights does not exist
-        //trees.at(fid)->SetBranchAddress(inconfig.m_mcgen_eventweight_branch_names[fid].c_str(), &(f_weights[fid]));
+        //Important step
+        trees.at(fid)->SetBranchAddress(inconfig.m_mcgen_eventweight_branch_names[fid].c_str(), &(f_weights[fid]));
 
         for(const auto branch_variable : inconfig.m_branch_variables[fid]) {
             //quick check that this branch associated subchannel is in the known chanels;
@@ -106,14 +98,15 @@ int PROcess(const PROconfig &inconfig){
         std::cout<<"Total Entries: "<<trees.at(fid)->GetEntries()<<" good event "<<good_event<<std::endl;
         trees.at(fid)->GetEntry(good_event);
 
-        //const auto f_weight = f_weights[fid];
-        //if (f_weight == nullptr) {
-        //    std::stringstream ss;
-        //    ss << "Could not read weight branch for file=" << fid << std::endl;
-        //    throw std::runtime_error(ss.str());
-        //}
-        /*
+        const auto f_weight = f_weights[fid];
+        if (f_weight == nullptr) {
+            std::stringstream ss;
+            ss << "Could not read weight branch for file=" << fid << std::endl;
+            throw std::runtime_error(ss.str());
+        }
+
         //This bit will calculate how many "universes" the file has. if ALL default is the inputted xml value
+
         std::cout<<"starting"<<std::endl;
         for(const auto& it : *f_weight){
             std::cout<<"On : "<<it.first<<std::endl;
@@ -139,13 +132,12 @@ int PROcess(const PROconfig &inconfig){
             std::cout << it.first << " has " << it.second.size() << " montecarlos in file " << fid << std::endl;
             used_montecarlos[fid] += it.second.size();
             variations_tmp.push_back(it.first);
-        }*/
+        }
     } // end fid
 
     std::sort(variations_tmp.begin(),variations_tmp.end());
     auto unique_iter = std::unique(variations_tmp.begin(), variations_tmp.end());
     variations.insert(variations.begin(),variations_tmp.begin(),unique_iter);
-    pset_indices.insert(pset_indices.begin(), pset_indices_tmp.begin(), unique_iter);
 
     //Variation Weight Maps Area
     std::vector<std::string> variation_modes(variations.size(),0);
@@ -282,7 +274,7 @@ int PROcess(const PROconfig &inconfig){
         for(int i=0; i < nevents; i++) {
             if(i%100==0)std::cout<<" -- uni :"<<i<<" / "<<nevents<<std::endl;
             nbytes+= trees[j]->GetEntry(i);
-            //ProcessEvent(inconfig, *(f_weights[j]),j,i);
+            ProcessEvent(inconfig, *(f_weights[j]),j,i);
             //INPUT PROCESS FIX
 
         } //end of entry loop
