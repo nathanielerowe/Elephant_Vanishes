@@ -24,9 +24,13 @@ int PROcess(const PROconfig &inconfig){
 
     std::vector<std::unique_ptr<TFile>> files(num_files);
     std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
-    std::vector<std::map<std::string, std::vector<eweight_type> >* > f_weights(num_files,nullptr);
 
-    //inconfig.m_mcgen_additional_weight.resize(num_files,1.0); its const, not allowed
+    //std::vector<std::map<std::string, std::vector<eweight_type> >* > f_weights(num_files,nullptr);
+    std::vector<int> pset_indices_tmp;
+    std::vector<int> pset_indeices;
+    std::map<std::string, int> map_systematic_num_universe;
+    std::vector<std::vector<float>> knobvals_tmp;
+    std::vector<std::vector<float>> knobvals;
 
     int good_event = 0;
 
@@ -36,6 +40,14 @@ int PROcess(const PROconfig &inconfig){
         files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
         trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
         nentries[fid]= (int)trees.at(fid)->GetEntries();
+
+        for(unsigned int i = 0; i < global->wgts.size(); ++i) {
+            const caf::SRWeightPSet& pset = global->wgts[i];
+            pset_indices.push_back(i);
+            variations_tmp.push_back(pset.name);
+            map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
+            knobvals_tmp[i] = pset.map.at(0).vals;
+
 
         //Some check to see if files open right?
 
@@ -138,6 +150,8 @@ int PROcess(const PROconfig &inconfig){
     std::sort(variations_tmp.begin(),variations_tmp.end());
     auto unique_iter = std::unique(variations_tmp.begin(), variations_tmp.end());
     variations.insert(variations.begin(),variations_tmp.begin(),unique_iter);
+    pset_indices.insert(pset_indices.begin(), pset_indices_tmp.begin(), unique_iter);
+    knobvals.insert(knobvals.begin(), knobvals_tmp.begin(), unique_iter);
 
     //Variation Weight Maps Area
     std::vector<std::string> variation_modes(variations.size(),0);
@@ -247,7 +261,7 @@ int PROcess(const PROconfig &inconfig){
     std::vector<SystStruct> syst_vector;
     for(int v=0; v< variations.size(); v++){
         // Check to see if pattern is in this variation
-        syst_vector.emplace_back(variations[v], map_var_to_num_universe[variations[v]], variation_modes[v], s_formulas[v]);
+        syst_vector.emplace_back(variations[v], map_var_to_num_universe[variations[v]], variation_modes[v], s_formulas[v], knobvals[v]);
     }
 
     std::cout << " -------------------------------------------------------------" << std::endl;
