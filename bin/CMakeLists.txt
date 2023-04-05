@@ -14,10 +14,10 @@ endif(MPI_ENABLE)
 
 
 
-add_executable(PROreader PROreader.cxx ${CMAKE_CURRENT_BINARY_DIR}/PROfit_dict.cxx )
+add_executable(PROreader PROreader.cxx ${CMAKE_BINARY_DIR}/PROfit_dict.cxx )
 target_include_directories(PROreader PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
 target_compile_features(PROreader PRIVATE cxx_std_14)
-target_link_directories(PROfit_dict PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROreader PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict)
 
 
