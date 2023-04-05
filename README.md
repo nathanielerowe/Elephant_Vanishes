@@ -1,3 +1,6 @@
+![Alt text](/other/profit.png "Minimizing PROfit")
+
+
 PROfessional
 PROspect
 PROton
