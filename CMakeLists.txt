@@ -86,19 +86,24 @@ if                          (MFA_INCLUDE_DIR)
     message                 ("Weights are disabled for MFA")
 endif  ()
 
+#This works, but only runs at make not cmake ..
+#set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED true)
+#ExternalProject_Add(
+#    sbnanaobj
+#    GIT_REPOSITORY https://github.com/SBNSoftware/sbnanaobj.git 
+#    GIT_TAG v09_20_05
+#    CONFIGURE_COMMAND ""
+#    BUILD_COMMAND ""
+#    INSTALL_COMMAND ""
+#    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src
+#    INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-inc
+#    GIT_SHALLOW ON
+#)
 
-ExternalProject_Add(
-    sbnanaobj
-    GIT_REPOSITORY https://github.com/SBNSoftware/sbnanaobj.git 
-    GIT_TAG v09_20_05
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-    UPDATE_COMMAND ""
-    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src
-    INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-inc
-)
+#this is a bit mesier but works
+execute_process(COMMAND git clone -b v09_20_05 https://github.com/SBNSoftware/sbnanaobj.git ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src )
 set(SBNANAOBJ_INCLUDE_DIR "${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src/")
+
 
 
 find_package(Boost REQUIRED)
