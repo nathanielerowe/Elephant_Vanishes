@@ -71,7 +71,7 @@ int PROcess(const PROconfig &inconfig){
             int is_valid_subchannel = 0;
             for(const auto &name: inconfig.m_fullnames){
                 if(branch_variable->associated_hist==name){
-                    log<LOG_DEBUG>(L"%1% || Found a valid subchannel for this branch %2%") % __func__  % name;
+                    log<LOG_DEBUG>(L"%1% || Found a valid subchannel for this branch %2%") % __func__  % name.c_str();
                     is_valid_subchannel++;
                 }
             }
@@ -140,7 +140,7 @@ int PROcess(const PROconfig &inconfig){
     variations.insert(variations.begin(),variations_tmp.begin(),unique_iter);
 
     //Variation Weight Maps Area
-    std::vector<int> variation_modes(variations.size(),0);
+    std::vector<std::string> variation_modes(variations.size(),0);
     std::vector<std::string> s_formulas(variations.size(),"1"); 
     int n_wei = inconfig.m_mcgen_weightmaps_patterns.size();
 
@@ -154,8 +154,7 @@ int PROcess(const PROconfig &inconfig){
                 s_formulas[v] = s_formulas[v] + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
                 std::cout<<" -- weight is thus "<<s_formulas[v]<<std::endl;
                 std::cout<<" -- mode is "<<inconfig.m_mcgen_weightmaps_mode[i]<<std::endl;
-                if(inconfig.m_mcgen_weightmaps_mode[i]=="multisim") variation_modes[v] = 0;
-                if(inconfig.m_mcgen_weightmaps_mode[i]=="minmax") variation_modes[v] = 1;
+                variation_modes[v]=inconfig.m_mcgen_weightmaps_mode[i];
             }
         }
     }
@@ -235,7 +234,7 @@ int PROcess(const PROconfig &inconfig){
 
     ///Quick check on minmax
     for(int v=0; v< variations.size(); v++){
-        if(variation_modes[v]==1 && map_var_to_num_universe[variations[v]]!=2){
+        if(variation_modes[v]=="minmax" && map_var_to_num_universe[variations[v]]!=2){
             std::cerr <<"ERROR! variation "<<variations[v]<<" is tagged as minmax mode, but has "<<map_var_to_num_universe[variations[v]]<<" universes (can only be 2)."<<std::endl;
             std::cout <<"ERROR! variation "<<variations[v]<<" is tagged as minmax mode, but has "<<map_var_to_num_universe[variations[v]]<<" universes (can only be 2)."<<std::endl;
             exit(EXIT_FAILURE);
