@@ -10,9 +10,6 @@
 #include <memory>
 #include <map>
 
-// TINYXML2
-#include "tinyxml2.h"
-
 // EIGEN
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -26,7 +23,7 @@ namespace PROfit{
 
     struct SystStruct {
 
-        SystStruct(const std::string& in_systname, int in_n_univ, const std::string& in_mode, const std::string& in_formula): systname(in_systname), n_univ(in_n_univ), mode(in_mode), formula(in_formula){}
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula): systname(in_systname), n_univ(in_n_univ), mode(in_mode), formula(in_formula){}
         std::string systname;
         int n_univ;
         std::string mode;
