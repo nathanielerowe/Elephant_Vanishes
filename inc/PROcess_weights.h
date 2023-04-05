@@ -31,8 +31,8 @@ namespace PROfit{
         //map
         //hist
 
-        std::vector<std::vector<float>> GetCovVec();
-        std::vector<float> GetKnobs(int index, std::string variation);
+        std::vector<std::vector<eweight_type>> GetCovVec();
+        std::vector<eweight_type> GetKnobs(int index, std::string variation);
 
     };
 

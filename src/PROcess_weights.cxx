@@ -9,8 +9,6 @@ int PROcess(const PROconfig &inconfig){
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
 
     int universes_used = 0;
-    //Is there a Global weight to be applied to ALL weights, CV and otherwise, inside the eventweight class? 
-    std::string bnbcorrection_str = "NAN";//this has mainly beeen superseeded by XML creation
 
     std::vector<std::string> variations;
     std::vector<std::string> variations_tmp;
@@ -19,12 +17,12 @@ int PROcess(const PROconfig &inconfig){
 
     log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
 
-    std::vector<int> nentries(num_files,0);
+    std::vector<long int> nentries(num_files,0);
     std::vector<int> used_montecarlos(num_files,0);
 
     std::vector<std::unique_ptr<TFile>> files(num_files);
     std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
-    std::vector<std::map<std::string, std::vector<eweight_type> >* > f_weights(num_files,nullptr);
+    std::vector<std::vector<std::map<std::string, std::vector<eweight_type>>* >> f_weights(num_files);
 
     //inconfig.m_mcgen_additional_weight.resize(num_files,1.0); its const, not allowed
 
@@ -35,98 +33,112 @@ int PROcess(const PROconfig &inconfig){
 
         files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
         trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
-        nentries[fid]= (int)trees.at(fid)->GetEntries();
+        nentries[fid]= (long int)trees.at(fid)->GetEntries();
 
-        //Some check to see if files open right?
+	if(files[fid]->IsOpen()){
+    	    log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
+	}else{
+    	    log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % fn.c_str();
+	    exit(EXIT_FAILURE);
+	}
+    	log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
 
         //Some POT counting (FIX)
+        //Guanqun: POT counting not needed for covariance matrix generation 
         //double pot_scale = 1.0;
         //if(inconfig.m_mcgen_pot[fid]!=-1){
         //    pot_scale = FIX_plot_pot/inconfig.m_mcgen_pot[fid];
         //}
         //mcgen_scale[fid] = inconfig.m_mcgen_scale[fid]*pot_scale;
 
+    	//first, grab friend trees
         auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
         if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
 
             auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
             if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
-                std::stringstream ss;
-                throw std::runtime_error(ss.str());
+    	    	log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
+		log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
             }
 
-            for(int k=0; k < (*mcgen_file_friend_iter).second.size(); k++){
+            for(int k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
 
-                std::string treefriendname = (*mcgen_file_friend_treename_iter).second.at(k);
-                std::string treefriendfile = (*mcgen_file_friend_iter).second.at(k);
+                std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
+                std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
                 trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
             }
         }
 
-        //Important step
-        trees.at(fid)->SetBranchAddress(inconfig.m_mcgen_eventweight_branch_names[fid].c_str(), &(f_weights[fid]));
+        // grab branches 
+        int num_branch = inconfig.m_branch_variables[fid].size();
+	f_weights[fid].resize(num_branch);
+        for(int ib = 0; ib != num_branch; ++ib) {
 
-        for(const auto branch_variable : inconfig.m_branch_variables[fid]) {
+            const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
+
             //quick check that this branch associated subchannel is in the known chanels;
             int is_valid_subchannel = 0;
             for(const auto &name: inconfig.m_fullnames){
                 if(branch_variable->associated_hist==name){
                     log<LOG_DEBUG>(L"%1% || Found a valid subchannel for this branch %2%") % __func__  % name.c_str();
-                    is_valid_subchannel++;
+                    ++is_valid_subchannel;
                 }
             }
             if(is_valid_subchannel==0){
-                std::cout<<" ERROR ERROR: This branch did not match one defined in the .xml : " <<branch_variable->associated_hist<<std::endl;
-                std::cout<<" ERROR ERROR: There is probably a typo somehwhere in xml! "<<std::endl;
+    	    	log<LOG_ERROR>(L"%1% || This branch did not match one defined in the .xml : %2%") % __func__ % inconfig.m_xmlname.c_str();
+    	    	log<LOG_ERROR>(L"%1% || There is probably a typo somehwhere in xml!") % __func__;
+		log<LOG_ERROR>(L"Terminating.");
                 exit(EXIT_FAILURE);
 
             }else if(is_valid_subchannel>1){
-                std::cout<<" ERROR ERROR: This branch matched more than 1 subchannel!: " <<branch_variable->associated_hist<<std::endl;
+    	    	log<LOG_ERROR>(L"%1% || This branch matched more than 1 subchannel!: %2%") % __func__ %  branch_variable->associated_hist.c_str();
+		log<LOG_ERROR>(L"Terminating.");
                 exit(EXIT_FAILURE);
             }
 
-            branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form"+std::to_string(fid)).c_str(), branch_variable->name.c_str(), trees[fid]);
-        }
+            branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), trees[fid]);
+    	    log<LOG_INFO>(L"%1% || Setting up reco variable for this branch: %2%") % __func__ %  branch_variable->name.c_str();
 
-        if(inconfig.m_mcgen_additional_weight_bool[fid]){
-            //we have an additional weight we want to apply at run time, otherwise its just set at 1.
-            std::cout<<"Setting Additional weight of : "<< inconfig.m_mcgen_additional_weight_name[fid].c_str()<<std::endl; 
-            //FIX FIX
-            //additional_weight_formulas[fid] =  std::make_shared<TTreeFormula>(("a_w"+std::to_string(fid)).c_str(),inconfig.m_mcgen_additional_weight_name[fid].c_str(),trees[fid]);
-        }
 
-        std::cout<<"Total Entries: "<<trees.at(fid)->GetEntries()<<" good event "<<good_event<<std::endl;
+	    //grab monte carlo weight
+	    if(m_mcgen_additional_weight_bool[fid][ib]){
+                branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][id].c_str(),trees[fid]);
+    	    	log<LOG_INFO>(L"%1% || Setting up additional monte carlo weight for this branch: %2%") % __func__ %  inconfig.m_mcgen_additional_weight_name[fid][id].c_str();
+            }
+
+
+	    //grab eventweight branch
+    	    log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  inconfig.m_mcgen_eventweight_branch_names[fid][ib].c_str();
+	    trees[fid]->SetBranchAddress(inconfig.m_mcgen_eventweight_branch_names[fid][ib].c_str(), &(f_weights[fid][ib]));
+
+	    if(!f_weights[fid][ib]){
+            	log<LOG_ERROR>(L"%1% || Could not read eventweight branch for file=%2%") % __func__ % fid ;
+		log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+	    }
+        } //end of branch loop
+
+
         trees.at(fid)->GetEntry(good_event);
 
         const auto f_weight = f_weights[fid];
-        if (f_weight == nullptr) {
-            std::stringstream ss;
-            ss << "Could not read weight branch for file=" << fid << std::endl;
-            throw std::runtime_error(ss.str());
-        }
 
-        //This bit will calculate how many "universes" the file has. if ALL default is the inputted xml value
-
+	//calculate how many "universes" the file has.
+    	log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
         std::cout<<"starting"<<std::endl;
         for(const auto& it : *f_weight){
             std::cout<<"On : "<<it.first<<std::endl;
-            if(it.first == bnbcorrection_str) {
-                std::cout<<"Found a variation consistent with "<<bnbcorrection_str<<" . This will be instead applied as a general weight"<<std::endl;
-                continue;    
+    	    log<LOG_INFO>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
+
+            if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
+    	    	log<LOG_INFO>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
+                continue;
             }
 
-            if(inconfig.m_mcgen_variation_allowlist.size()> 0 ){
-                if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
-                    std::cout<<"Skipping "<<it.first<<" as its not in the AllowList!!"<<std::endl;
-                    continue;
-                }
-            }
-
-            if(inconfig.m_mcgen_variation_denylist.size()> 0 ){
-                if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
-                    std::cout<<"Skipping "<<it.first<<" as it is the DenyList!!"<<std::endl;
-                    continue;
-                }
+            if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
+    	    	log<LOG_INFO>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
+                continue;
             }
 
             std::cout << it.first << " has " << it.second.size() << " montecarlos in file " << fid << std::endl;

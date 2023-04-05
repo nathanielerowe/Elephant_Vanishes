@@ -37,6 +37,8 @@
         
 namespace PROfit{
 
+typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
+
     struct BranchVariable{
         std::string name;
         std::string type;
@@ -44,9 +46,10 @@ namespace PROfit{
         std::string associated_systematic;
         bool central_value;
 
-        std::shared_ptr<TTreeFormula> branch_formula=NULL;
-        std::shared_ptr<TTreeFormula> branch_true_value_formula=NULL;
-        std::shared_ptr<TTreeFormula> branch_true_L_formula=NULL;
+        std::shared_ptr<TTreeFormula> branch_formula=nullptr;
+        std::shared_ptr<TTreeFormula> branch_monte_carlo_weight_formula = nullptr;
+        std::shared_ptr<TTreeFormula> branch_true_value_formula=nullptr;
+        std::shared_ptr<TTreeFormula> branch_true_L_formula=nullptr;
 
         bool oscillate;
         std::string true_param_name;
@@ -73,6 +76,13 @@ namespace PROfit{
         void SetOscillate(bool inbool){ oscillate = inbool; return;}
         bool GetOscillate(){ return oscillate;}
 
+        double GetMonteCarloWeight(){
+            if(branch_monte_carlo_weight_formula){ 
+                branch_monte_carlo_weight_formula->GetNdata();
+                return (double)branch_monte_carlo_weight_formula->EvalInstance();
+            }
+	    return 1.0;
+	}
     };
 
 
@@ -234,10 +244,10 @@ namespace PROfit{
             std::vector<std::vector<std::string>> m_mcgen_additional_weight_name;
             std::vector<std::vector<bool>> m_mcgen_additional_weight_bool;
             std::vector<std::vector<std::shared_ptr<BranchVariable>>> m_branch_variables;
+            std::vector<std::vector<std::string>> m_mcgen_eventweight_branch_names;
 
 
             //specific bits for covariancegeneration
-            std::vector<std::string> m_mcgen_eventweight_branch_names;
             std::vector<std::string> m_mcgen_weightmaps_formulas;
             std::vector<std::string> m_mcgen_weightmaps_uses;
             std::vector<std::string> m_mcgen_weightmaps_patterns;

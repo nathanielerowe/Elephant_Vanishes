@@ -13,6 +13,7 @@ PROconfig::PROconfig(const std::string &xml):
     m_num_bins_mode_block_collapsed(0),
     m_num_bins_total_collapsed(0),
     m_plot_pot(1.0),
+    m_num_mcgen_files(0),
     m_write_out_variation(false), 
     m_form_covariance(true)
 {
@@ -394,6 +395,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             std::vector<bool> TEMP_additional_weight_bool;
             std::vector<std::string> TEMP_additional_weight_name;
+	    std::vector<std::string> TEMP_eventweight_branch_names;
             std::vector<std::shared_ptr<BranchVariable>> TEMP_branch_variables;
             while(pBranch){
 
@@ -407,10 +409,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 if(bwname== NULL){
                     log<LOG_WARNING>(L"%1% || WARNING: No eventweight branch name passed, defaulting to 'weights' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
-                    m_mcgen_eventweight_branch_names.push_back("weights");
+                    TEMP_eventweight_branch_names.push_back("weights");
                 }else{
                     log<LOG_DEBUG>(L"%1% || Setting eventweight branch name %2%") %__func__ % bnam;
-                    m_mcgen_eventweight_branch_names.push_back(std::string(bwname));
+                    TEMP_eventweight_branch_names.push_back(std::string(bwname));
                 }
 
                 if(bnam == NULL){
@@ -507,6 +509,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             m_mcgen_additional_weight_name.push_back(TEMP_additional_weight_name);
             m_mcgen_additional_weight_bool.push_back(TEMP_additional_weight_bool);
             m_branch_variables.push_back(TEMP_branch_variables);
+            m_mcgen_eventweight_branch_names.push_back(TEMP_eventweight_branch_names);
             //next file
             pMC=pMC->NextSiblingElement("MCFile");
         }
@@ -845,6 +848,7 @@ void PROconfig::remove_unused_files(){
     std::vector<std::vector<std::string>> temp_additional_weight_name;
     std::vector<std::vector<bool>> temp_additional_weight_bool;
     std::vector<std::vector<std::shared_ptr<BranchVariable>>> temp_branch_variables;
+    std::vector<std::vector<std::string>> temp_eventweight_branch_names;
 
 
     //update file info
@@ -857,6 +861,7 @@ void PROconfig::remove_unused_files(){
             std::vector<std::string> this_file_additional_weight_name;
             std::vector<bool> this_file_additional_weight_bool;
             std::vector<std::shared_ptr<BranchVariable>> this_file_branch_variables;
+	    std::vector<std::string> this_file_eventweight_branch_names;
             for(int j = 0; j != m_branch_variables[i].size(); ++j){
 
                 if(set_all_names.find(m_branch_variables[i][j]->associated_hist) == set_all_names.end()){
@@ -868,6 +873,7 @@ void PROconfig::remove_unused_files(){
                     this_file_additional_weight_name.push_back(m_mcgen_additional_weight_name[i][j]);
                     this_file_additional_weight_bool.push_back(m_mcgen_additional_weight_bool[i][j]);
                     this_file_branch_variables.push_back(m_branch_variables[i][j]);
+		    this_file_eventweight_branch_names.push_back(m_mcgen_eventweight_branch_names[i][j]);
                 }
             }
 
@@ -884,6 +890,7 @@ void PROconfig::remove_unused_files(){
                 temp_additional_weight_name.push_back(this_file_additional_weight_name);
                 temp_additional_weight_bool.push_back(this_file_additional_weight_bool);
                 temp_branch_variables.push_back(this_file_branch_variables);
+		temp_eventweight_branch_names.push_back(this_file_eventweight_branch_names);
             }
         }
 
@@ -898,6 +905,7 @@ void PROconfig::remove_unused_files(){
         m_mcgen_additional_weight_name = temp_additional_weight_name;
         m_mcgen_additional_weight_bool = temp_additional_weight_bool;
         m_branch_variables = temp_branch_variables;
+	m_mcgen_eventweight_branch_names = temp_eventweight_branch_names;
     }
 
     m_num_mcgen_files = m_mcgen_file_name.size();
