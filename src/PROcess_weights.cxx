@@ -35,12 +35,18 @@ int PROcess_CAFana(const PROconfig &inconfig){
 
     int good_event = 0;
 
+    std::vector<SystStruct> syst_vector;
     for(int fid=0; fid < num_files; ++fid) {
         const auto& fn = inconfig.m_mcgen_file_name.at(fid);
 
+        caf::SRGlobal* global = NULL;
         files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
         trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
+        TTree * globalTree = (TTree*)(files[fid]->Get("globalTree"));
         nentries[fid]= (int)trees.at(fid)->GetEntries();
+
+        globalTree->SetBranchAddress("global", &global);
+        globalTree->GetEntry(0);
 
         for(unsigned int i = 0; i < global->wgts.size(); ++i) {
             const caf::SRWeightPSet& pset = global->wgts[i];
@@ -79,7 +85,6 @@ int PROcess_CAFana(const PROconfig &inconfig){
 
         //This bit will calculate how many "universes" the file has. if ALL default is the inputted xml value
 
-        std::vector<SystStruct> syst_vector;
 
 
         for(int v =0; v< cafana_pset_names.size(); v++){
@@ -110,10 +115,10 @@ int PROcess_CAFana(const PROconfig &inconfig){
                 // Check to see if pattern is in this variation
                 if (varname.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
                     std::cout << "Variation "<<varname<<" is a match for pattern "<<inconfig.m_mcgen_weightmaps_patterns[i]<<std::endl;
-                    s_formulas = s_formulas + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
-                    std::cout<<" -- weight is thus "<<s_formulas<<std::endl;
+                    s_formula = s_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
+                    std::cout<<" -- weight is thus "<<s_formula<<std::endl;
                     std::cout<<" -- mode is "<<inconfig.m_mcgen_weightmaps_mode[i]<<std::endl;
-                    variation_modes=inconfig.m_mcgen_weightmaps_mode[i];
+                    variation_mode=inconfig.m_mcgen_weightmaps_mode[i];
                 }
             }
 
@@ -131,7 +136,7 @@ int PROcess_CAFana(const PROconfig &inconfig){
     for(int fid=0; fid < num_files; ++fid) {
         files[fid]->cd();
         for(int vid = 0; vid < syst_vector.size(); vid++){ 
-            additional_weight_formulas[fid][vid] =  std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+std::to_string(vid)).c_str(), syst_vector[vid].formulas.c_str(),trees[fid]);
+            additional_weight_formulas[fid][vid] =  std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+std::to_string(vid)).c_str(), syst_vector[vid].formula.c_str(),trees[fid]);
         }
     }
 
@@ -149,7 +154,8 @@ int PROcess_CAFana(const PROconfig &inconfig){
         }
     }
     //But in reality we want the max universes to be the sum of all max variaitons across all files, NOT the sum over all files max variations.
-    universes_used = num_universes_per_variation.size();
+    //WHAT
+    //universes_used = num_universes_per_variation.size();
 
     std::cout << " -------------------------------------------------------------" << std::endl;
     std::cout << " Initilizing " << universes_used << " universes." << std::endl;
@@ -167,7 +173,7 @@ int PROcess_CAFana(const PROconfig &inconfig){
     std::cout << " Reading the data files" << std::endl;
 
     for(int j=0; j < num_files; j++){
-        int nevents = std::min(inconfig.m_mcgen_maxevents[j], nentries[j]);
+        int nevents = nentries[j];//std::min(inconfig.m_mcgen_maxevents[j], nentries[j]);
         std::cout << " Starting @ data file=" << files[j]->GetName() <<" which has "<<nevents<<" Events. "<<std::endl;
         for(int i=0; i < nevents; i++) {
             if(i%100==0)std::cout<<" -- uni :"<<i<<" / "<<nevents<<std::endl;
