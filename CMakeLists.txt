@@ -10,6 +10,10 @@ project (
 include(FetchContent)
 include(ExternalProject)
 
+option(MPI_ENABLE "MPI_ENABLE" OFF)
+message("MPI_ENABLE IS SET TO ${MPI_ENABLE}")
+
+
 
 #Allow for nice support folders in IDEs like VScode
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -21,6 +25,7 @@ if(Doxygen_FOUND)
 else()
     message(STATUS "Doxygen not found, not building docs")
 endif()
+
 
 
 ##### Some Dependancies ######
@@ -56,35 +61,39 @@ FetchContent_MakeAvailable(tinyxml2)
 #    INSTALL_COMMAND ""
 #    )
 
-ExternalProject_Add(mfa
-    GIT_REPOSITORY https://markrosslonergan@github.com/markrosslonergan/mfa4profit.git
-    GIT_TAG 0e0cc41e027603668a9ca67b9a9195b3d6be50a3
-    USES_TERMINAL_DOWNLOAD ON 
-    UPDATE_COMMAND ""
-    BUILD_IN_SOURCE 1
-    CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/mfa_build/
-    SBNANAOBJ_INCLUDE_DIR
-    INSTALL_COMMAND ""
-    )
-ExternalProject_Get_Property(mfa install_dir)
+if(MPI_ENABLE)
+    ExternalProject_Add(mfa
+        GIT_REPOSITORY https://markrosslonergan@github.com/markrosslonergan/mfa4profit.git
+        GIT_TAG 0e0cc41e027603668a9ca67b9a9195b3d6be50a3
+        USES_TERMINAL_DOWNLOAD ON 
+        UPDATE_COMMAND ""
+        BUILD_IN_SOURCE 1
+        CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/mfa_build/
+        SBNANAOBJ_INCLUDE_DIR
+        INSTALL_COMMAND ""
+        )
+    ExternalProject_Get_Property(mfa install_dir)
 
-message("MFA installed to: ${install_dir}")
+    message("MFA installed to: ${install_dir}")
 
-set(MFA_INCLUDE_DIR ${install_dir}/src/mfa/include)
-set(DIY_INCLUDE_DIR ${MFA_INCLUDE_DIR}/diy/include)
-set(FMT_LIBRARY_PATH ${MFA_INCLUDE_DIR}/fmt)
-set(FMT_INCLUDE_DIR ${FMT_LIBRARY_PATH}/include)
+    set(MFA_INCLUDE_DIR ${install_dir}/src/mfa/include)
+    set(DIY_INCLUDE_DIR ${MFA_INCLUDE_DIR}/diy/include)
+    set(FMT_LIBRARY_PATH ${MFA_INCLUDE_DIR}/fmt)
+    set(FMT_INCLUDE_DIR ${FMT_LIBRARY_PATH}/include)
 
-message("MFA include dir: ${MFA_INCLUDE_DIR}")
-message("DIY include dir: ${DIY_INCLUDE_DIR}")
+    message("MFA include dir: ${MFA_INCLUDE_DIR}")
+    message("DIY include dir: ${DIY_INCLUDE_DIR}")
+    
+    if                          (MFA_INCLUDE_DIR)
+        include_directories     (SYSTEM ${MFA_INCLUDE_DIR} ${DIY_INCLUDE_DIR} ${FMT_INCLUDE_DIR})
+        message                 ("MFA_INCLUDE_DIR = " ${MFA_INCLUDE_DIR})
+        add_definitions         (-DMFA_NO_WEIGHTS)
+        add_definitions         (-DMFA_SERIAL)
+        message                 ("Weights are disabled for MFA")
+    endif  ()
 
-if                          (MFA_INCLUDE_DIR)
-    include_directories     (SYSTEM ${MFA_INCLUDE_DIR} ${DIY_INCLUDE_DIR} ${FMT_INCLUDE_DIR})
-    message                 ("MFA_INCLUDE_DIR = " ${MFA_INCLUDE_DIR})
-    add_definitions         (-DMFA_NO_WEIGHTS)
-    add_definitions         (-DMFA_SERIAL)
-    message                 ("Weights are disabled for MFA")
-endif  ()
+endif(MPI_ENABLE)
+
 
 #This works, but only runs at make not cmake ..
 #set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED true)
@@ -125,11 +134,13 @@ ELSE()
     message("ROOT cxx flags set to: ${ROOT_CXX_FLAGS}")
 ENDIF()
 
-find_package(MPI REQUIRED)
-set(libraries ${libraries} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
-message("MPI libraries: ${libraries}")
-message("MPI include path: ${MPI_INCLUDE_PATH}")
 
+if(MPI_ENABLE)
+    find_package(MPI REQUIRED)
+    set(libraries ${libraries} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+    message("MPI libraries: ${libraries}")
+    message("MPI include path: ${MPI_INCLUDE_PATH}")
+endif(MPI_ENABLE)
 
 
 file(GLOB SRHeaders ${SBNANAOBJ_INCLUDE_DIR}/sbnanaobj/StandardRecord/*.h)
