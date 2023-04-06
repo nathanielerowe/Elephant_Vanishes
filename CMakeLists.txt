@@ -14,6 +14,9 @@ option(MPI_ENABLE "MPI_ENABLE" OFF)
 message("MPI_ENABLE IS SET TO ${MPI_ENABLE}")
 
 
+set(CMAKE_CXX_FLAGS "-g -O3 -Wall -Wextra")
+
+
 
 #Allow for nice support folders in IDEs like VScode
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
