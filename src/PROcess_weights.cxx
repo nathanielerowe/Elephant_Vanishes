@@ -31,7 +31,6 @@ void SystStruct::SanityCheck() const{
 }
 
 
-
 int PROcess_SBNfit(const PROconfig &inconfig){
  
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
@@ -243,7 +242,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             if(i%100==0)
 		log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
             
-            ProcessEvent(inconfig, fid, f_event_weights[fid], syst_vector);
+            //ProcessEvent(inconfig, fid, f_event_weights[fid], syst_vector);
             //INPUT PROCESS FIX
 
         } //end of entry loop
@@ -404,7 +403,7 @@ int PROcess_CAFana(const PROconfig &inconfig){
     for(int fid=0; fid < num_files; ++fid) {
         files[fid]->cd();
         for(int vid = 0; vid < syst_vector.size(); vid++){ 
-            additional_weight_formulas[fid][vid] =  std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+std::to_string(vid)).c_str(), syst_vector[vid].formula.c_str(),trees[fid]);
+            additional_weight_formulas[fid][vid] =  std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+std::to_string(vid)).c_str(), syst_vector[vid].weight_formula.c_str(),trees[fid]);
         }
     }
 
@@ -431,4 +430,4 @@ int PROcess_CAFana(const PROconfig &inconfig){
 
 
 
-}
+};

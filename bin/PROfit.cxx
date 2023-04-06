@@ -15,6 +15,7 @@
 #include <unsupported/Eigen/NumericalDiff>
 
 using namespace PROfit;
+
 log_level_t GLOBAL_LEVEL = LOG_DEBUG;
 
 class ChiTest
