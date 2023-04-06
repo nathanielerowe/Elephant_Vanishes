@@ -9,6 +9,7 @@
 #include <fstream>
 #include <memory>
 #include <map>
+#include <ctime>
 
 // EIGEN
 #include <Eigen/Core>
@@ -21,17 +22,22 @@
 
 namespace PROfit{
 
+    typedef Eigen::Matrix<eweight_type, Eigen::Dynamic, Eigen::Dynamic> multi_spec;
+
     struct SystStruct {
 
-        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1"){}
-        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_weight_formula): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_weight_formula){}
+        //members 
         std::string systname;
         int n_univ;
         std::string mode;
         std::string weight_formula;
-        //map
-        //hist
-	std::vector<std::vector<eweight_type>> multi_vecspec;
+
+        std::unique_ptr<multi_spec> p_multi_spec;
+	//std::vector<std::vector<eweight_type>> multi_vecspec;
+
+        //functions
+        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1"){}
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_weight_formula): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_weight_formula){}
 
 	inline
 	void SetMode(const std::string& in_mode){mode = in_mode; return;}
@@ -39,20 +45,34 @@ namespace PROfit{
 	inline
 	void SetWeightFormula(const std::string& in_formula){weight_formula = in_formula; return;}
 
+	inline
+        int GetNUniverse() const {return n_univ;}
+
+	inline 
+	const std::string& GetSysName() const {return systname;}
+
+	inline 
+	const std::string& GetWeightFormula() const {return weight_formula;}
+
         std::vector<std::vector<eweight_type>> GetCovVec();
         std::vector<eweight_type> GetKnobs(int index, std::string variation);
 
+        //function might not needed
 	void SanityCheck() const;
 	void CleanSpecs();
-	void SetSpecDimension(int row, int col);
+	void CreateSpecs(int row, int col);
     };
 
 
-    int PROcess(const PROconfig &inconfig);
+    int PROcess_SBNfit(const PROconfig &inconfig);
     void ProcessEvent(const PROconfig &inconfig,
         const std::map<std::string, 
         std::vector<eweight_type> >& thisfWeight,
         size_t fileid,
         int entryid);
-    };
+    void ProcessEvent(const PROconfig &inconfig, size_t fid, const std::vector<std::map<std::string, std::vector<eweight_type>>* >& thisfWeight,
+        std::vector<SystStruct>& syst_vector);
+    
+
+};
 #endif

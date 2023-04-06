@@ -5,12 +5,19 @@
 using namespace PROfit;
 
 void SystStruct::CleanSpecs(){
-    multi_vecspec.clear();
+    if(p_multi_spec)
+        p_multi_spec.reset(nullptr);
     return;
 }
 
-void void SetSpecDimension(int row, int col){
+void SystStruct::CreateSpecs(int row, int col){
+    this->CleanSpecs();
+    log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % row % col;
+    p_multi_spec = std::make_unique<multi_spec>(row, col);
+    p_multi_spec->setZero(row, col);
+    return;
 }
+
 void SystStruct::SanityCheck() const{
     if(mode == "minmax" && n_univ != 2){
         log<LOG_ERROR>(L"%1% || Systematic variation %2% is tagged as minmax mode, but has %3% universes (can only be 2)") % __func__ % systname.c_str() % n_univ;
@@ -25,7 +32,7 @@ void SystStruct::SanityCheck() const{
 
 
 
-int PROcess(const PROconfig &inconfig){
+int PROcess_SBNfit(const PROconfig &inconfig){
  
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
 
@@ -39,11 +46,9 @@ int PROcess(const PROconfig &inconfig){
     log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
 
     std::vector<long int> nentries(num_files,0);
-    std::vector<int> used_montecarlos(num_files,0);
-
     std::vector<std::unique_ptr<TFile>> files(num_files);
     std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
-    std::vector<std::vector<std::map<std::string, std::vector<eweight_type>>* >> f_weights(num_files);
+    std::vector<std::vector<std::map<std::string, std::vector<eweight_type>>* >> f_event_weights(num_files);
     std::map<std::string, int> map_systematic_num_universe;
 
     //inconfig.m_mcgen_additional_weight.resize(num_files,1.0); its const, not allowed
@@ -94,10 +99,10 @@ int PROcess(const PROconfig &inconfig){
 
         // grab branches 
         int num_branch = inconfig.m_branch_variables[fid].size();
-	f_weights[fid].resize(num_branch);
+	f_event_weights[fid].resize(num_branch);
         for(int ib = 0; ib != num_branch; ++ib) {
 
-            const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
+            std::shared_ptr<BranchVariable> branch_variable = inconfig.m_branch_variables[fid][ib];
 
             //quick check that this branch associated subchannel is in the known chanels;
             int is_valid_subchannel = 0;
@@ -124,17 +129,17 @@ int PROcess(const PROconfig &inconfig){
 
 
 	    //grab monte carlo weight
-	    if(m_mcgen_additional_weight_bool[fid][ib]){
-                branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][id].c_str(),trees[fid]);
-    	    	log<LOG_INFO>(L"%1% || Setting up additional monte carlo weight for this branch: %2%") % __func__ %  inconfig.m_mcgen_additional_weight_name[fid][id].c_str();
+	    if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
+                branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][ib].c_str(),trees[fid]);
+    	    	log<LOG_INFO>(L"%1% || Setting up additional monte carlo weight for this branch: %2%") % __func__ %  inconfig.m_mcgen_additional_weight_name[fid][ib].c_str();
             }
 
 
 	    //grab eventweight branch
     	    log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  inconfig.m_mcgen_eventweight_branch_names[fid][ib].c_str();
-	    trees[fid]->SetBranchAddress(inconfig.m_mcgen_eventweight_branch_names[fid][ib].c_str(), &(f_weights[fid][ib]));
+	    trees[fid]->SetBranchAddress(inconfig.m_mcgen_eventweight_branch_names[fid][ib].c_str(), &(f_event_weights[fid][ib]));
 
-	    if(!f_weights[fid][ib]){
+	    if(!f_event_weights[fid][ib]){
             	log<LOG_ERROR>(L"%1% || Could not read eventweight branch for file=%2%") % __func__ % fid ;
 		log<LOG_ERROR>(L"Terminating.");
                 exit(EXIT_FAILURE);
@@ -147,7 +152,7 @@ int PROcess(const PROconfig &inconfig){
         trees.at(fid)->GetEntry(good_event);
 	for(int ib = 0; ib != num_branch; ++ib) {
             const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
-	    auto& f_weight = f_weights[fid][ib];
+	    auto& f_weight = f_event_weights[fid][ib];
 
             for(const auto& it : *f_weight){
     	    	log<LOG_INFO>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
@@ -164,14 +169,18 @@ int PROcess(const PROconfig &inconfig){
 
             	log<LOG_INFO>(L"%1% || %2% has %3% montecarlo variations in branch %4%") % __func__ % it.first.c_str() % it.second.size() % branch_variable->associated_hist.c_str();
 
-		map_systematic_num_universe[it.first] = std::max(map_systematic_num_universe[it.first], it.second.size());
+		map_systematic_num_universe[it.first] = std::max((int)map_systematic_num_universe[it.first], (int)it.second.size());
 	    }
         }
     } // end fid
 
     log<LOG_INFO>(L"%1% || Found %2% unique variations") % __func__ % map_systematic_num_universe.size();
-    log<LOG_INFO>(L"%1% || Now start to grab related weightmaps") % __func__;
+    for(auto& sys_pair : map_systematic_num_universe){
+    	log<LOG_DEBUG>(L"%1% || Variation: %2% --> %3% universes") % __func__ % sys_pair.first.c_str() % sys_pair.second;
+    }
 
+    //constuct object for each systematic variation, and grab weight maps
+    log<LOG_INFO>(L"%1% || Now start to grab related weightmaps") % __func__;
     int total_num_systematics = map_systematic_num_universe.size();
     std::vector<SystStruct> syst_vector;
     for(auto& sys_pair : map_systematic_num_universe){
@@ -205,108 +214,74 @@ int PROcess(const PROconfig &inconfig){
     for(const auto& s : syst_vector)
 	s.SanityCheck();
 
-    std::vector<std::vector<std::unique_ptr<TTreeFormula>>> additional_weight_formulas(num_files);//(num_files, std::vector<std::unique_ptr<TTreeFormula>>(variations.size()));FIX why does this fail?
-    for (auto& innerVector : additional_weight_formulas) {
-        innerVector.resize(variations.size());
+
+    //create 2D multi-universe spec.
+    for(auto& s : syst_vector){
+	int nrow = s.GetNUniverse(), ncol = inconfig.m_num_bins_total;
+ 	s.CreateSpecs(nrow, ncol);	
     }
 
+
+    time_t start_time = time(nullptr);
+    log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
     for(int fid=0; fid < num_files; ++fid) {
-        files[fid]->cd();
-        for(int vid = 0; vid < variations.size(); vid++){ 
-            additional_weight_formulas[fid][vid] =  std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+std::to_string(vid)).c_str(), s_formulas[vid].c_str(),trees[fid]);
-        }
-    }
+        const auto& fn = inconfig.m_mcgen_file_name.at(fid);
+        long int nevents = std::min(inconfig.m_mcgen_maxevents[fid], nentries[fid]);
+	log<LOG_DEBUG>(L"%1% || Start @files: %2% which has %3% events") % __func__ % fn.c_str() % nevents;
 
 
-    //CHeck This FIX
-    std::vector<int> num_universes_per_variation;
-    std::map<int, std::string> map_universe_to_var;
-    std::vector<int> vec_universe_to_var;
-    std::map<std::string, int> map_var_to_num_universe;
-
-    map_universe_to_var.clear();
-    vec_universe_to_var.clear();
-    num_universes_per_variation.clear();
+    	std::vector<std::unique_ptr<TTreeFormula>> sys_weight_formula;
+	for(const auto& s : syst_vector){
+	    sys_weight_formula.push_back(std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+ s.GetSysName()).c_str(), s.GetWeightFormula().c_str(),trees[fid]));
+  	}
+	log<LOG_DEBUG>(L"%1% || Finished setting up systematic weight formula") % __func__;
 
 
-    //But in reality we want the max universes to be the sum of all max variaitons across all files, NOT the sum over all files max variations.
-    universes_used = num_universes_per_variation.size();
+        for(long int i=0; i < nevents; ++i) {
 
-
-    std::cout << " -------------------------------------------------------------" << std::endl;
-    std::cout << " Initilizing " << universes_used << " universes." << std::endl;
-    std::cout << " -------------------------------------------------------------" << std::endl;
-
-    std::vector<double> base_vec (inconfig.m_num_bins_total,0.0);
-
-    std::cout << " Full concatanated vector has : " << inconfig.m_num_bins_total << std::endl;
-
-    std::vector<std::vector<double>> multi_vecspec; ///FIX REplace with Eigen
-    multi_vecspec.clear();
-    multi_vecspec.resize(universes_used,base_vec);
-
-    std::cout << " multi_vecspec now initilized of size :" << multi_vecspec.size() << std::endl;
-    std::cout << " Reading the data files" << std::endl;
-    //watch.Reset();
-    //watch.Start();
-
-    for(int j=0; j < num_files; j++){
-        int nevents = std::min(inconfig.m_mcgen_maxevents[j], nentries[j]);
-        std::cout << " Starting @ data file=" << files[j]->GetName() <<" which has "<<nevents<<" Events. "<<std::endl;
-        size_t nbytes = 0;
-        for(int i=0; i < nevents; i++) {
-            if(i%100==0)std::cout<<" -- uni :"<<i<<" / "<<nevents<<std::endl;
-            nbytes+= trees[j]->GetEntry(i);
-            ProcessEvent(inconfig, *(f_weights[j]),j,i);
+	    trees[fid]->GetEntry(i);
+            if(i%100==0)
+		log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
+            
+            ProcessEvent(inconfig, fid, f_event_weights[fid], syst_vector);
             //INPUT PROCESS FIX
 
         } //end of entry loop
-        std::cout << " nbytes read=" << nbytes << std::endl;
 
     } //end of file loop
 
+    time_t time_took = time(nullptr) - start_time;
+    log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
 
-
-    //watch.Stop();
-    //std::cout << " done CpuTime=" << watch.CpuTime() << " RealTime=" << watch.RealTime() << std::endl;
-
-    /***************************************************************
-     *		Now some clean-up and Writing
-     * ************************************************************/
 
     //FIX check?
     //NOPE In fact, calling Close() on a TFile object managed by a std::unique_ptr can lead to undefined behavior because the std::unique_ptr may delete the object before the Close() method finishes executing. So, it is best to rely on the std::unique_ptr to manage the lifetime of the TFile object and not call Close() explicitly.
     //for(auto f: files){
-    //    std::cout << " TFile::Close() file=" << f->GetName() <<  std::endl;
+    //  log<LOG_DEBUG>(L"%1% || Closing file: %2%") %__func__ % f->GetName();
     //    f->Close();
     //}
-    std::cout << " End" << std::endl;
-
+    log<LOG_INFO>(L"%1% || DONE") %__func__ ;
 
     return 0;
 }
 
+void ProcessEvent(const PROconfig &inconfig, size_t fid,
+        const std::vector<std::map<std::string, std::vector<eweight_type>>* >& thisfWeight,
+        std::vector<SystStruct>& syst_vector){
 
-/*
-void ProcessEvent(const PROconfig &inconfig,
-        const std::map<std::string, 
-        std::vector<eweight_type> >& thisfWeight,
-        size_t fileid,
-        int entryid) {
-
-    double abnormally_large_weight = 1e3;//1e20;//20.0;
+    double abnormally_large_weight = 1e3;
     double global_weight = 1.0;
 
+    std::vector<std::shared_ptr<BranchVariable>> pbranches = inconfig.m_branch_variables[fid];
+    int num_branch = pbranches.size();
+
+  /*
     if( montecarlo_additional_weight_bool[fileid]){
         montecarlo_additional_weight_formulas[fileid]->GetNdata();
         global_weight = montecarlo_additional_weight_formulas[fileid]->EvalInstance();
     };//this will be 1.0 unless specifi
     global_weight *= montecarlo_scale[fileid];
 
-    double additional_CV_weight = 1.0;
-
-    const auto bnbcorr_iter = thisfWeight.find(bnbcorrection_str);
-    if (bnbcorr_iter != thisfWeight.end())    additional_CV_weight *= (*bnbcorr_iter).second.front();
 
     if(std::isinf(global_weight) or (global_weight != global_weight)){
         std::stringstream ss;
@@ -445,7 +420,7 @@ void ProcessEvent(const PROconfig &inconfig,
             multi_vecspec[m][reco_bin] += weights[m];
         }
     }
-
-    return;*/
-//}
+*/
+    return;
+}
 

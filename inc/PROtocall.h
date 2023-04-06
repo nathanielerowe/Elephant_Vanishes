@@ -27,7 +27,6 @@ namespace PROfit{
     long int FindGlobalBin(const PROconfig &inconfig, double reco_value, const std::string& subchannel_fullname);
 
 
-    };
 
 };
 

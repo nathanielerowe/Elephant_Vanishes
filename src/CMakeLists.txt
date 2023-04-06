@@ -1,6 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/inc/*.h")
 
-    add_library(PROfitLib PROconfig.cxx PROspec.cxx ${HEADER_LIST})
+    add_library(PROfitLib PROconfig.cxx PROspec.cxx PROcess_weights.cxx PROtocall.cxx ${HEADER_LIST})
     #add_library(PROfitLib PROconfig.cxx PROspec.cxx  PROcess_weights.cxx ${HEADER_LIST})
 if(MPI_ENABLE)
     target_include_directories(PROfitLib PUBLIC ${PROJECT_SOURCE_DIR}/inc ${install_dir}/src/mfa/include/ ${MPI_INCLUDE_PATH} ${DIY_INCLUDE_DIR} ${FMT_INCLUDE_DIR} )

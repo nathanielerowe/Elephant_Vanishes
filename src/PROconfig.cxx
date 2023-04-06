@@ -293,6 +293,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 log<LOG_DEBUG>(L"%1% || Subchannel %2% with and osc pattern %3% and isdata %4%") % __func__ % m_subchannel_names.at(nchan).back().c_str() % m_subchannel_osc_patterns.at(nchan).back() % m_subchannel_datas.at(nchan).back();
 
+
                 pSubChan = pSubChan->NextSiblingElement("subchannel");
             }
 
@@ -831,9 +832,10 @@ void PROconfig::remove_unused_channel(){
         m_channel_names = temp_channel_names;
         m_channel_plotnames = temp_channel_plotnames;
         m_channel_units = temp_channel_units;
-
-
-        //update subchannel-related info
+    }
+        
+    //update subchannel-related info
+    {
         m_num_subchannels.resize(m_num_channels);
         std::vector<std::vector<std::string >> temp_subchannel_names(m_num_channels), temp_subchannel_plotnames(m_num_channels);
         std::vector<std::vector<int >> temp_subchannel_datas(m_num_channels), temp_subchannel_osc_patterns(m_num_channels);
@@ -869,9 +871,9 @@ void PROconfig::remove_unused_channel(){
     for(int im = 0; im < m_num_modes; im++){
         for(int id =0; id < m_num_detectors; id++){
             for(int ic = 0; ic < m_num_channels; ic++){
-                for(int sc = 0; sc < m_num_subchannels[ic]; sc++){
+                for(int sc = 0; sc < m_num_subchannels.at(ic); sc++){
 
-                    std::string temp_name  = m_mode_names[im] +"_" +m_detector_names[id]+"_"+m_channel_names[ic]+"_"+m_subchannel_names[ic][sc];
+                    std::string temp_name  = m_mode_names.at(im) +"_" +m_detector_names.at(id)+"_"+m_channel_names.at(ic)+"_"+m_subchannel_names.at(ic).at(sc);
                     log<LOG_INFO>(L"%1% || fullname of subchannel: %2% ") % __func__ % temp_name.c_str();
                     m_fullnames.push_back(temp_name);
                 }
