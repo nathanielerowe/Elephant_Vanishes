@@ -2,7 +2,7 @@
 #include "TTree.h"
 #include "TFile.h"
 
-using namespace PROfit;
+namespace PROfit {
 
 int PROcess_CAFana(const PROconfig &inconfig){
 
@@ -345,4 +345,6 @@ for(int t=0; t < branch_variables[fileid].size(); t++) {
 
 return;*/
 //}
+
+};
 
