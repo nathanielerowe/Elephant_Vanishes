@@ -9,14 +9,9 @@ int PROcess_CAFana(const PROconfig &inconfig){
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
 
     int universes_used = 0;
-    //Is there a Global weight to be applied to ALL weights, CV and otherwise, inside the eventweight class? 
-    std::string bnbcorrection_str = "NAN";//this has mainly beeen superseeded by XML creation
-
-    std::vector<std::string> variations;
-    std::vector<std::string> variations_tmp;
-
     int num_files = inconfig.m_num_mcgen_files;
-
+    std::vector<SystStruct> syst_vector;
+    
     log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
 
     std::vector<int> nentries(num_files,0);
@@ -35,7 +30,7 @@ int PROcess_CAFana(const PROconfig &inconfig){
 
     int good_event = 0;
 
-    std::vector<SystStruct> syst_vector;
+
     for(int fid=0; fid < num_files; ++fid) {
         const auto& fn = inconfig.m_mcgen_file_name.at(fid);
 
@@ -124,13 +119,15 @@ int PROcess_CAFana(const PROconfig &inconfig){
 
             std::cout << varname << " has " << map_systematic_num_universe[varname] << " montecarlos in file " << fid << std::endl;
             used_montecarlos[fid] += map_systematic_num_universe[varname];
+
+            //Some code to check if this varname is already in the syst_vector. If it is, check if things are the same, otherwise PANIC!
             syst_vector.emplace_back(varname, map_systematic_num_universe[varname], variation_mode, s_formula, knobvals[v], pset_indices[v]);
         }
     } // end fid
     
     std::vector<std::vector<std::unique_ptr<TTreeFormula>>> additional_weight_formulas(num_files);
     for (auto& innerVector : additional_weight_formulas) {
-        innerVector.resize(variations.size());
+        innerVector.resize(syst_vector.size());
     }
 
     for(int fid=0; fid < num_files; ++fid) {
