@@ -48,7 +48,7 @@ int PROcess_CAFana(const PROconfig &inconfig){
             pset_indices.push_back(i);
             cafana_pset_names.push_back(pset.name);
             map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
-            knobvals_tmp[i] = pset.map.at(0).vals;
+            knobvals_tmp.push_back(pset.map.at(0).vals);
         }
 
         auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);

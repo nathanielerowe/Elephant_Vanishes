@@ -773,7 +773,8 @@ void PROconfig::remove_unused_channel(){
         m_channel_names = temp_channel_names;
         m_channel_plotnames = temp_channel_plotnames;
         m_channel_units = temp_channel_units;
-
+    }
+    {
 
         //update subchannel-related info
         m_num_subchannels.resize(m_num_channels);
