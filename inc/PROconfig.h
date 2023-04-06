@@ -149,13 +149,19 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
 
 
     class PROconfig {
-        protected:
+        private:
 
             //indicator of whether each channel/detector/subchannel is used
             std::vector<bool> m_mode_bool;
             std::vector<bool> m_detector_bool;
             std::vector<bool> m_channel_bool;
             std::vector<std::vector<bool>>  m_subchannel_bool;
+
+
+	    //map from subchannel name/index to global index and channel index
+	    std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
+            std::unordered_map<int, long int> m_map_subchannel_index_to_global_index_start;
+            std::unordered_map<int, int> m_map_subchannel_index_to_channel_index;
 
 
             //---- PRIVATE FUNCTION ------
@@ -171,9 +177,10 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             void remove_unused_files();
 
 
-	    /* Function: set up one-to-one mapping between mode_detector_channel_subchannel name and corresponding global bin start, and corresponding channel index 
- 	     */ 
-	    void setup_name_bin_mapping();
+	    /* Function: fill in mapping between subchannel name/index to global indices */
+            void generate_index_map();
+
+
         public:
 
 
@@ -183,8 +190,6 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             int LoadFromXML(const std::string & filename);
 
             std::vector<std::string> m_fullnames;
-	    std::unordered_map<std::string, long int> m_map_fullname_global_index_start;
-	    std::unordered_map<std::string, int> m_map_fullname_channel_index;
 
             int m_num_detectors;
             int m_num_channels;
@@ -278,8 +283,12 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
              */
             void CalcTotalBins();
 
-	    long int Fullname_Find_Global_Index_Start(const std::string& fullname) const;
-	    int Fullname_Find_Channel_Index(const std::string& fullname) const;
+
+	    /* Function: given subchannel full name, return global subchannel index 
+ 	     * Note: index start from 0, not 1
+ 	     * Note: if given subchannel fullname does not exist, return value of -1 
+             */
+	    int GetSubchannelIndex(const std::string& fullname) const;
     };
 
 

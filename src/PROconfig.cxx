@@ -694,14 +694,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
     return 0;
 }
 
-long int PROconfig::Fullname_Find_Global_Index_Start(const std::string& fullname) const{
-    return m_map_fullname_global_index_start.at(fullname);
-}
-
-int PROconfig::Fullname_Find_Channel_Index(const std::string& fullname) const{
-    return m_map_fullname_channel_index.at(fullname);
-}
-
 
 void PROconfig::CalcTotalBins(){
     this->remove_unused_channel();
@@ -717,36 +709,23 @@ void PROconfig::CalcTotalBins(){
     m_num_bins_total = m_num_bins_mode_block * m_num_modes;
     m_num_bins_total_collapsed = m_num_bins_mode_block_collapsed * m_num_modes;
 
-    this->setup_name_bin_mapping();
+    this->generate_index_map();
     return;
 }
 
-void PROconfig::setup_name_bin_mapping(){
-
-    for(int im = 0; im < m_num_modes; im++){
-
-	long int mode_bin_start = im*m_num_bins_mode_block;
-
-        for(int id =0; id < m_num_detectors; id++){
-
-	    long int detector_bin_start = id*m_num_bins_detector_block;
-	    long int channel_bin_start = 0;
-
-            for(int ic = 0; ic < m_num_channels; ic++){
-                for(int sc = 0; sc < m_num_subchannels[ic]; sc++){
-
-                    std::string temp_name  = m_mode_names[im] +"_" +m_detector_names[id]+"_"+m_channel_names[ic]+"_"+m_subchannel_names[ic][sc];
-		    m_map_fullname_global_index_start[temp_name] = mode_bin_start + detector_bin_start + channel_bin_start + sc*m_channel_num_bins[ic]; 
-		    m_map_fullname_channel_index[temp_name] = ic; 
-                }
-		channel_bin_start += m_channel_num_bins[ic]*m_num_subchannels[ic]; 
-            }
-        }
-    }
-
-    return;
+int PROconfig::GetSubchannelIndex(const std::string& fullname) const{
+   auto pos_iter = m_map_fullname_subchannel_index.find(fullname);
+   if(pos_iter == m_map_fullname_subchannel_index.end()){
+       log<ERROR>(L"%1% || Subchannel name: %2% does not exist in the indexing map!") % __func__ % fullname.c_str();
+       log<ERROR>(L"%1% || Return subchannel index of -1!") % __func__;
+       return -1;
+   }
+   return pos_iter->second;
 }
 
+//------------ Start of private function ------------------
+//------------ Start of private function ------------------
+//------------ Start of private function ------------------
 
 void PROconfig::remove_unused_channel(){
 
@@ -951,3 +930,34 @@ void PROconfig::remove_unused_files(){
     return;
 }
 
+
+void PROconfig::generate_index_map(){
+
+    int global_subchannel_index = 0;
+    for(int im = 0; im < m_num_modes; im++){
+
+        long int mode_bin_start = im*m_num_bins_mode_block;
+
+        for(int id =0; id < m_num_detectors; id++){
+
+            long int detector_bin_start = id*m_num_bins_detector_block;
+            long int channel_bin_start = 0;
+
+            for(int ic = 0; ic < m_num_channels; ic++){
+                for(int sc = 0; sc < m_num_subchannels[ic]; sc++){
+
+                    std::string temp_name  = m_mode_names[im] +"_" +m_detector_names[id]+"_"+m_channel_names[ic]+"_"+m_subchannel_names[ic][sc];
+                    long int global_bin_index = mode_bin_start + detector_bin_start + channel_bin_start + sc*m_channel_num_bins[ic];
+
+		    m_map_fullname_subchannel_index[temp_name] = global_subchannel_index;
+                    m_map_subchannel_index_to_global_index_start[global_subchannel_index] = global_bin_index;
+                    m_map_subchannel_index_to_channel_index[global_subchannel_index] = ic;
+
+                    ++global_subchannel_index;
+                }
+                channel_bin_start += m_channel_num_bins[ic]*m_num_subchannels[ic];
+            }
+        }
+    }
+    return;
+}
