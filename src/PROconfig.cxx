@@ -716,11 +716,43 @@ void PROconfig::CalcTotalBins(){
 int PROconfig::GetSubchannelIndex(const std::string& fullname) const{
    auto pos_iter = m_map_fullname_subchannel_index.find(fullname);
    if(pos_iter == m_map_fullname_subchannel_index.end()){
-       log<ERROR>(L"%1% || Subchannel name: %2% does not exist in the indexing map!") % __func__ % fullname.c_str();
-       log<ERROR>(L"%1% || Return subchannel index of -1!") % __func__;
-       return -1;
+       log<LOG_ERROR>(L"%1% || Subchannel name: %2% does not exist in the indexing map!") % __func__ % fullname.c_str();
+       log<LOG_ERROR>(L"Terminating.");
+       exit(EXIT_FAILURE);
    }
    return pos_iter->second;
+}
+
+int PROconfig::GetChannelIndex(int subchannel_index) const{
+    auto pos_iter = m_map_subchannel_index_to_channel_index.find(subchannel_index);
+    if(pos_iter == m_map_subchannel_index_to_channel_index.end()){
+       log<LOG_ERROR>(L"%1% || Subchannel index: %2% does not exist in the subchannel-channel indexing map!") % __func__ % subchannel_index;
+       log<LOG_ERROR>(L"Terminating.");
+       exit(EXIT_FAILURE);
+    }
+    return pos_iter->second;
+}
+
+long int PROconfig::GetGlobalBinStart(int subchannel_index) const{
+    auto pos_iter = m_map_subchannel_index_to_global_index_start.find(subchannel_index);
+    if(pos_iter == m_map_subchannel_index_to_global_index_start.end()){
+       log<LOG_ERROR>(L"%1% || Subchannel index: %2% does not exist in the subchannel-globalbin map!") % __func__ % subchannel_index;
+       log<LOG_ERROR>(L"Terminating.");
+       exit(EXIT_FAILURE);
+    }
+    return pos_iter->second;
+}
+
+const std::vector<double>& PROconfig::GetChannelBinEdges(int channel_index) const{
+
+    if(channel_index < 0 || channel_index >= m_num_channels){
+        log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
+        log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+
+    return m_channel_bin_edges[channel_index];
 }
 
 //------------ Start of private function ------------------
