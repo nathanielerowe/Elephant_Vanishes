@@ -42,7 +42,6 @@ namespace PROfit{
 
     };
 
-
     int PROcess(const PROconfig &inconfig);
     int PROcess_CAFana(const PROconfig &inconfig);
     void ProcessEvent(const PROconfig &inconfig,
