@@ -13,11 +13,11 @@ PROspec::PROspec(PROconfig const & inConfig){
 }
 
 
-TH1D PROspec::toTH1D(PROconfig const & inConfig){
+/*TH1D PROspec::toTH1D(PROconfig const & inConfig){
 
 
     TH1D hSpec("","",10,0,1); 
 
     return hSpec;
 
-}
+}*/

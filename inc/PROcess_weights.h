@@ -19,15 +19,21 @@
 #include "PROlog.h"
 #include "PROconfig.h"
 
+//CAFana
+#include "sbnanaobj/StandardRecord/SRGlobal.h"
+#include "sbnanaobj/StandardRecord/SRWeightPSet.h"
+
 namespace PROfit{
 
     struct SystStruct {
 
-        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula): systname(in_systname), n_univ(in_n_univ), mode(in_mode), formula(in_formula){}
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), formula(in_formula), knobval(in_knobval), index(in_index){}
         std::string systname;
         int n_univ;
         std::string mode;
         std::string formula;
+        int index;
+        std::vector<float> knobval;
         //map
         //hist
 
@@ -38,6 +44,7 @@ namespace PROfit{
 
 
     int PROcess(const PROconfig &inconfig);
+    int PROcess_CAFana(const PROconfig &inconfig);
     void ProcessEvent(const PROconfig &inconfig,
         const std::map<std::string, 
         std::vector<eweight_type> >& thisfWeight,
