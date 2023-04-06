@@ -834,8 +834,9 @@ void PROconfig::remove_unused_channel(){
         m_channel_units = temp_channel_units;
     }
         
-    //update subchannel-related info
     {
+
+        //update subchannel-related info
         m_num_subchannels.resize(m_num_channels);
         std::vector<std::vector<std::string >> temp_subchannel_names(m_num_channels), temp_subchannel_plotnames(m_num_channels);
         std::vector<std::vector<int >> temp_subchannel_datas(m_num_channels), temp_subchannel_osc_patterns(m_num_channels);

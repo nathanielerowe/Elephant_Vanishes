@@ -10,6 +10,7 @@
 #include <fstream>
 #include <memory>
 #include <map>
+#include <unordered_map>
 #include <unordered_set>
 #include <unordered_map>
 #include <climits>
@@ -66,9 +67,9 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
 
         BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a) {oscillate=false; associated_systematic=""; central_value =false;}
         BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst) { oscillate=false; central_value=cv;}
-        virtual void* GetValue(){};
-        virtual void* GetTrueValue(){};
-        virtual void* GetTrueL(){};
+        virtual void* GetValue(){return nullptr;};
+        virtual void* GetTrueValue(){return nullptr;};
+        virtual void* GetTrueL(){return nullptr;};
 
         std::shared_ptr<TTreeFormula> GetFormula(){
             return branch_formula;

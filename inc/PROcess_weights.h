@@ -20,12 +20,17 @@
 #include "PROlog.h"
 #include "PROconfig.h"
 
+//CAFana
+#include "sbnanaobj/StandardRecord/SRGlobal.h"
+#include "sbnanaobj/StandardRecord/SRWeightPSet.h"
+
 namespace PROfit{
 
     typedef Eigen::Matrix<eweight_type, Eigen::Dynamic, Eigen::Dynamic> multi_spec;
 
     struct SystStruct {
 
+<<<<<<< HEAD
         //members 
         std::string systname;
         int n_univ;
@@ -44,6 +49,17 @@ namespace PROfit{
 
 	inline
 	void SetWeightFormula(const std::string& in_formula){weight_formula = in_formula; return;}
+=======
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), formula(in_formula), knobval(in_knobval), index(in_index){}
+        std::string systname;
+        int n_univ;
+        std::string mode;
+        std::string formula;
+        int index;
+        std::vector<float> knobval;
+        //map
+        //hist
+>>>>>>> master
 
 	inline
         int GetNUniverse() const {return n_univ;}
@@ -63,8 +79,13 @@ namespace PROfit{
 	void CreateSpecs(int row, int col);
     };
 
+<<<<<<< HEAD
 
     int PROcess_SBNfit(const PROconfig &inconfig);
+=======
+    int PROcess(const PROconfig &inconfig);
+    int PROcess_CAFana(const PROconfig &inconfig);
+>>>>>>> master
     void ProcessEvent(const PROconfig &inconfig,
         const std::map<std::string, 
         std::vector<eweight_type> >& thisfWeight,

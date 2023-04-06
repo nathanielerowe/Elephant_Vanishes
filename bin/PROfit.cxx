@@ -1,6 +1,7 @@
 #include "PROconfig.h"
 #include "PROspec.h"
 #include "PROcovariancegen.h"
+#include "PROcess_weights.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -12,8 +13,6 @@
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <unsupported/Eigen/NumericalDiff>
-
-
 
 using namespace PROfit;
 log_level_t GLOBAL_LEVEL = LOG_DEBUG;
@@ -60,10 +59,12 @@ int main(int argc, char* argv[])
 
     PROconfig myConf(xmlname);
 
+    PROcess_CAFana(myConf);
     //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
 
 
+    return 0;
     LBFGSpp::LBFGSBParam<double> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
