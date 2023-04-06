@@ -286,19 +286,16 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
 
 	    /* Function: given subchannel full name, return global subchannel index 
  	     * Note: index start from 0, not 1
- 	     * Note: if given subchannel fullname does not exist, return value of -1 
              */
 	    int GetSubchannelIndex(const std::string& fullname) const;
 
 	    /* Function: given subchannel global index, return corresponding channel index 
  	     * Note: index start from 0, not 1
- 	     * Note: if given subchannel global index is out of bound, return value of -1 
              */
 	    int GetChannelIndex(int subchannel_index) const;
 
 	    /* Function: given subchannel global index, return corresponding global bin start
  	     * Note: global bin index start from 0, not 1
- 	     * Note: if given subchannel global index is out of bound, return value of -1 
              */
 	    long int GetGlobalBinStart(int subchannel_index) const;
 

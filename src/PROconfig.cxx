@@ -698,6 +698,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 void PROconfig::CalcTotalBins(){
     this->remove_unused_channel();
 
+    log<LOG_INFO>(L"%1% || Calculating number of bins involved") % __func__;
     for(int i = 0; i != m_num_channels; ++i){
         m_num_bins_detector_block += m_num_subchannels[i]*m_channel_num_bins[i];
         m_num_bins_detector_block_collapsed += m_channel_num_bins[i];
@@ -761,12 +762,15 @@ const std::vector<double>& PROconfig::GetChannelBinEdges(int channel_index) cons
 
 void PROconfig::remove_unused_channel(){
 
+    log<LOG_INFO>(L"%1% || Remove any used channels and subchannels...") % __func__;
+
     m_num_modes = std::count(m_mode_bool.begin(), m_mode_bool.end(), true);
     m_num_detectors = std::count(m_detector_bool.begin(), m_detector_bool.end(), true);
     m_num_channels = std::count(m_channel_bool.begin(), m_channel_bool.end(), true);
 
     //update mode-info
     if(m_num_modes != m_mode_bool.size()){
+        log<LOG_DEBUG>(L"%1% || Found unused modes!! Clean it up...") % __func__;
         std::vector<std::string> temp_mode_names(m_num_modes), temp_mode_plotnames(m_num_modes);
         for(int i = 0, mode_index = 0; i != m_mode_bool.size(); ++i){
             if(m_mode_bool[i]){
@@ -782,6 +786,7 @@ void PROconfig::remove_unused_channel(){
 
     ///update detector-info
     if(m_num_detectors != m_detector_bool.size()){
+        log<LOG_DEBUG>(L"%1% || Found unused detectors!! Clean it up...") % __func__;
         std::vector<std::string> temp_detector_names(m_num_detectors), temp_detector_plotnames(m_num_detectors);
         for(int i = 0, det_index = 0; i != m_detector_bool.size(); ++i){
             if(m_detector_bool[i]){
@@ -796,6 +801,7 @@ void PROconfig::remove_unused_channel(){
     }
 
     if(m_num_channels != m_channel_bool.size()){
+        log<LOG_DEBUG>(L"%1% || Found unused channels!! Clean the messs up...") % __func__;
 
         //update channel-related info
         std::vector<int> temp_channel_num_bins(m_num_channels, 0);
@@ -858,6 +864,7 @@ void PROconfig::remove_unused_channel(){
     }
 
     //grab list of fullnames used.
+    log<LOG_DEBUG>(L"%1% || Sweet, now generating fullnames of all channels used...") % __func__;
     m_fullnames.clear();
     for(int im = 0; im < m_num_modes; im++){
         for(int id =0; id < m_num_detectors; id++){
@@ -879,12 +886,16 @@ void PROconfig::remove_unused_channel(){
 
 void PROconfig::remove_unused_files(){
 
+
     //ignore any files not associated with used channels 
     //clean up branches not associated with used channels 
     int num_all_branches = 0;
     for(auto& br : m_branch_variables)
         num_all_branches += br.size();
 
+    log<LOG_DEBUG>(L"%1% || Check for any files associated with unused subchannels ....") % __func__;
+    log<LOG_DEBUG>(L"%1% || Total number of %2% active subchannels..") % __func__ % m_fullnames.size();
+    log<LOG_DEBUG>(L"%1% || Total number of %2% branches listed in the xml....") % __func__ % num_all_branches;
 
     //update file info
     //loop over all branches, and ignore ones not used  
@@ -906,6 +917,7 @@ void PROconfig::remove_unused_files(){
     	std::vector<std::vector<std::string>> temp_eventweight_branch_names;
 
         for(int i = 0; i != m_mcgen_file_name.size(); ++i){
+    	    log<LOG_DEBUG>(L"%1% || Check on @%2% th file: %3%...") % __func__ % i % m_mcgen_file_name[i].c_str();
             bool this_file_needed = false;
 
             std::vector<std::string> this_file_additional_weight_name;
@@ -928,6 +940,7 @@ void PROconfig::remove_unused_files(){
             }
 
             if(this_file_needed){
+    	        log<LOG_DEBUG>(L"%1% || This file is active, keep it!") % __func__ ;
                 temp_tree_name.push_back(m_mcgen_tree_name[i]);
                 temp_file_name.push_back(m_mcgen_file_name[i]);
                 temp_maxevents.push_back(m_mcgen_maxevents[i]);
@@ -959,11 +972,16 @@ void PROconfig::remove_unused_files(){
     }
 
     m_num_mcgen_files = m_mcgen_file_name.size();
+    log<LOG_DEBUG>(L"%1% || Finish cleaning up, total of %2% files left.") % __func__ % m_num_mcgen_files;
     return;
 }
 
 
 void PROconfig::generate_index_map(){
+    log<LOG_INFO>(L"%1% || Generate map between subchannel and global indices..") % __func__;
+    m_map_fullname_subchannel_index.clear();
+    m_map_subchannel_index_to_global_index_start.clear();
+    m_map_subchannel_index_to_channel_index.clear();
 
     int global_subchannel_index = 0;
     for(int im = 0; im < m_num_modes; im++){
