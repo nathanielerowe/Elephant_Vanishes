@@ -24,8 +24,5 @@ void PrintVersionNumbers(const char* filename, const char* classname)
 }
 
 void testStreamerInfo(){
-
     PrintVersionNumbers("~/Downloads/test.flat.caf.root", "caf::SRWeightParam");
-    
-
 }
