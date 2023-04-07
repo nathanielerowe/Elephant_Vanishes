@@ -30,4 +30,4 @@ int FindLocalBin(const PROconfig &inconfig, double reco_value, int channel_index
     return pos_iter - bin_edges.begin() - 1; 
 }
 
-}
+};

@@ -24,7 +24,7 @@ namespace log_impl {
 
     class formatted_log_t {
         public:
-            formatted_log_t( log_level_t level, const wchar_t* msg ) : fmt(msg), level(level) {}
+            formatted_log_t( log_level_t level, const wchar_t* msg ) : level(level), fmt(msg) {}
             ~formatted_log_t() {
                 // GLOBAL_LEVEL is a global variable and could be changed at runtime
                 // Any customization could be here
