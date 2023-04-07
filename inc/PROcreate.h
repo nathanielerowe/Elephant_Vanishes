@@ -29,8 +29,6 @@
 
 namespace PROfit{
 
-    typedef Eigen::Matrix<eweight_type, Eigen::Dynamic, Eigen::Dynamic> multi_spec;
-
     struct SystStruct {
 
 	//members
@@ -41,7 +39,7 @@ namespace PROfit{
         std::vector<float> knobval;
         int index;
 
-        std::unique_ptr<multi_spec> p_multi_spec;
+        std::vector<PROspec> m_multi_spec;
 
 	// functions 
         SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},0){}
@@ -75,7 +73,7 @@ namespace PROfit{
     int PROcess_SBNfit(const PROconfig &inconfig);
     int PROcess_CAFana(const PROconfig &inconfig);
 
-    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, double reco_val, double add_weight, int global_bin);
+    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, double add_weight, long int global_bin);
 
     void ProcessEvent(const PROconfig &inconfig, size_t fid, const std::vector<std::map<std::string, std::vector<eweight_type>>* >& thisfWeight,
             std::vector<SystStruct>& syst_vector);
