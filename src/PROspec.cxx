@@ -22,3 +22,9 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
     return hSpec;
 
 }
+
+
+TH1D PROspec::toTH1D(const PROconfig& inconfig, const std::string& subchannel_fullname){
+    int subchannel_index = inconfig.GetSubchannelIndex(subchannel_fullname);
+    return this->toTH1D(PROconfig const &inconfig, subchannel_index);
+}
