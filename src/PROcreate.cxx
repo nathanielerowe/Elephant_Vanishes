@@ -264,6 +264,9 @@ int PROcess_SBNfit(const PROconfig &inconfig){
     return 0;
 }
 
+
+
+
 int PROcess_CAFana(const PROconfig &inconfig){
 
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
@@ -411,14 +414,13 @@ int PROcess_CAFana(const PROconfig &inconfig){
     //universes_used = num_universes_per_variation.size();
     //FIX Replace With Eigen
     
-
     for(int j=0; j < num_files; j++){
         int nevents = nentries[j];//std::min(inconfig.m_mcgen_maxevents[j], nentries[j]);
-        std::cout << " Starting @ data file=" << files[j]->GetName() <<" which has "<<nevents<<" Events. "<<std::endl;
+        log<LOG_DEBUG>(L"%1% || Starting on data file %2% qith %3% events") % __func__  % files[j]->GetName() % nevents ;
         for(int i=0; i < nevents; i++) {
-            if(i%100==0)std::cout<<" -- uni :"<<i<<" / "<<nevents<<std::endl;
+            if(i%1000==0)log<LOG_DEBUG>(L"%1% || ---- universe %2%/%3% ") % __func__  % files[j]->GetName() % nevents ;
             trees[j]->GetEntry(i);
-            //ProcessEvent(inconfig, *(f_weights[j]),j,i);
+            PROcess_CAFana_Event(inconfig, trees[j], syst_vector);
 
         } //end of entry loop
     } //end of file loop

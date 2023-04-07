@@ -32,14 +32,18 @@
 
 //#define TYPE_FLOAT
 #ifdef TYPE_FLOAT  
-    typedef float eweight_type;
+typedef float eweight_type;
 #else
-    typedef double eweight_type;
+typedef double eweight_type;
 #endif
-        
+
 namespace PROfit{
 
-typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
+    typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
+
+    /* Struct: Branch variable is a SBNfit era class to load using TTReeFormula a givem variable (or function of variables) 
+     * Note: was originally split between float/int, but moved to TTreeFormula
+     */
 
     struct BranchVariable{
         std::string name;
@@ -83,8 +87,8 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
                 branch_monte_carlo_weight_formula->GetNdata();
                 return (double)branch_monte_carlo_weight_formula->EvalInstance();
             }
-	    return 1.0;
-	}
+            return 1.0;
+        }
     };
 
 
@@ -160,8 +164,8 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             std::vector<std::vector<bool>>  m_subchannel_bool;
 
 
-	    //map from subchannel name/index to global index and channel index
-	    std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
+            //map from subchannel name/index to global index and channel index
+            std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
             std::unordered_map<int, long int> m_map_subchannel_index_to_global_index_start;
             std::unordered_map<int, int> m_map_subchannel_index_to_channel_index;
 
@@ -179,7 +183,7 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             void remove_unused_files();
 
 
-	    /* Function: fill in mapping between subchannel name/index to global indices */
+            /* Function: fill in mapping between subchannel name/index to global indices */
             void generate_index_map();
 
 
@@ -286,24 +290,24 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             void CalcTotalBins();
 
 
-	    /* Function: given subchannel full name, return global subchannel index 
- 	     * Note: index start from 0, not 1
+            /* Function: given subchannel full name, return global subchannel index 
+             * Note: index start from 0, not 1
              */
-	    int GetSubchannelIndex(const std::string& fullname) const;
+            int GetSubchannelIndex(const std::string& fullname) const;
 
-	    /* Function: given subchannel global index, return corresponding channel index 
- 	     * Note: index start from 0, not 1
+            /* Function: given subchannel global index, return corresponding channel index 
+             * Note: index start from 0, not 1
              */
-	    int GetChannelIndex(int subchannel_index) const;
+            int GetChannelIndex(int subchannel_index) const;
 
-	    /* Function: given subchannel global index, return corresponding global bin start
- 	     * Note: global bin index start from 0, not 1
+            /* Function: given subchannel global index, return corresponding global bin start
+             * Note: global bin index start from 0, not 1
              */
-	    long int GetGlobalBinStart(int subchannel_index) const;
+            long int GetGlobalBinStart(int subchannel_index) const;
 
 
-	    /* Function: given channel index, return list of bin edges for this channel */
-	    const std::vector<double>& GetChannelBinEdges(int channel_index) const;
+            /* Function: given channel index, return list of bin edges for this channel */
+            const std::vector<double>& GetChannelBinEdges(int channel_index) const;
     };
 
 
