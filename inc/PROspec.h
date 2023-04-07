@@ -53,6 +53,10 @@ namespace PROfit{
 	    /* Function: zero out the spectrum and error, but keep the dimension */
 	    void Zero();
 
+        /* Function: Print out spec*/
+	    void Print();
+
+
     };
 
 }

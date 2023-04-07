@@ -4,12 +4,20 @@ using namespace PROfit;
 PROspec::PROspec(long int num_bins):
     spec(Eigen::VectorXd::Zero(num_bins)),
     error_square(Eigen::VectorXd::Zero(num_bins)){
-}
+    }
 
 void PROspec::Zero(){
     log<LOG_INFO>(L"%1% || Zero out spectrum") % __func__ ;
     spec.setZero();
     error_square.setZero();
+    return;
+}
+
+void PROspec::Print(){
+    //std::cout<<spec<<std::endl;
+    std::string spec_string = "";
+    for(auto &f : spec) spec_string+=" "+std::to_string(f); 
+    log<LOG_INFO>(L"%1% || %2%" ) % __func__ % spec_string.c_str();
     return;
 }
 
@@ -35,8 +43,8 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
     TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
     hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());
     for(int i = 1; i <= nbins; ++i){
-	hSpec.SetBinContent(i, spec[global_bin_start + i -1]);
-	hSpec.SetBinError(i, std::sqrt(error_square[global_bin_start + i -1]));
+        hSpec.SetBinContent(i, spec[global_bin_start + i -1]);
+        hSpec.SetBinError(i, std::sqrt(error_square[global_bin_start + i -1]));
     }
 
     return hSpec;

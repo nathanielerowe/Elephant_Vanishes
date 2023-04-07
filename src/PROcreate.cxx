@@ -30,6 +30,17 @@ namespace PROfit {
         return;
     }
 
+    void SystStruct::Print(){
+        log<LOG_INFO>(L"%1% || Printing %2%") % __func__ % systname.c_str();
+        int i=0;
+        for(auto &spec: m_multi_spec){
+             log<LOG_INFO>(L"%1% || On Universe %2% for knob %3% ") % __func__ % i % knobval[i];
+             spec.Print();
+             i++;
+        }
+
+        return;
+    }
 
     int PROcess_SBNfit(const PROconfig &inconfig){
 
@@ -514,10 +525,17 @@ namespace PROfit {
 
         } //end of file loop
 
+
         time_t time_took = time(nullptr) - start_time;
         log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
-        log<LOG_INFO>(L"%1% || DONE") %__func__ ;
 
+        log<LOG_INFO>(L"%1% || Some useful info:") %__func__ ;
+        //OK some printing of syst_vector
+        for(auto &syst: syst_vector){
+            syst.Print();
+        }
+
+        log<LOG_INFO>(L"%1% || DONE") %__func__ ;
         return 0;
     }
 
@@ -537,7 +555,8 @@ namespace PROfit {
             int nuniv = syst.GetNUniverse();
             for(long int u =0; u<nuniv; u++){
                 float this_weight = caf_helper.GetUniverseWeight(syst.index, u);
-                syst.m_multi_spec[u].Fill(global_bin, add_weight);//*this_weight);
+                syst.m_multi_spec[u].Fill(global_bin, add_weight*this_weight);
+                //std::cout<<"WEI "<<is<<" "<<u<<global_bin<<" "<<add_weight<<" "<<this_weight<<std::endl;
             }
             is++;
         }

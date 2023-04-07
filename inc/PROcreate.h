@@ -68,6 +68,7 @@ namespace PROfit{
         void SanityCheck() const;
         void CleanSpecs();
         void CreateSpecs(int row, int col);
+        void Print();
     };
 
 
@@ -88,13 +89,15 @@ namespace PROfit{
             i_wgt_totsize=0;
         };
 
-        float GetUniverseWeight(int which_index , int whichnui){
+        float GetUniverseWeight(int which_index , int which_uni){
             for(int s = 0; s<i_wgt_size;s++){
                 if(v_truth_index[s]==0){
-                        return v_wgt_univ[v_wgt_idx[s]+v_wgt_univ_idx[which_index]+whichuni];
-                    }
+                    return v_wgt_univ[v_wgt_idx[s]+v_wgt_univ_idx[which_index]+which_uni];
                 }
-            };
+            }
+
+            return 0;
+        };
 
     };
 
