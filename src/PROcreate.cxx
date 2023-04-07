@@ -6,15 +6,15 @@ namespace PROfit {
 
     void SystStruct::CleanSpecs(){
         for(auto &spec: m_multi_spec){
-            //m.Zero();
+            spec.Zero();
         }
         return;
     }
 
-    void SystStruct::CreateSpecs(int num_sys, int num_bins){
+    void SystStruct::CreateSpecs(int num_uni_in_this_sys, int num_bins){
         this->CleanSpecs();
-        log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % row % col;
-        //m_multi_spec.Resize(num_sys, PROspec(num_bins));
+        log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % num_uni_in_this_sys % num_bins;
+        m_multi_spec.resize(num_uni_in_this_sys, PROspec(num_bins));
         return;
     }
 
@@ -490,11 +490,7 @@ namespace PROfit {
                     long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     if(global_bin < 0 )  //out or range
                         continue;
-                    //spec[global_bin] += additional_weight;
-                    //error_square[global_bin] += std::pow(additional_weight, 2.0);
-
-                    PROcess_CAFana_Event(inconfig, sys_weight_formula, syst_vector, reco_value, additional_weight, global_bin);
-
+                    PROcess_CAFana_Event(inconfig, sys_weight_formula, syst_vector, additional_weight, global_bin);
 
                 }//end of branch 
 
@@ -522,7 +518,13 @@ namespace PROfit {
                 throw std::runtime_error("NAN or INF in put string");
             }
 
-            syst.m_multi_spec[is].Fill(global_bin, add_weight);
+            int nuniv = syst.GetNUniverse();
+            for(long int u =0; u<nuniv; u++){
+
+
+
+                syst.m_multi_spec[u].Fill(global_bin, add_weight*this_weight);
+            }
 
             is++;
         }
