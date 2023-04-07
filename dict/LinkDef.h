@@ -8,4 +8,9 @@
 #pragma link C++ class caf::SRWeightPSet+;
 #pragma link C++ class caf::SRWeightMapEntry+;
 #pragma link C++ class caf::SRWeightParam+;
+
+#pragma link C++ class std::pair<std::string, std::vector<float>>+;
+#pragma link C++ class std::pair<std::string, std::vector<double>>+;
+#pragma link C++ class std::map<std::string, std::vector<float> >+;
+#pragma link C++ class std::map<std::string, std::vector<double> >+;
 #endif

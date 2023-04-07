@@ -5,18 +5,32 @@
 namespace PROfit {
 
     void SystStruct::CleanSpecs(){
-        if(p_multi_spec)
-            p_multi_spec.reset(nullptr);
+	if(p_cv)  p_cv.reset(nullptr);
+	p_multi_spec.clear();
         return;
     }
 
-    void SystStruct::CreateSpecs(int row, int col){
+    void SystStruct::CreateSpecs(long int num_bins){
         this->CleanSpecs();
-        log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % row % col;
-        p_multi_spec = std::make_unique<multi_spec>(row, col);
-        p_multi_spec->setZero(row, col);
+        log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
+	
+        p_cv = std::make_unique<PROspec>(num_bins);
+	for(int i = 0; i != n_univ; ++i){
+	    p_multi_spec.push_back(std::make_unique<PROspec>(num_bins));
+  	}
         return;
     }
+
+    void SystStruct::FillCV(long int global_bin, double event_weight){
+	p_cv->Fill(global_bin, event_weight);
+	return;
+    }
+
+    void SystStruct::FillUniverse(int universe, long int global_bin, double event_weight){
+	p_multi_spec.at(universe)->Fill(global_bin, event_weight);
+	return;
+    }
+
 
     void SystStruct::SanityCheck() const{
         if(mode == "minmax" && n_univ != 2){
@@ -45,10 +59,9 @@ int PROcess_SBNfit(const PROconfig &inconfig){
     std::vector<std::vector<std::map<std::string, std::vector<eweight_type>>* >> f_event_weights(num_files);
     std::map<std::string, int> map_systematic_num_universe;
 
-    //inconfig.m_mcgen_additional_weight.resize(num_files,1.0); its const, not allowed
 
+    //open files, and link trees and branches
     int good_event = 0;
-
     for(int fid=0; fid < num_files; ++fid) {
         const auto& fn = inconfig.m_mcgen_file_name.at(fid);
 
@@ -64,13 +77,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 	}
     	log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
 
-        //Some POT counting (FIX)
-        //Guanqun: POT counting not needed for covariance matrix generation 
-        //double pot_scale = 1.0;
-        //if(inconfig.m_mcgen_pot[fid]!=-1){
-        //    pot_scale = FIX_plot_pot/inconfig.m_mcgen_pot[fid];
-        //}
-        //mcgen_scale[fid] = inconfig.m_mcgen_scale[fid]*pot_scale;
 
     	//first, grab friend trees
         auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
@@ -212,7 +218,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
     //create 2D multi-universe spec.
     for(auto& s : syst_vector){
 	int nrow = s.GetNUniverse(), ncol = inconfig.m_num_bins_total;
- 	s.CreateSpecs(nrow, ncol);	
+ 	s.CreateSpecs(ncol);	
     }
 
 
@@ -223,22 +229,51 @@ int PROcess_SBNfit(const PROconfig &inconfig){
         long int nevents = std::min(inconfig.m_mcgen_maxevents[fid], nentries[fid]);
 	log<LOG_DEBUG>(L"%1% || Start @files: %2% which has %3% events") % __func__ % fn.c_str() % nevents;
 
-
+	
+	// set up systematic weight formula
+	std::vector<double> sys_weight_value(total_num_systematics, 1.0);
     	std::vector<std::unique_ptr<TTreeFormula>> sys_weight_formula;
 	for(const auto& s : syst_vector){
-	    sys_weight_formula.push_back(std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+ s.GetSysName()).c_str(), s.GetWeightFormula().c_str(),trees[fid]));
+	    if(s.HasWeightFormula())
+	    	sys_weight_formula.push_back(std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+ s.GetSysName()).c_str(), s.GetWeightFormula().c_str(),trees[fid]));
+	    else
+		sys_weight_formula.push_back(nullptr);
   	}
 	log<LOG_DEBUG>(L"%1% || Finished setting up systematic weight formula") % __func__;
 
 
+	// grab the subchannel index
+	int num_branch = inconfig.m_branch_variables[fid].size();
+	auto& branches = inconfig.m_branch_variables[fid];
+	std::vector<int> subchannel_index(num_branch, 0); 
+	log<LOG_DEBUG>(L"%1% || This file includes %2% branch/subchannels") % __func__ % num_branch;
+        for(int ib = 0; ib != num_branch; ++ib) {
+
+            const std::string& subchannel_name = inconfig.m_branch_variables[fid][ib]->associated_hist;
+	    subchannel_index[ib] = inconfig.GetSubchannelIndex(subchannel_name);
+	    log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % subchannel_index[ib];
+	}
+
+
+	// loop over all entries
         for(long int i=0; i < nevents; ++i) {
 
+            if(i%100==0)	log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
 	    trees[fid]->GetEntry(i);
-            if(i%100==0)
-		log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
             
-            //ProcessEvent(inconfig, fid, f_event_weights[fid], syst_vector);
-            //INPUT PROCESS FIX
+
+	    //grab additional weight for systematics
+	    for(int is = 0; is != total_num_systematics; ++is){
+	    	if(syst_vector[is].HasWeightFormula()){
+		    sys_weight_formula[is]->GetNdata();	
+		    sys_weight_value[is] = sys_weight_formula[is]->EvalInstance();
+		}
+  	    }
+
+	    //branch loop
+            for(int ib = 0; ib != num_branch; ++ib) {
+		process_sbnfit_event(inconfig, branches[ib], *f_event_weights[fid][ib], subchannel_index[ib], syst_vector, sys_weight_value);
+	    } 
 
         } //end of entry loop
 
@@ -246,14 +281,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
     time_t time_took = time(nullptr) - start_time;
     log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
-
-
-    //FIX check?
-    //NOPE In fact, calling Close() on a TFile object managed by a std::unique_ptr can lead to undefined behavior because the std::unique_ptr may delete the object before the Close() method finishes executing. So, it is best to rely on the std::unique_ptr to manage the lifetime of the TFile object and not call Close() explicitly.
-    //for(auto f: files){
-    //  log<LOG_DEBUG>(L"%1% || Closing file: %2%") %__func__ % f->GetName();
-    //    f->Close();
-    //}
     log<LOG_INFO>(L"%1% || DONE") %__func__ ;
 
     return 0;
@@ -447,7 +474,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
         //create 2D multi-universe spec.
         for(auto& s : syst_vector){
             int nrow = s.GetNUniverse(), ncol = inconfig.m_num_bins_total;
-            s.CreateSpecs(nrow, ncol);	
+            s.CreateSpecs(ncol);	
         }
 
 
@@ -629,10 +656,7 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
 
 
     time_t start_time = time(nullptr);
-    Eigen::VectorXd spec = Eigen::VectorXd::Zero(inconfig.m_num_bins_total);
-    Eigen::VectorXd error_square = Eigen::VectorXd::Zero(inconfig.m_num_bins_total);
-    
-    std::cout<<spec[0]<<std::endl;
+    PROspec spec(inconfig.m_num_bins_total);
 
 
     log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
@@ -680,8 +704,7 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
                 if(i%100==0)	
 		    log<LOG_DEBUG>(L"%1% || Subchannel %2% -- Reco variable value: %3%, MC event weight: %4%, correponds to global bin: %5%") % __func__ %  subchannel_index[ib] % reco_value % additional_weight % global_bin;
 
-		spec[global_bin] += additional_weight;
-		error_square[global_bin] += std::pow(additional_weight, 2.0);
+		spec.Fill(global_bin, additional_weight);
 
 	    }  //end of branch loop
 
@@ -693,10 +716,38 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
     log<LOG_INFO>(L"%1% || Generating central value spectrum took %2% seconds..") % __func__ % time_took;
     log<LOG_INFO>(L"%1% || DONE") %__func__ ;
 
-    return PROspec(spec, error_square);
+    return spec;
 }
 
+void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight){
 
+    int total_num_sys = syst_vector.size(); 
+    double reco_value = *(static_cast<double*>(branch->GetValue()));
+    double mc_weight = branch->GetMonteCarloWeight(); 
+    long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
+
+    for(int i = 0; i != total_num_sys; ++i){
+	SystStruct& syst_obj = syst_vector[i];
+	double additional_weight = syst_additional_weight.at(i);
+
+	syst_obj.FillCV(global_bin, mc_weight);
+
+	auto map_iter = eventweight_map.find(syst_obj.GetSysName());
+	int map_variation_size = (map_iter == eventweight_map.end()) ? 0 : map_iter->second.size();
+	int iuni = 0;
+	for(; iuni != std::min(map_variation_size, syst_obj.GetNUniverse()); ++iuni){
+	    syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second.at(iuni)));
+	}
+
+	while(iuni != syst_obj.GetNUniverse()){
+	    //syst_obj.FillUniverse(iuni, global_bin, mc_weight);
+	    syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight);
+	    ++iuni;
+ 	}
+    }
+
+    return;
+}
 
 }//namespace
 
