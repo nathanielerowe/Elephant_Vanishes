@@ -44,6 +44,10 @@ namespace PROfit{
 	    /* Function: save TH1Ds of all channels into a root file */
 	    void toROOT(const PROconfig& inconfig);
 
+
+	    /* Function: fill given bin with provided weight 
+ 	     * Note: it does NOT check whether the given bin is out of range or not 
+ 	     */
 	    void Fill(long int bin_index, double weight);
 
 	    /* Function: zero out the spectrum and error, but keep the dimension */

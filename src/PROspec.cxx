@@ -1,6 +1,26 @@
 #include "PROspec.h"
 using namespace PROfit;
 
+PROspec::PROspec(long int num_bins):
+    spec(Eigen::VectorXd::Zero(num_bins)),
+    error_square(Eigen::VectorXd::Zero(num_bins)){
+}
+
+void PROspec::Zero(){
+    log<LOG_INFO>(L"%1% || Zero out spectrum") % __func__ ;
+    spec.setZero();
+    error_square.setZero();
+    return;
+}
+
+void PROspec::Fill(long int bin_index, double weight){
+    log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    spec[bin_index] += weight;
+    error_square[bin_index] += std::pow(weight, 2.0);
+    return;
+}
+
+
 TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
 
     long int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
