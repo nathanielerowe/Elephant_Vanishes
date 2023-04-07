@@ -88,6 +88,14 @@ namespace PROfit{
             i_wgt_totsize=0;
         };
 
+        float GetUniverseWeight(int which_index , int whichnui){
+            for(int s = 0; s<i_wgt_size;s++){
+                if(v_truth_index[s]==0){
+                        return v_wgt_univ[v_wgt_idx[s]+v_wgt_univ_idx[which_index]+whichuni];
+                    }
+                }
+            };
+
     };
 
 
@@ -96,7 +104,7 @@ namespace PROfit{
     int PROcess_SBNfit(const PROconfig &inconfig);
     int PROcess_CAFana(const PROconfig &inconfig);
 
-    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, double add_weight, long int global_bin);
+    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin);
 
     void ProcessEvent(const PROconfig &inconfig, size_t fid, const std::vector<std::map<std::string, std::vector<eweight_type>>* >& thisfWeight,
             std::vector<SystStruct>& syst_vector);

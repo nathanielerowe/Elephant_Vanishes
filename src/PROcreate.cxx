@@ -287,6 +287,8 @@ namespace PROfit {
         int good_event = 0;
         std::vector<SystStruct> syst_vector;
 
+        std::vector<PROfit::CAFweightHelper> v_cafhelper(num_files);
+
         for(int fid=0; fid < num_files; ++fid) {
             const auto& fn = inconfig.m_mcgen_file_name.at(fid);
 
@@ -294,6 +296,10 @@ namespace PROfit {
             trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
             TTree * globalTree = (TTree*)(files[fid]->Get("globalTree"));
             nentries[fid]= (long int)trees.at(fid)->GetEntries();
+
+
+
+
 
             if(files[fid]->IsOpen()){
                 log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
@@ -318,6 +324,16 @@ namespace PROfit {
                 map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
                 knobvals.push_back(pset.map.at(0).vals);
             }
+
+            //Setup things for grabbing the CAFana weights
+            trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..totarraysize", &(v_cafhelper[fid].i_wgt_univ_size));
+            trees[fid]->SetBranchAddress("rec.mc.nu..length", &(v_cafhelper[fid].i_wgt_size));
+            trees[fid]->SetBranchAddress("rec.mc.nu.wgt..totarraysize",&(v_cafhelper[fid].i_wgt_totsize));
+            trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ", v_cafhelper[fid].v_wgt_univ);
+            trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..idx", v_cafhelper[fid].v_wgt_univ_idx);
+            trees[fid]->SetBranchAddress("rec.mc.nu.wgt..idx",v_cafhelper[fid].v_wgt_idx);
+            trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..length",v_cafhelper[fid].v_wgt_univ_length);
+            trees[fid]->SetBranchAddress("rec.mc.nu.index", v_cafhelper[fid].v_truth_index);
 
 
             //first, grab friend trees
@@ -490,7 +506,7 @@ namespace PROfit {
                     long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     if(global_bin < 0 )  //out or range
                         continue;
-                    PROcess_CAFana_Event(inconfig, sys_weight_formula, syst_vector, additional_weight, global_bin);
+                    PROcess_CAFana_Event(inconfig, sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin);
 
                 }//end of branch 
 
@@ -505,7 +521,7 @@ namespace PROfit {
         return 0;
     }
 
-    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, double add_weight, long int global_bin){
+    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin){
 
         int is = 0;
         for(SystStruct & syst : syst_vector){
@@ -520,17 +536,17 @@ namespace PROfit {
 
             int nuniv = syst.GetNUniverse();
             for(long int u =0; u<nuniv; u++){
-
-
-
-                syst.m_multi_spec[u].Fill(global_bin, add_weight*this_weight);
+                float this_weight = caf_helper.GetUniverseWeight(syst.index, u);
+                syst.m_multi_spec[u].Fill(global_bin, add_weight);//*this_weight);
             }
-
             is++;
         }
 
         return 0;
     }
+
+
+
 
 
 
