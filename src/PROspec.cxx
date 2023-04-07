@@ -6,10 +6,11 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
     long int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
     int channel_index = inconfig.GetChannelIndex(subchannel_index);
 
+    //set up hist specs
     int nbins = inconfig.m_channel_num_bins[channel_index];
     const std::vector<double>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
     std::string hist_name = inconfig.m_fullnames[subchannel_index];
-    std::string xaxis_title = inconfig.m_channel_plotnames[channel_index];
+    std::string xaxis_title = inconfig.m_channel_units[channel_index];
 
     TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
     hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());

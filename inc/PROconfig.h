@@ -192,6 +192,7 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             int LoadFromXML(const std::string & filename);
 
             std::string m_xmlname;	
+            double m_plot_pot;
             std::vector<std::string> m_fullnames;
 
             int m_num_detectors;
@@ -226,11 +227,6 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             std::vector<std::vector<int >> m_subchannel_datas; 
             std::vector<std::vector<int> > m_subchannel_osc_patterns; 
 
-            bool m_write_out_variation;
-            bool m_form_covariance;
-            std::string m_write_out_tag;
-
-
             int m_num_bins_detector_block;
             int m_num_bins_mode_block;
             int m_num_bins_total;
@@ -239,12 +235,13 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             int m_num_bins_mode_block_collapsed;
             int m_num_bins_total_collapsed;
 
-
-            Eigen::MatrixXd collapsingVector;
-
-
             //This section entirely for montecarlo generation of a covariance matrix or PROspec 
             //For generating a covariance matrix from scratch, this contains the number of montecarlos (weights in weight vector) and their names.
+            bool m_write_out_variation;
+            bool m_form_covariance;
+            std::string m_write_out_tag;
+
+
             int m_num_mcgen_files;
             std::vector<std::string> m_mcgen_tree_name;	
             std::vector<std::string> m_mcgen_file_name;	
@@ -275,7 +272,6 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             //FIX skepic
             std::vector<std::string> systematic_name;
 
-            double m_plot_pot;
 
             //----- PUBLIC FUNCTIONS ------
             //

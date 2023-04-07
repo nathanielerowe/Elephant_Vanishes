@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <cmath>
 
 // ROOT
 #include "TH1D.h"

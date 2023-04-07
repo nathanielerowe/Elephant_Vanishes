@@ -4,19 +4,20 @@ using namespace PROfit;
 
 PROconfig::PROconfig(const std::string &xml): 
     m_xmlname(xml), 
-    m_num_modes(0),
+    m_plot_pot(1.0),
     m_num_detectors(0),
     m_num_channels(0),
+    m_num_modes(0),
     m_num_bins_detector_block(0),
     m_num_bins_mode_block(0),
     m_num_bins_total(0),
     m_num_bins_detector_block_collapsed(0),
     m_num_bins_mode_block_collapsed(0),
     m_num_bins_total_collapsed(0),
-    m_plot_pot(1.0),
-    m_num_mcgen_files(0),
     m_write_out_variation(false), 
-    m_form_covariance(true)
+    m_form_covariance(true),
+    m_write_out_tag("UNSET_DEFAULT"),
+    m_num_mcgen_files(0)
 {
 
     LoadFromXML(m_xmlname);
@@ -86,7 +87,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
     pMode = doc.FirstChildElement("mode");
     pDet =  doc.FirstChildElement("detector");
     pChan = doc.FirstChildElement("channel");
-    pPOT = doc.FirstChildElement("PlotPOT");
+    pPOT = doc.FirstChildElement("plotpot");
 
 
     while(pPOT){
@@ -659,8 +660,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
         }
 
         if(m_write_out_variation){
-            if(swrite_out_tag == NULL) m_write_out_tag="UNSET_DEFAULT";
-            else m_write_out_tag = std::string(swrite_out_tag);
+            if(swrite_out_tag) 
+		m_write_out_tag = std::string(swrite_out_tag);
         }
 
         if( std::string(sform_matrix) == "false"){

@@ -460,6 +460,7 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
             pot_scale[fid] = spec_pot/inconfig.m_mcgen_pot.at(fid);
         }
 	pot_scale[fid] *= inconfig.m_mcgen_scale[fid];
+    	log<LOG_INFO>(L"%1% || File POT: %2%, additional scale: %3%") % __func__ %  inconfig.m_mcgen_pot.at(fid) % inconfig.m_mcgen_scale[fid];
     	log<LOG_INFO>(L"%1% || POT scale factor: %2%") % __func__ %  pot_scale[fid];
 
     	//first, grab friend trees
@@ -562,11 +563,16 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
 
 		double additional_weight = branches[ib]->GetMonteCarloWeight();
 		additional_weight *= pot_scale[fid];
+		if(additional_weight == 0) //skip on event failing cuts
+		    continue;
 
 		//find bins
 		long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
 		if(global_bin < 0 )  //out of range
 		    continue;
+
+                if(i%100==0)	
+		    log<LOG_DEBUG>(L"%1% || Subchannel %2% -- Reco variable value: %3%, MC event weight: %4%, correponds to global bin: %5%") % __func__ %  subchannel_index[ib] % reco_value % additional_weight % global_bin;
 
 		spec[global_bin] += additional_weight;
 		error_square[global_bin] += std::pow(additional_weight, 2.0);
