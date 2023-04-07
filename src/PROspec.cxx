@@ -1,6 +1,17 @@
 #include "PROspec.h"
 using namespace PROfit;
 
+PROspec(long int num_bins):
+    spec(Eigen::VectorXd::Zero(num_bins)),
+    error_square(Eigen::VectorXd::Zero(num_bins)){
+}
+
+void PROspec::Zero(){
+    int size = spec.rows();
+    spec.setZero(size);
+    error_square.setZero(size);
+}
+
 TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
 
     long int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
