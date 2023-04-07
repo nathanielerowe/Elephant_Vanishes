@@ -232,7 +232,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             log<LOG_DEBUG>(L"%1% || Loading Bins with edges %2%  ") % __func__ % binstring.c_str();
 
-            for(int b = 0; b<binedge.size()-1; b++){
+            for(size_t b = 0; b<binedge.size()-1; b++){
                 binwidth.push_back(fabs(binedge.at(b)-binedge.at(b+1)));
             }
 
@@ -770,10 +770,10 @@ void PROconfig::remove_unused_channel(){
     m_num_channels = std::count(m_channel_bool.begin(), m_channel_bool.end(), true);
 
     //update mode-info
-    if(m_num_modes != m_mode_bool.size()){
+    if(m_num_modes != (int)m_mode_bool.size()){
         log<LOG_DEBUG>(L"%1% || Found unused modes!! Clean it up...") % __func__;
         std::vector<std::string> temp_mode_names(m_num_modes), temp_mode_plotnames(m_num_modes);
-        for(int i = 0, mode_index = 0; i != m_mode_bool.size(); ++i){
+        for(size_t i = 0, mode_index = 0; i != m_mode_bool.size(); ++i){
             if(m_mode_bool[i]){
                 temp_mode_names[mode_index] = m_mode_names[i];
                 temp_mode_plotnames[mode_index] = m_mode_plotnames[i];
@@ -786,10 +786,10 @@ void PROconfig::remove_unused_channel(){
     }
 
     ///update detector-info
-    if(m_num_detectors != m_detector_bool.size()){
+    if(m_num_detectors != (int)m_detector_bool.size()){
         log<LOG_DEBUG>(L"%1% || Found unused detectors!! Clean it up...") % __func__;
         std::vector<std::string> temp_detector_names(m_num_detectors), temp_detector_plotnames(m_num_detectors);
-        for(int i = 0, det_index = 0; i != m_detector_bool.size(); ++i){
+        for(size_t i = 0, det_index = 0; i != m_detector_bool.size(); ++i){
             if(m_detector_bool[i]){
                 temp_detector_names[det_index] = m_detector_names[i];
                 temp_detector_plotnames[det_index] = m_detector_plotnames[i];
@@ -801,7 +801,7 @@ void PROconfig::remove_unused_channel(){
         m_detector_plotnames = temp_detector_plotnames;
     }
 
-    if(m_num_channels != m_channel_bool.size()){
+    if(m_num_channels != (int)m_channel_bool.size()){
         log<LOG_DEBUG>(L"%1% || Found unused channels!! Clean the messs up...") % __func__;
 
         //update channel-related info
@@ -812,7 +812,7 @@ void PROconfig::remove_unused_channel(){
         std::vector<std::string> temp_channel_names(m_num_channels);
         std::vector<std::string> temp_channel_plotnames(m_num_channels);
         std::vector<std::string> temp_channel_units(m_num_channels);
-        for(int i=0, chan_index = 0; i< m_channel_bool.size(); ++i){
+        for(size_t i=0, chan_index = 0; i< m_channel_bool.size(); ++i){
             if(m_channel_bool[i]){
                 temp_channel_num_bins[chan_index] = m_channel_num_bins[i];
                 temp_channel_bin_edges[chan_index] = m_channel_bin_edges[i];
@@ -840,10 +840,10 @@ void PROconfig::remove_unused_channel(){
         m_num_subchannels.resize(m_num_channels);
         std::vector<std::vector<std::string >> temp_subchannel_names(m_num_channels), temp_subchannel_plotnames(m_num_channels);
         std::vector<std::vector<int >> temp_subchannel_datas(m_num_channels), temp_subchannel_osc_patterns(m_num_channels);
-        for(int i=0, chan_index = 0; i< m_channel_bool.size(); ++i){
+        for(size_t i=0, chan_index = 0; i< m_channel_bool.size(); ++i){
             if(m_channel_bool.at(i)){
                 m_num_subchannels[chan_index]= 0;
-                for(int j=0; j< m_subchannel_bool[i].size(); ++j){ 
+                for(size_t j=0; j< m_subchannel_bool[i].size(); ++j){ 
                     if(m_subchannel_bool[i][j]){
                         ++m_num_subchannels[chan_index];
                         temp_subchannel_names[chan_index].push_back(m_subchannel_names[i][j]);
@@ -892,7 +892,7 @@ void PROconfig::remove_unused_files(){
 
     //ignore any files not associated with used channels 
     //clean up branches not associated with used channels 
-    int num_all_branches = 0;
+    size_t num_all_branches = 0;
     for(auto& br : m_branch_variables)
         num_all_branches += br.size();
 
@@ -919,7 +919,7 @@ void PROconfig::remove_unused_files(){
     	std::vector<std::vector<std::shared_ptr<BranchVariable>>> temp_branch_variables;
     	std::vector<std::vector<std::string>> temp_eventweight_branch_names;
 
-        for(int i = 0; i != m_mcgen_file_name.size(); ++i){
+        for(size_t i = 0; i != m_mcgen_file_name.size(); ++i){
     	    log<LOG_DEBUG>(L"%1% || Check on @%2% th file: %3%...") % __func__ % i % m_mcgen_file_name[i].c_str();
             bool this_file_needed = false;
 
@@ -927,7 +927,7 @@ void PROconfig::remove_unused_files(){
             std::vector<bool> this_file_additional_weight_bool;
             std::vector<std::shared_ptr<BranchVariable>> this_file_branch_variables;
 	    std::vector<std::string> this_file_eventweight_branch_names;
-            for(int j = 0; j != m_branch_variables[i].size(); ++j){
+            for(size_t j = 0; j != m_branch_variables[i].size(); ++j){
 
                 if(set_all_names.find(m_branch_variables[i][j]->associated_hist) == set_all_names.end()){
                 }else{

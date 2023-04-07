@@ -1,23 +1,23 @@
 #include "PROspec.h"
 using namespace PROfit;
 
+TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
 
-PROspec::PROspec(PROconfig const & inConfig){
+    long int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
+    int channel_index = inconfig.GetChannelIndex(subchannel_index);
 
-    spec = Eigen::VectorXd::Zero(inConfig.m_num_bins_total);
-    error = Eigen::VectorXd::Zero(inConfig.m_num_bins_total);
-    bins = Eigen::VectorXd::Zero(inConfig.m_num_bins_total+1);
-    
-    std::cout<<spec[0]<<std::endl;
+    int nbins = inconfig.m_channel_num_bins[channel_index];
+    const std::vector<double>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
+    std::string hist_name = inconfig.m_fullnames[subchannel_index];
+    std::string xaxis_title = inconfig.m_channel_plotnames[channel_index];
 
-}
-
-
-/*TH1D PROspec::toTH1D(PROconfig const & inConfig){
-
-
-    TH1D hSpec("","",10,0,1); 
+    TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
+    hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());
+    for(int i = 1; i <= nbins; ++i){
+	hSpec.SetBinContent(i, spec[global_bin_start + i -1]);
+	hSpec.SetBinError(i, std::sqrt(error_square[global_bin_start + i -1]));
+    }
 
     return hSpec;
 
-}*/
+}

@@ -10,6 +10,7 @@
 #include <memory>
 #include <map>
 #include <ctime>
+#include <cmath>
 
 // EIGEN
 #include <Eigen/Core>
@@ -19,6 +20,8 @@
 //PROfit
 #include "PROlog.h"
 #include "PROconfig.h"
+#include "PROspec.h"
+#include "PROtocall.h"
 
 //CAFana
 #include "sbnanaobj/StandardRecord/SRGlobal.h"
@@ -30,17 +33,21 @@ namespace PROfit{
 
     struct SystStruct {
 
-        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},0){}
-        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), index(in_index){}
-
+	//members
         std::string systname;
         int n_univ;
         std::string mode;
         std::string weight_formula;
-        int index;
         std::vector<float> knobval;
+        int index;
 
         std::unique_ptr<multi_spec> p_multi_spec;
+
+	// functions 
+        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},0){}
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), index(in_index){}
+
+
         inline
             void SetMode(const std::string& in_mode){mode = in_mode; return;}
 
@@ -70,5 +77,10 @@ namespace PROfit{
     void ProcessEvent(const PROconfig &inconfig, size_t fid, const std::vector<std::map<std::string, std::vector<eweight_type>>* >& thisfWeight,
             std::vector<SystStruct>& syst_vector);
 
+
+    /* Function: given configuration, generate spectrum at central value. 
+     * Note: assume the input config has SBNfit-style files, TODO: check if compatible with CAF-style
+     */
+    PROspec CreatePROspecCV(const PROconfig& configin);
 };
 #endif

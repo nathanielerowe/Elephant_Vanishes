@@ -191,6 +191,7 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
 
             int LoadFromXML(const std::string & filename);
 
+            std::string m_xmlname;	
             std::vector<std::string> m_fullnames;
 
             int m_num_detectors;
@@ -238,7 +239,6 @@ typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
             int m_num_bins_mode_block_collapsed;
             int m_num_bins_total_collapsed;
 
-            std::string m_xmlname;	
 
             Eigen::MatrixXd collapsingVector;
 

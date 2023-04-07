@@ -1,6 +1,6 @@
 #include "PROtocall.h"
 
-using namespace PROfit;
+namespace PROfit{
 
 long int FindGlobalBin(const PROconfig &inconfig, double reco_value, const std::string& subchannel_fullname){
     int subchannel_index = inconfig.GetSubchannelIndex(subchannel_fullname);
@@ -30,4 +30,4 @@ int FindLocalBin(const PROconfig &inconfig, double reco_value, int channel_index
     return pos_iter - bin_edges.begin() - 1; 
 }
 
-
+};
