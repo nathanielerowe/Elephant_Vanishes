@@ -32,6 +32,7 @@ namespace PROfit{
             //Constructors
             PROspec() {};
             PROspec(const Eigen::VectorXd &in_spec, const Eigen::VectorXd &in_error) : spec(in_spec), error_square(in_error){}
+	    PROspec(long int num_bins);
             //PROspec(PROconfig const & configin); //Load in config file EMPTY hists
             //PROspec(std::string &xmlname); //Load directly from XML 
 
@@ -42,6 +43,11 @@ namespace PROfit{
 
 	    /* Function: save TH1Ds of all channels into a root file */
 	    void toROOT(const PROconfig& inconfig);
+
+	    void Fill(long int bin_index, double weight);
+
+	    /* Function: zero out the spectrum and error, but keep the dimension */
+	    void Zero();
 
     };
 

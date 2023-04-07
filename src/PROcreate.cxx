@@ -331,7 +331,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
                     exit(EXIT_FAILURE);
                 }
 
-                for(int k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+                for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
 
                     std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
                     std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
@@ -385,7 +385,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
 
             log<LOG_DEBUG>(L"%1% || On file %2% - %3% Starting on cafana pset loop to build SysVec ") % __func__ % fid % fn.c_str()  ;
-            for(int v =0; v< cafana_pset_names.size(); v++){
+            for(size_t v =0; v< cafana_pset_names.size(); v++){
                 std::string varname = cafana_pset_names[v];
 
                 log<LOG_DEBUG>(L"%1% || starting %2% ") % __func__ % varname.c_str()  ;
