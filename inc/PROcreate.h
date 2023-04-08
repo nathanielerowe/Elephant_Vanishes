@@ -48,8 +48,6 @@ namespace PROfit{
         SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},0){}
         SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), index(in_index){}
 
-	void FillCV(long int global_bin, double event_weight);
-	void FillUniverse(int universe, long int global_bin, double event_weight);
 
         inline
             void SetMode(const std::string& in_mode){mode = in_mode; return;}
@@ -72,7 +70,6 @@ namespace PROfit{
         std::vector<std::vector<eweight_type>> GetCovVec();
         std::vector<eweight_type> GetKnobs(int index, std::string variation);
 
-        //function might not needed
 
         /* Function: check if num of universes of this systematics matches with its type 
  	 * Note: multisim mode can have many universes, while minmax mode can only have 2
@@ -82,10 +79,17 @@ namespace PROfit{
 	/* Function: clean up all the member spectra (but ONLY spectra) */
         void CleanSpecs();
 
-	/* Function: create empty spectra with given length 
- 	 * Note: spectra will be created but empty
+	/* Function: create EMPTY spectra with given length 
  	 */ 
         void CreateSpecs(long int num_bins);
+
+
+	/* Function: given global bin index, and event weight, fill the central value spectrum */
+	void FillCV(long int global_bin, double event_weight);
+
+	/* Function: given global bin index, and event weight, fill the spectrum of given universe */
+	void FillUniverse(int universe, long int global_bin, double event_weight);
+
     };
 
 
@@ -103,8 +107,16 @@ namespace PROfit{
     PROspec CreatePROspecCV(const PROconfig& configin);
 
 
-    /* Function: assume currently in one entry of a file, fill systematic variations for this event 
+
+    /* Function: assume currently reading one entry of a file, update systematic variation spectrum 
      * Note: designed to be called internally by PROcess_SBNfit() function
+     *
+     * Arguments: 
+     * 		branch: pointer to branch variable, each corresponding to one subchannel 
+     * 		eventweight_map: a map between systematic string to list of variation weights
+     * 		subchannel_index: index associated with current branch/subchannel
+     *		syst_vector: list of SystStruct TO BE UPDATED, each stores all variation spectra of one systematic
+     *		syst_additional_weight: additional weight applied to systematic variation
      */
     void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight);
 
