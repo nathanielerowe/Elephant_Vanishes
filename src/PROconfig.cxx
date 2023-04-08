@@ -897,6 +897,7 @@ void PROconfig::remove_unused_files(){
     for(auto& br : m_branch_variables)
         num_all_branches += br.size();
 
+    log<LOG_DEBUG>(L"%1% || Deubg: BRANCH VARIABLE size: %2% ") % __func__ % m_branch_variables.size();;
     log<LOG_DEBUG>(L"%1% || Check for any files associated with unused subchannels ....") % __func__;
     log<LOG_DEBUG>(L"%1% || Total number of %2% active subchannels..") % __func__ % m_fullnames.size();
     log<LOG_DEBUG>(L"%1% || Total number of %2% branches listed in the xml....") % __func__ % num_all_branches;

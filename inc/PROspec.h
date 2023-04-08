@@ -8,6 +8,8 @@
 #include <cmath>
 
 // ROOT
+#include "TFile.h"
+#include "TCanvas.h"
 #include "TH1D.h"
 
 // EIGEN
@@ -30,9 +32,12 @@ namespace PROfit{
         public:
 
             //Constructors
-            PROspec() {};
+            PROspec() {}
             PROspec(const Eigen::VectorXd &in_spec, const Eigen::VectorXd &in_error) : spec(in_spec), error_square(in_error){}
+
+	    /* Function: create PROspec of given size */
 	    PROspec(long int num_bins);
+
             //PROspec(PROconfig const & configin); //Load in config file EMPTY hists
             //PROspec(std::string &xmlname); //Load directly from XML 
 
@@ -41,8 +46,9 @@ namespace PROfit{
             TH1D toTH1D(const PROconfig& inconfig, int subchannel_index);
             TH1D toTH1D(const PROconfig& inconfig, const std::string& subchannel_fullname);
 
-	    /* Function: save TH1Ds of all channels into a root file */
-	    void toROOT(const PROconfig& inconfig);
+
+	    /* Function: save TH1Ds of all subchannels into a root file */
+	    void toROOT(const PROconfig& inconfig, const std::string& output_name);
 
 
 	    /* Function: fill given bin with provided weight 

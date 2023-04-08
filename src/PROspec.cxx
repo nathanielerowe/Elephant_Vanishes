@@ -40,6 +40,8 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
     std::string hist_name = inconfig.m_fullnames[subchannel_index];
     std::string xaxis_title = inconfig.m_channel_units[channel_index];
 
+
+    //fill 1D hist
     TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
     hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());
     for(int i = 1; i <= nbins; ++i){
@@ -56,3 +58,23 @@ TH1D PROspec::toTH1D(const PROconfig& inconfig, const std::string& subchannel_fu
     int subchannel_index = inconfig.GetSubchannelIndex(subchannel_fullname);
     return this->toTH1D(inconfig, subchannel_index);
 }
+
+
+void PROspec::toROOT(const PROconfig& inconfig, const std::string& output_name){
+
+    TFile* f = new TFile(output_name.c_str(), "recreate");
+    const std::vector<std::string>& all_subchannels = inconfig.m_fullnames;
+
+    for(size_t i = 0; i!= all_subchannels.size(); ++i){
+	auto& subchannel_fullname = all_subchannels[i];
+
+	TH1D h = this->toTH1D(inconfig, subchannel_fullname);
+	h.Write();
+    }
+    f->Write();
+    f->Close();
+   
+    delete f;
+    return;
+}
+
