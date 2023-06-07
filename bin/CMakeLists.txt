@@ -20,4 +20,10 @@ target_compile_features(PROreader PRIVATE cxx_std_14)
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROreader PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict ${libraries})
 
+add_executable(PROtransformer PROtransformer.cxx ${CMAKE_BINARY_DIR}/PROfit_dict.cxx )
+target_include_directories(PROtransformer PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
+target_compile_features(PROtransformer PRIVATE cxx_std_14)
+target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
+target_link_libraries(PROtransformer PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict ${libraries})
+
 

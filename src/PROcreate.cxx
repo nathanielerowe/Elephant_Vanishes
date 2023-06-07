@@ -372,6 +372,16 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..length",v_cafhelper[fid].v_wgt_univ_length);
             trees[fid]->SetBranchAddress("rec.mc.nu.index", v_cafhelper[fid].v_truth_index);
 
+            /* comments on branches  
+	    trees[fid]->SetBranchAddress("rec.mc.nu..length", &(v_cafhelper[fid].i_wgt_size));  //number of true neutrinos in an event - integer
+	    trees[fid]->SetBranchAddress("rec.mc.nu.index", v_cafhelper[fid].v_truth_index);    // index of true neutrinos: 0 - first neutrino, 1 - second so on..
+	    trees[fid]->SetBranchAddress("rec.mc.nu.wgt..idx",v_cafhelper[fid].v_wgt_idx);      // starting index of first systematic weight string for each true neutrino
+	    trees[fid]->SetBranchAddress("rec.mc.nu.wgt..totarraysize",&(v_cafhelper[fid].i_wgt_totsize));    // total number of systematic weight strings in one event - integer (might have 1 or more neutrinos, [# neutrino * # syst strings])
+	    trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..idx", v_cafhelper[fid].v_wgt_univ_idx);	      // index of first universe for all systematic weight strings
+	    trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..length",v_cafhelper[fid].v_wgt_univ_length);    // number of univers for each systematic string.
+            trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..totarraysize", &(v_cafhelper[fid].i_wgt_univ_size));    // total number of universes - integer (ie. size of the long 1D weight array)
+	    trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ", v_cafhelper[fid].v_wgt_univ);			      // long vector containing weights of all universes of all neutrinos
+	    */
 
             //first, grab friend trees
             auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
@@ -491,7 +501,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             log<LOG_DEBUG>(L"%1% || Variation: %2% --> %3% universes") % __func__ % sys_pair.first.c_str() % sys_pair.second;
         }
 
-        int total_num_systematics = map_systematic_num_universe.size();
 
         //sanity check 
         for(const auto& s : syst_vector)
@@ -560,6 +569,160 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             syst.Print();
         }
 
+        log<LOG_INFO>(L"%1% || DONE") %__func__ ;
+        return 0;
+    }
+
+    int PROcess_WeightMap(const std::string& infile_flatcaf, const std::string& infile_post_selection, std::string destination_file){
+
+        log<LOG_DEBUG>(L"%1% || Starting to generate SBNfit-style file with eventweight map") % __func__ ;
+        log<LOG_DEBUG>(L"%1% || Input flat CAF file: %2%") % __func__ % infile_flatcaf.c_str();
+
+
+        //CAFANA related things
+        std::vector<int> pset_indices;
+        std::vector<std::string> cafana_pset_names;
+        std::map<std::string, int> map_systematic_num_universe;
+        std::map<std::string, std::vector<float>> map_systematic_vector_weights;
+
+
+	//open flat caf file
+        auto flat_caf = std::make_unique<TFile>(infile_flatcaf.c_str(),"read");
+        if(flat_caf->IsOpen()){
+            log<LOG_INFO>(L"%1% || Flat CAF file succesfully opened: %2%") % __func__  % infile_flatcaf.c_str();
+        }else{
+            log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % infile_flatcaf.c_str();
+            exit(EXIT_FAILURE);
+        }
+
+        TTree * recTree = (TTree*)(flat_caf->Get("recTree"));
+        TTree * globalTree = (TTree*)(flat_caf->Get("globalTree"));
+        int flat_caf_entries = recTree->GetEntries(); 
+        log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ % flat_caf_entries;
+
+
+	// get systematic name, index and corresponding number of universes
+        log<LOG_DEBUG>(L"%1% || Getting SRglobal ")  % __func__ ;
+        caf::SRGlobal* global = NULL;
+        globalTree->SetBranchAddress("global", &global);
+        log<LOG_DEBUG>(L"%1% || Getting first entry from global tree ") % __func__ ;
+        globalTree->GetEntry(0);
+
+        log<LOG_DEBUG>(L"%1% || Grabbing Weights ") % __func__ ;
+        for(unsigned int i = 0; i < global->wgts.size(); ++i) {
+            const caf::SRWeightPSet& pset = global->wgts[i];
+            pset_indices.push_back(i);
+            cafana_pset_names.push_back(pset.name);
+            map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
+	    log<LOG_DEBUG>(L"%1% || Grabbing Weight with index : %2%, name : %3% , number of universe: %4%")%__func__% i % pset.name.c_str() % pset.nuniv;
+        }
+
+
+        //Setup things for grabbing the CAFana weights
+        PROfit::CAFweightHelper cafhelper;
+	recTree->SetBranchAddress("rec.mc.nu..length", &(cafhelper.i_wgt_size));  //number of true neutrinos in an event - integer
+	recTree->SetBranchAddress("rec.mc.nu.index", cafhelper.v_truth_index);    // index of true neutrinos: 0 - first neutrino, 1 - second so on..
+	recTree->SetBranchAddress("rec.mc.nu.wgt..idx", cafhelper.v_wgt_idx);      // starting index of first systematic weight string for each true neutrino
+	recTree->SetBranchAddress("rec.mc.nu.wgt..totarraysize",&(cafhelper.i_wgt_totsize));    // total number of systematic weight strings in one event - integer (might have 1 or more neutrinos, [# neutrino * # syst strings])
+	recTree->SetBranchAddress("rec.mc.nu.wgt.univ..idx", cafhelper.v_wgt_univ_idx);	      // index of first universe for all systematic weight strings
+	recTree->SetBranchAddress("rec.mc.nu.wgt.univ..length",cafhelper.v_wgt_univ_length);    // number of univers for each systematic string.
+        recTree->SetBranchAddress("rec.mc.nu.wgt.univ..totarraysize", &(cafhelper.i_wgt_univ_size));    // total number of universes - integer (ie. size of the long 1D weight array)
+	recTree->SetBranchAddress("rec.mc.nu.wgt.univ", cafhelper.v_wgt_univ);			      // long vector containing weights of all universes of all neutrinos
+
+
+	//read root file that contains slices passing event selection
+	auto f_post_selection = std::make_unique<TFile>(infile_post_selection.c_str(),"read");
+        if(f_post_selection->IsOpen()){
+            log<LOG_INFO>(L"%1% || Post-selection file succesfully opened: %2%") % __func__  % infile_post_selection.c_str();
+        }else{
+            log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % infile_post_selection.c_str();
+            exit(EXIT_FAILURE);
+        }
+ 	TTree* afterTree = (TTree*)f_post_selection->Get("nutree");
+	double recoE, trueE, baseline, mc_weight, nuPDG, isCC;
+	long long entry_index;
+	double nu_index;
+	afterTree->SetBranchAddress("trueE", &trueE);
+	afterTree->SetBranchAddress("recoE", &recoE);
+	afterTree->SetBranchAddress("baseline", &baseline);
+	afterTree->SetBranchAddress("PDG", &nuPDG);
+	afterTree->SetBranchAddress("isCC", &isCC);
+	afterTree->SetBranchAddress("mc_weight", &mc_weight);
+	afterTree->SetBranchAddress("entry_index", &entry_index);
+	afterTree->SetBranchAddress("nu_index", &nu_index);
+
+	//output file and tree	
+	if(destination_file == "NULLDEFAULT")
+	    destination_file = infile_post_selection + ".addweightmap.root";	
+	auto fout = std::make_unique<TFile>(destination_file.c_str(),"recreate");
+        if(fout->IsOpen()){
+            log<LOG_INFO>(L"%1% || Output file succesfully created: %2%") % __func__  % destination_file.c_str();
+        }else{
+            log<LOG_ERROR>(L"%1% || Fail to create root file: %2%") % __func__  % destination_file.c_str();
+            exit(EXIT_FAILURE);
+        }
+	fout->cd();
+	TTree* outTree = new TTree("nutree", "nutree");
+	int in_nuPDG, in_isCC, in_nu_index;
+	outTree->Branch("trueE", &trueE);
+	outTree->Branch("recoE", &recoE);
+	outTree->Branch("baseline", &baseline);
+	outTree->Branch("mc_weight", &mc_weight);
+	outTree->Branch("PDG", &in_nuPDG);
+	outTree->Branch("isCC", &in_isCC);
+	outTree->Branch("entry_index", &entry_index);
+	outTree->Branch("nu_index", &in_nu_index);
+	outTree->Branch("event_weight",&map_systematic_vector_weights);
+
+
+        time_t start_time = time(nullptr);
+        log<LOG_INFO>(L"%1% || Start reading the files and grab weights..") % __func__;
+	for(int i = 0 ; i != afterTree->GetEntries(); ++i){
+	    afterTree->GetEntry(i);
+	    in_nuPDG = static_cast<int>(nuPDG);
+	    in_isCC = static_cast<int>(isCC);
+	    in_nu_index = isnan(nu_index) ? -1 : static_cast<int>(nu_index);
+	    map_systematic_vector_weights.clear();
+
+            if(i%500==0){
+		std::string neutrino_index_print = in_nu_index == -1 ? "Nan" : std::to_string(in_nu_index);
+		log<LOG_INFO>(L"%1% || On Neutrino Entry: %2%, corresponding to original event entry: %3%, true neutrino index: %4%") % __func__ % i % entry_index % neutrino_index_print.c_str() ;
+	    }
+
+
+	    //iterate through all systematics and fill in weight map
+	    recTree->GetEntry(entry_index);
+	    for(size_t s = 0; s != pset_indices.size(); ++s){
+		std::string& sname = cafana_pset_names[s];
+		int s_index = pset_indices[s];
+		int s_num_universe = map_systematic_num_universe[sname];
+
+		if(in_nu_index == -1){
+		    map_systematic_vector_weights[sname]={};
+		    continue;
+		}
+		for(int iuni = 0; iuni != s_num_universe; ++iuni){
+		     map_systematic_vector_weights[sname].push_back(cafhelper.GetUniverseWeight(in_nu_index, s_index, iuni));
+		     if(false && i == 1 && iuni < 50)
+			log<LOG_INFO>(L"%1% || name: %2%, weight : %3%") % __func__ % sname.c_str() % map_systematic_vector_weights[sname].back();
+		}
+
+	    }
+	
+	    outTree->Fill();
+
+	}
+
+
+        time_t time_took = time(nullptr) - start_time;
+        log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
+
+	fout->cd();
+	outTree->Write();
+	fout->Close();
+
+	flat_caf->Close();
+	f_post_selection->Close();
         log<LOG_INFO>(L"%1% || DONE") %__func__ ;
         return 0;
     }
