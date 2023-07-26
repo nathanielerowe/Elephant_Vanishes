@@ -661,13 +661,17 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             log<LOG_ERROR>(L"%1% || Fail to create root file: %2%") % __func__  % destination_file.c_str();
             exit(EXIT_FAILURE);
         }
+
+        double new_mc_weight;
+
 	fout->cd();
 	TTree* outTree = new TTree("nutree", "nutree");
 	int in_nuPDG, in_isCC, in_nu_index;
-	outTree->Branch("trueE", &trueE);
+        double in_trueE, in_baseline;
+	outTree->Branch("trueE", &in_trueE);
 	outTree->Branch("recoE", &recoE);
-	outTree->Branch("baseline", &baseline);
-	outTree->Branch("mc_weight", &mc_weight);
+	outTree->Branch("baseline", &in_baseline);
+	outTree->Branch("mc_weight", &new_mc_weight);
 	outTree->Branch("PDG", &in_nuPDG);
 	outTree->Branch("isCC", &in_isCC);
 	outTree->Branch("entry_index", &entry_index);
@@ -682,6 +686,9 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 	    in_nuPDG = static_cast<int>(nuPDG);
 	    in_isCC = static_cast<int>(isCC);
 	    in_nu_index = isnan(nu_index) ? -1 : static_cast<int>(nu_index);
+            new_mc_weight = isnan(mc_weight) ? 1.0 : static_cast<double>(mc_weight);
+            in_trueE = isnan(trueE) ? -999. : static_cast<double>(trueE);
+            in_baseline = isnan(baseline) ? -999. : static_cast<double>(baseline);
 	    map_systematic_vector_weights.clear();
 
             if(i%500==0){
