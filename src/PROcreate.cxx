@@ -33,7 +33,6 @@ namespace PROfit {
 	return;
     }
 
-
     void SystStruct::SanityCheck() const{
         if(mode == "minmax" && n_univ != 2){
             log<LOG_ERROR>(L"%1% || Systematic variation %2% is tagged as minmax mode, but has %3% universes (can only be 2)") % __func__ % systname.c_str() % n_univ;
@@ -80,9 +79,9 @@ namespace PROfit {
         // at x=1. The matrices are simply the inverses of writing out the
         // constraints expressed above.
 
-        const double y1 = ratios[0]->GetBinContent(binIdx);
-        const double y2 = ratios[1]->GetBinContent(binIdx);
-        const double y3 = ratios[2]->GetBinContent(binIdx);
+        const double y1 = ratios[0]->GetBinContent(i);
+        const double y2 = ratios[1]->GetBinContent(i);
+        const double y3 = ratios[2]->GetBinContent(i);
         const Eigen::Vector3d v{y1, y2, (y3-y1)/2};
         const Eigen::Matrix3d m{{ 1, -1,  1},
                                 {-2,  2, -1},
@@ -91,10 +90,10 @@ namespace PROfit {
         spline.push_back({res(2), res(1), res(0), 0});
 
         for(unsigned int shiftIdx = 1; shiftIdx < ratios.size()-2; ++shiftIdx){
-          const double y0 = ratios[shiftIdx-1]->GetBinContent(binIdx);
-          const double y1 = ratios[shiftIdx  ]->GetBinContent(binIdx);
-          const double y2 = ratios[shiftIdx+1]->GetBinContent(binIdx);
-          const double y3 = ratios[shiftIdx+2]->GetBinContent(binIdx);
+          const double y0 = ratios[shiftIdx-1]->GetBinContent(i);
+          const double y1 = ratios[shiftIdx  ]->GetBinContent(i);
+          const double y2 = ratios[shiftIdx+1]->GetBinContent(i);
+          const double y3 = ratios[shiftIdx+2]->GetBinContent(i);
           const Eigen::Vector4d v{y1, y2, (y2-y0)/2, (y3-y1)/2};
           const Eigen::Matrix4d m{{ 2, -2,  1,  1},
                                   {-3,  3, -2, -1},
@@ -104,9 +103,9 @@ namespace PROfit {
           spline.push_back({res(3), res(2), res(1), res(0)});
         }
 
-        const double y0 = ratios[ratios.size() - 3]->GetBinContent(binIdx);
-        const double y1 = ratios[ratios.size() - 2]->GetBinContent(binIdx);
-        const double y2 = ratios[ratios.size() - 1]->GetBinContent(binIdx);
+        const double y0 = ratios[ratios.size() - 3]->GetBinContent(i);
+        const double y1 = ratios[ratios.size() - 2]->GetBinContent(i);
+        const double y2 = ratios[ratios.size() - 1]->GetBinContent(i);
         const Eigen::Vector3d v{y1, y2, (y2-y0)/2};
         const Eigen::Matrix3d m{{-1,  1, -1},
                                 { 0,  0,  1},
@@ -393,6 +392,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
         std::vector<int> pset_indices_tmp;
         std::vector<int> pset_indices;
         std::vector<std::vector<float>> knobvals;
+        std::vector<std::vector<int>> knob_index;
         std::vector<std::string> cafana_pset_names;
 
         int good_event = 0;
@@ -407,10 +407,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
             TTree * globalTree = (TTree*)(files[fid]->Get("globalTree"));
             nentries[fid]= (long int)trees.at(fid)->GetEntries();
-
-
-
-
 
             if(files[fid]->IsOpen()){
                 log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
@@ -433,7 +429,9 @@ int PROcess_SBNfit(const PROconfig &inconfig){
                 pset_indices.push_back(i);
                 cafana_pset_names.push_back(pset.name);
                 map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
-                knobvals.push_back(pset.map.at(0).vals);
+                knob_index.push_back(pset.map.at(0).vals);
+                knobvals.push_back(pser.map.at(0).vals);
+                std::sort(knobvals.back().begin(), knobvals.back().end());
             }
 
             //Setup things for grabbing the CAFana weights
@@ -555,7 +553,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
                 log<LOG_DEBUG>(L"%1% || emplace syst_vector") % __func__  ;
                 log<LOG_DEBUG>(L"%1% || varname: %2% , map: %3% , sform: %5% , varmode %4%, knobvals[v]size %6%, psetindex %7%  ") % __func__  % varname.c_str() % map_systematic_num_universe[varname] % variation_mode.c_str() % s_formula.c_str() % knobvals[v].size() % pset_indices[v] ;
 
-                syst_vector.emplace_back(varname, map_systematic_num_universe[varname], variation_mode, s_formula, knobvals[v], pset_indices[v]);
+                syst_vector.emplace_back(varname, map_systematic_num_universe[varname], variation_mode, s_formula, knobvals[v], knob_index[v], pset_indices[v]);
             }
 
         } // end fid
@@ -653,7 +651,11 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
             int nuniv = syst.GetNUniverse();
             for(long int u =0; u<nuniv; u++){
-                float this_weight = caf_helper.GetUniverseWeight(syst.index, u);
+                int i = 0;
+                for(; i < nuniv; ++i) {
+                  if(syst.knob_index[i] == syst.knobval[u]) break;
+                }
+                float this_weight = caf_helper.GetUniverseWeight(syst.index, i);
 		syst.FillUniverse(u, global_bin, add_weight*this_weight);
                 //std::cout<<"WEI "<<is<<" "<<u<<global_bin<<" "<<add_weight<<" "<<this_weight<<std::endl;
             }

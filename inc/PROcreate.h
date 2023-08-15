@@ -37,6 +37,7 @@ namespace PROfit{
         std::string mode;
         std::string weight_formula;
         std::vector<float> knobval;
+        std::vector<int> knob_index;
         int index;
         std::vector<std::vector<std::array<double, 4>>> spline_coeffs;
 
@@ -48,7 +49,7 @@ namespace PROfit{
 
         // functions 
         SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},0){}
-        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), index(in_index){}
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, std::vector<int>& in_knob_index, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), knob_index(in_knob_index), index(in_index){}
 
 
         inline
