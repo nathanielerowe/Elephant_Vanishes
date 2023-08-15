@@ -34,7 +34,7 @@ namespace PROfit{
         //members
         std::string systname;
         int n_univ;
-        std::string mode;
+        std::string mode;  //'multisim', 'minmax', and 'multisig'
         std::string weight_formula;
         std::vector<float> knobval;
         int index;
@@ -92,6 +92,11 @@ namespace PROfit{
 	/* Function: given global bin index, and event weight, fill the spectrum of given universe */
 	void FillUniverse(int universe, long int global_bin, double event_weight);
 
+	/* Function: return CV spectrum in PROspec */
+	const PROspec& CV() const;
+
+	/*Function: return the spectrum for variation at given universe */
+	const PROspec& Variation(int universe) const;
     };
 
 

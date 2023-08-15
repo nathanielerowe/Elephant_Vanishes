@@ -21,6 +21,15 @@ namespace PROfit {
         return;
     }
 
+
+    const PROspec& SystStruct::CV() const{
+	return *p_cv;
+    }
+
+    const PROspec& SystStruct::Variation(int universe) const{
+   	return *(p_multi_spec.at(universe));
+    }
+
     void SystStruct::FillCV(long int global_bin, double event_weight){
 	p_cv->Fill(global_bin, event_weight);
 	return;
