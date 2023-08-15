@@ -38,6 +38,7 @@ namespace PROfit{
         std::string weight_formula;
         std::vector<float> knobval;
         int index;
+        std::vector<std::vector<std::array<double, 4>>> spline_coeffs;
 
         //std::vector<PROspec> m_multi_spec;
 
@@ -92,6 +93,14 @@ namespace PROfit{
 	/* Function: given global bin index, and event weight, fill the spectrum of given universe */
 	void FillUniverse(int universe, long int global_bin, double event_weight);
 
+    /* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
+    void FillSpline();
+
+    /* Function: Get weight for bin for a given shift using spline */
+    double GetSplineShift(long bin, double shift);
+
+    /* Function: Get cv spectrum shifted using spline */
+    PROspec GetSplineShiftedSpectrum(double shift);
     };
 
 
