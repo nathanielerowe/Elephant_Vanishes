@@ -14,7 +14,6 @@ void PROspec::Zero(){
 }
 
 void PROspec::Print(){
-    //std::cout<<spec<<std::endl;
     std::string spec_string = "";
     for(auto &f : spec) spec_string+=" "+std::to_string(f); 
     log<LOG_INFO>(L"%1% || %2%" ) % __func__ % spec_string.c_str();
@@ -22,7 +21,6 @@ void PROspec::Print(){
 }
 
 void PROspec::Fill(long int bin_index, double weight){
-    log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec[bin_index] += weight;
     error_square[bin_index] += std::pow(weight, 2.0);
     return;
