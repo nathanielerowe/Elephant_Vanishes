@@ -444,26 +444,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             trees[fid]->SetBranchAddress("rec.mc.nu.wgt.univ..length",v_cafhelper[fid].v_wgt_univ_length);
             trees[fid]->SetBranchAddress("rec.mc.nu.index", v_cafhelper[fid].v_truth_index);
 
-
-            //first, grab friend trees
-            auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
-            if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
-
-                auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
-                if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
-                    log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
-                    log<LOG_ERROR>(L"Terminating.");
-                    exit(EXIT_FAILURE);
-                }
-
-                for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
-
-                    std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
-                    std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                    trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
-                }
-            }
-
             // grab branches 
             int num_branch = inconfig.m_branch_variables[fid].size();
             for(int ib = 0; ib != num_branch; ++ib) {
@@ -589,8 +569,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             }
             log<LOG_DEBUG>(L"%1% || Finished setting up systematic weight formula") % __func__;
 
-
-
             // grab the subchannel index
             int num_branch = inconfig.m_branch_variables[fid].size();
             auto& branches = inconfig.m_branch_variables[fid];
@@ -640,7 +618,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
         int is = 0;
         for(SystStruct & syst : syst_vector){
-
+            syst.FillCV(global_bin, add_weight);
             formulas[is]->GetNdata();
             double sys_weight_value =formulas[is]->EvalInstance();
 
