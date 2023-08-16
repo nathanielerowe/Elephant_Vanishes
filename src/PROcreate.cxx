@@ -527,7 +527,9 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
                 //Variation Weight Maps Area
                 int n_wei = inconfig.m_mcgen_weightmaps_patterns.size();
-                std::string variation_mode = "multisim"; 
+                std::string variation_mode;
+                if(varname.find("multisigma") != std::string::npos) variation_mode = "multisigma";
+                else if(varname.find("multisim") != std::string::npos) variation_mode = "multisim";
                 std::string s_formula = "1";
 
                 for(int i=0; i< n_wei; i++){
@@ -646,8 +648,12 @@ int PROcess_SBNfit(const PROconfig &inconfig){
             int nuniv = syst.GetNUniverse();
             for(long int u =0; u<nuniv; u++){
                 int i = 0;
-                for(; i < nuniv; ++i) {
-                  if(syst.knob_index[i] == syst.knobval[u]) break;
+                if(syst.mode == "multisigma") {
+                  for(; i < nuniv; ++i) {
+                    if(syst.knob_index[i] == syst.knobval[u]) break;
+                  }
+                } else {
+                  i = u;
                 }
                 float this_weight = caf_helper.GetUniverseWeight(syst.index, i);
 		syst.FillUniverse(u, global_bin, add_weight*this_weight);
