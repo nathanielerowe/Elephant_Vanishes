@@ -38,7 +38,7 @@ namespace PROfit {
     }
 
     void SystStruct::FillUniverse(int universe, long int global_bin, double event_weight){
-	p_multi_spec.at(universe)->Fill(global_bin, event_weight);
+	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
 	return;
     }
 
@@ -322,7 +322,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
     }
 
 
-    time_t start_time = time(nullptr);
+    time_t start_time = time(nullptr), time_stamp = time(nullptr);
     log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
     for(int fid=0; fid < num_files; ++fid) {
         const auto& fn = inconfig.m_mcgen_file_name.at(fid);
@@ -357,8 +357,11 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
 	// loop over all entries
         for(long int i=0; i < nevents; ++i) {
-
-            if(i%1000==0)	log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
+            if(i%1000==0){
+	    	time_t time_passed = time(nullptr) - time_stamp;
+		log<LOG_INFO>(L"%1% || File %2% -- uni : %3% / %4%  took %5% seconds") % __func__ % fid % i % nevents % time_passed;
+	        time_stamp = time(nullptr);
+	    }
 	    trees[fid]->GetEntry(i);
             
 

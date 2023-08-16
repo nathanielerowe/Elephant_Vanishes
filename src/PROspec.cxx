@@ -33,6 +33,12 @@ void PROspec::Fill(long int bin_index, double weight){
     return;
 }
 
+void PROspec::QuickFill(long int bin_index, double weight){
+    log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    spec[bin_index] += weight;
+    return;
+}
+
 
 TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
 

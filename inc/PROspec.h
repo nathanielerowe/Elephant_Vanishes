@@ -64,9 +64,13 @@ namespace PROfit{
 
 
 	    /* Function: fill given bin with provided weight 
- 	     * Note: it does NOT check whether the given bin is out of range or not 
+ 	     * Note: 
+ 	     * 	 Both function do NOT check whether the given bin is out of range or not 
+ 	     * 	 Fill() updates the bin content and error, while QuickFill() only updates bin content and doesn't care error
+ 	     *
  	     */
 	    void Fill(long int bin_index, double weight);
+	    void QuickFill(long int bin_index, double weight);
 
 	    /* Function: zero out the spectrum and error, but keep the dimension */
 	    void Zero();
