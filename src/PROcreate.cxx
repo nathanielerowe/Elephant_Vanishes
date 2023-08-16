@@ -69,8 +69,9 @@ namespace PROfit {
     void SystStruct::FillSpline() {
       std::vector<PROspec> ratios;
       ratios.reserve(p_multi_spec.size());
-      for(const auto& spec: p_multi_spec) {
-        ratios.push_back(*spec / *p_cv);
+      for(size_t i = 0; i < p_multi_spec.size(); ++i) {
+        ratios.push_back(*p_multi_spec[i] / *p_cv);
+        if(knobval[i] == -1) ratios.push_back(*p_cv / *p_cv);
       }
       spline_coeffs.reserve(p_cv->GetNbins());
       for(long i = 0; i < p_cv->GetNbins(); ++i) {
@@ -133,7 +134,8 @@ namespace PROfit {
       // We should use the line below if we switch to c++17
       // const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
       std::array<double, 4> coeffs = spline_coeffs[bin][shiftBin];
-      shift -= knobval[shiftBin];
+      if(shiftBin == spline_coeffs.size() - 1 || knobval[shiftBin] > 1) shift -= knobval[shiftBin - 1];
+      else if(knobval[shiftBin] < 1) shift -= knobval[shiftBin];
       return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
     }
 
