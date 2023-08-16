@@ -93,12 +93,13 @@ if(MPI_ENABLE)
 
 endif(MPI_ENABLE)
 
-
 #this is a bit mesier but works
 execute_process(COMMAND git clone -b v09_20_05 https://github.com/SBNSoftware/sbnanaobj.git ${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src )
 set(SBNANAOBJ_INCLUDE_DIR "${CMAKE_BINARY_DIR}/_deps/sbnanaobj-src/")
 
-#execute_process(COMMAND ${CMAKE_BINARY_DIR}/setup_h5.sh)
+execute_process(COMMAND git clone -b v2.7.1 https://github.com/BlueBrain/HighFive.git ${CMAKE_BINARY_DIR}/_deps/highfive-src )
+set(HIGHFIVE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/_deps/highfive-src/include/")
+
 find_package(HDF5 REQUIRED)
 if(HDF5_FOUND)
     include_directories (SYSTEM ${HDF5_INCLUDE_DIR})
