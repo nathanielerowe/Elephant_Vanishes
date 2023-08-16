@@ -66,7 +66,7 @@ namespace PROfit {
     }
 
 
-int PROcess_SBNfit(const PROconfig &inconfig){
+int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector){
  
     log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
 
@@ -176,15 +176,15 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 	    auto& f_weight = f_event_weights[fid][ib];
 
             for(const auto& it : *f_weight){
-    	    	log<LOG_INFO>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
+    	    	log<LOG_DEBUG>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
 
             	if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
-    	    	    log<LOG_INFO>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
+    	    	    log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
                     continue;
                 }
 
             	if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
-    	    	    log<LOG_INFO>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
+    	    	    log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
                     continue;
             	}
 
@@ -203,7 +203,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
     //constuct object for each systematic variation, and grab weight maps
     log<LOG_INFO>(L"%1% || Now start to grab related weightmaps") % __func__;
-    std::vector<SystStruct> syst_vector;
     for(auto& sys_pair : map_systematic_num_universe){
 
 	const std::string& sys_name = sys_pair.first;
@@ -278,7 +277,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 	// loop over all entries
         for(long int i=0; i < nevents; ++i) {
 
-            if(i%100==0)	log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
+            if(i%1000==0)	log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
 	    trees[fid]->GetEntry(i);
             
 
@@ -713,7 +712,7 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
 	int num_branch = inconfig.m_branch_variables[fid].size();
 	auto& branches = inconfig.m_branch_variables[fid];
 	std::vector<int> subchannel_index(num_branch, 0); 
-	log<LOG_DEBUG>(L"%1% || This file includes %2% branch/subchannels") % __func__ % num_branch;
+	log<LOG_INFO>(L"%1% || This file includes %2% branch/subchannels") % __func__ % num_branch;
         for(int ib = 0; ib != num_branch; ++ib) {
 
             const std::string& subchannel_name = inconfig.m_branch_variables[fid][ib]->associated_hist;
@@ -725,7 +724,7 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
 	// loop over all entries
         for(long int i=0; i < nevents; ++i) {
 
-            if(i%100==0)	log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
+            if(i%1000==0)	log<LOG_INFO>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
 	    trees[fid]->GetEntry(i);
             
 	    //branch loop
@@ -768,6 +767,8 @@ void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<Branc
     double reco_value = *(static_cast<double*>(branch->GetValue()));
     double mc_weight = branch->GetMonteCarloWeight(); 
     long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
+    if(global_bin < 0 )  //out of range
+        return;
 
     for(int i = 0; i != total_num_sys; ++i){
 	SystStruct& syst_obj = syst_vector[i];
@@ -792,5 +793,77 @@ void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<Branc
     return;
 }
 
+
+Eigen::MatrixXd SystStruct::GenerateCovarMatrix(const SystStruct& sys_obj){
+    int n_universe = sys_obj.GetNUniverse(); 
+    std::string sys_name = sys_obj.GetSysName();
+    
+    const PROspec& cv_spec = sys_obj.CV();
+    long int nbins = cv_spec.GetNbins();
+    log<LOG_INFO>(L"%1% || Generating covariance matrix.. size: %2% x %3%") % __func__ % nbins % nbins;
+
+    //build full covariance matrix 
+    Eigen::MatrixXd full_covar_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
+    for(int i = 0; i != n_universe; ++i){
+	PROspec spec_diff  = cv_spec - sys_obj.Variation(i);
+	full_covar_matrix += (spec_diff.Spec() * spec_diff.Spec().transpose() ) / static_cast<double>(n_universe);
+    }
+ 
+    //build fractional covariance matrix 
+    //first, get the matrix with diagonal being reciprocal of CV spectrum prdiction
+    Eigen::MatrixXd cv_spec_matrix =  Eigen::MatrixXd::Identity(nbins, nbins);
+    for(int i =0; i != nbins; ++i)
+	cv_spec_matrix(i, i) = 1.0/cv_spec.GetBinContent(i);
+
+    //second, get fractioal covar
+    Eigen::MatrixXd frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
+
+    return frac_covar_matrix;
+}
+
+bool SystStruct::isPositiveSemidefinite(const Eigen::MatrixXd& in_matrix){
+
+    //first, check if it's symmetric 
+    if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
+	log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<double>::dummy_precision();
+	return false;
+    }
+
+    //second, check if it's positive semi-definite;
+    Eigen::LDLT<Eigen::MatrixXd> llt(in_matrix);
+    if((llt.info() == Eigen::NumericalIssue ) || (!llt.isPositive()) )
+	return false;
+
+    return true;
+
+}
+
+bool SystStruct::isPositiveSemidefinite2(const Eigen::MatrixXd& in_matrix, double tolerance ){
+
+    //first, check if it's symmetric 
+    if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
+	log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<double>::dummy_precision();
+	return false;
+    }
+   
+
+    //second, check if it's positive semi-definite;
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(in_matrix);
+    if(eigensolver.info() != Eigen::Success){
+	log<LOG_ERROR>(L"%1% || Failing to get eigenvalues..") % __func__ ;
+	return false;
+    }
+   
+    Eigen::VectorXd eigenvals = eigensolver.eigenvalues();
+    for(auto val : eigenvals ){
+        //double val = v;
+	if(val < 0 || fabs(val) > tolerance){
+	   log<LOG_ERROR>(L"%1% || Found negative eigenvalues beyond tolerance (%2%): %3%...") % __func__ % tolerance % fabs(val);
+	   return false;
+	}
+    }
+    return true;
+
+}
 }//namespace
 

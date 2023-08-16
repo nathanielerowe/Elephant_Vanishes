@@ -1,6 +1,5 @@
 #include "PROconfig.h"
 #include "PROspec.h"
-#include "PROcovariancegen.h"
 #include "PROcreate.h"
 
 #include "CLI11.h"
@@ -60,7 +59,9 @@ int main(int argc, char* argv[])
 
     PROconfig myConf(xmlname);
 
-    PROcess_CAFana(myConf);
+    std::vector<SystStruct> syst_vector;
+    PROcess_SBNfit(myConf, syst_vector);
+    //PROcess_CAFana(myConf);
     //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
 
