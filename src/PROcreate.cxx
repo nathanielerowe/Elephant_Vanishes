@@ -60,8 +60,9 @@ namespace PROfit {
     void SystStruct::FillSpline() {
       std::vector<PROspec> ratios;
       ratios.reserve(p_multi_spec.size());
-      for(const auto& spec: p_multi_spec) {
-        ratios.push_back(*spec / *p_cv);
+      for(size_t i = 0; i < p_multi_spec.size(); ++i) {
+        ratios.push_back(*p_multi_spec[i] / *p_cv);
+        if(knobval[i] == -1) ratios.push_back(*p_cv / *p_cv);
       }
       spline_coeffs.reserve(p_cv->GetNbins());
       for(long i = 0; i < p_cv->GetNbins(); ++i) {
