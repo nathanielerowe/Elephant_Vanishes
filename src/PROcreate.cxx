@@ -124,7 +124,8 @@ namespace PROfit {
       // We should use the line below if we switch to c++17
       // const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
       std::array<double, 4> coeffs = spline_coeffs[bin][shiftBin];
-      shift -= knobval[shiftBin];
+      if(shiftBin == spline_coeffs.size() - 1 || knobval[shiftBin] > 1) shift -= knobval[shiftBin - 1];
+      else if(knobval[shiftBin] < 1) shift -= knobval[shiftBin];
       return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
     }
 
