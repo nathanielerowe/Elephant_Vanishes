@@ -882,7 +882,7 @@ Eigen::MatrixXd SystStruct::GenerateCovarMatrix(const SystStruct& sys_obj){
     return frac_covar_matrix;
 }
 
-bool SystStruct::isPositiveSemidefinite(const Eigen::MatrixXd& in_matrix){
+bool SystStruct::isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix){
 
     //first, check if it's symmetric 
     if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
@@ -899,7 +899,7 @@ bool SystStruct::isPositiveSemidefinite(const Eigen::MatrixXd& in_matrix){
 
 }
 
-bool SystStruct::isPositiveSemidefinite2(const Eigen::MatrixXd& in_matrix, double tolerance ){
+bool SystStruct::isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance ){
 
     //first, check if it's symmetric 
     if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
@@ -917,9 +917,8 @@ bool SystStruct::isPositiveSemidefinite2(const Eigen::MatrixXd& in_matrix, doubl
    
     Eigen::VectorXd eigenvals = eigensolver.eigenvalues();
     for(auto val : eigenvals ){
-        //double val = v;
-	if(val < 0 || fabs(val) > tolerance){
-	   log<LOG_ERROR>(L"%1% || Found negative eigenvalues beyond tolerance (%2%): %3%...") % __func__ % tolerance % fabs(val);
+	if(val < 0 && fabs(val) > tolerance){
+	   log<LOG_ERROR>(L"%1% || Found negative eigenvalues beyond tolerance (%2%): %3%") % __func__ % tolerance % val;
 	   return false;
 	}
     }

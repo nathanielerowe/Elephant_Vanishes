@@ -87,18 +87,29 @@ namespace PROfit{
 	const PROspec& Variation(int universe) const;
 
 
-	//----- Covariance matrix related ---
-	//----- Covariance matrix related ---
+	//----- Spline and Covariance matrix related ---
+	//----- Spline and Covariance matrix related ---
 	
         /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it. */ 
         static Eigen::MatrixXd GenerateCovarMatrix(const SystStruct& sys_obj);
 
 
 
-        /* Function: check if given matrix is positive semi-definite */
-	static bool isPositiveSemidefinite2(const Eigen::MatrixXd& in_matrix,double tolerance=1e-16);
-	static bool isPositiveSemidefinite(const Eigen::MatrixXd& in_matrix);
+        /* Function: check if given matrix is positive semi-definite with tolerance*/
+	static bool isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance=1.0e-16);
 
+        /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
+	static bool isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix);
+
+    
+	/* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
+    	void FillSpline();
+
+    	/* Function: Get weight for bin for a given shift using spline */
+    	double GetSplineShift(long bin, double shift);
+
+    	/* Function: Get cv spectrum shifted using spline */
+    	PROspec GetSplineShiftedSpectrum(double shift);
 
 	//---------- Helper Functions --------
 	//---------- Helper Functions --------
@@ -125,14 +136,6 @@ namespace PROfit{
         void SanityCheck() const;
         void Print() const;
 
-    /* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
-    void FillSpline();
-
-    /* Function: Get weight for bin for a given shift using spline */
-    double GetSplineShift(long bin, double shift);
-
-    /* Function: Get cv spectrum shifted using spline */
-    PROspec GetSplineShiftedSpectrum(double shift);
     };
 
 
