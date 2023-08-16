@@ -527,9 +527,8 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
                 //Variation Weight Maps Area
                 int n_wei = inconfig.m_mcgen_weightmaps_patterns.size();
-                std::string variation_mode;
+                std::string variation_mode = "multisim";
                 if(varname.find("multisigma") != std::string::npos) variation_mode = "multisigma";
-                else if(varname.find("multisim") != std::string::npos) variation_mode = "multisim";
                 std::string s_formula = "1";
 
                 for(int i=0; i< n_wei; i++){
