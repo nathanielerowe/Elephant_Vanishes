@@ -544,7 +544,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 
                 log<LOG_DEBUG>(L"%1% || %2% has %3% montecarlos in fie %4% ") % __func__ % varname.c_str() % map_systematic_num_universe[varname] % fid  ;
 
-                map_systematic_num_universe[varname] = std::max((int)map_systematic_num_universe[varname], (int)knobvals[v].size());
+                //map_systematic_num_universe[varname] = std::max((int)map_systematic_num_universe[varname], (int)knobvals[v].size());
 
                 //Some code to check if this varname is already in the syst_vector. If it is, check if things are the same, otherwise PANIC!
                 log<LOG_DEBUG>(L"%1% || emplace syst_vector") % __func__  ;
