@@ -139,7 +139,7 @@ namespace PROfit{
      * TODO: not finished yet
      */
     int PROcess_SBNfit(const PROconfig &inconfig);
-    int PROcess_CAFana(const PROconfig &inconfig);
+    int PROcess_CAFana(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
 
     int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin);
 

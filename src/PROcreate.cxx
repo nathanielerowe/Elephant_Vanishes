@@ -112,6 +112,8 @@ namespace PROfit {
                                  { 1,  0,  0}};
         const Eigen::Vector3d resp = mp * vp;
         spline.push_back({resp(2), resp(1), resp(0), 0});
+        
+        spline_coeffs.push_back(spline);
       }
     }
 
@@ -122,6 +124,7 @@ namespace PROfit {
       // We should use the line below if we switch to c++17
       // const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
       std::array<double, 4> coeffs = spline_coeffs[bin][shiftBin];
+      shift -= knobval[shiftBin];
       return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
     }
 
@@ -374,7 +377,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
 }
 
 
-    int PROcess_CAFana(const PROconfig &inconfig){
+    int PROcess_CAFana(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector){
 
         log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
 
@@ -399,7 +402,6 @@ int PROcess_SBNfit(const PROconfig &inconfig){
         std::vector<std::string> cafana_pset_names;
 
         int good_event = 0;
-        std::vector<SystStruct> syst_vector;
 
         std::vector<PROfit::CAFweightHelper> v_cafhelper(num_files);
 
