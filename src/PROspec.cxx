@@ -18,7 +18,7 @@ void PROspec::Zero(){
     return;
 }
 
-void PROspec::Print(){
+void PROspec::Print() const {
     //std::cout<<spec<<std::endl;
     std::string spec_string = "";
     for(auto &f : spec) spec_string+=" "+std::to_string(f); 
