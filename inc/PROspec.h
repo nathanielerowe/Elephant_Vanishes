@@ -72,7 +72,7 @@ namespace PROfit{
 	    void Zero();
 
             /* Function: Print out spec*/
-	    void Print();
+	    void Print() const;
 
 	    /*Return number of bins in spectrum */
 	    long int GetNbins() const;

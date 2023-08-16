@@ -38,7 +38,9 @@ namespace PROfit{
         std::string mode;  //'multisim', 'minmax', and 'multisig'
         std::string weight_formula;
         std::vector<float> knobval;
+        std::vector<float> knob_index;
         int index;
+        std::vector<std::vector<std::array<double, 4>>> spline_coeffs;
 
         //std::vector<PROspec> m_multi_spec;
 
@@ -47,8 +49,8 @@ namespace PROfit{
         std::vector<std::unique_ptr<PROspec>> p_multi_spec;
 
         // functions 
-        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},0){}
-        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), index(in_index){}
+        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},{},0){}
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const std::vector<float>& in_knob_index, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), knob_index(in_knob_index), index(in_index){}
 
 
         inline
@@ -123,6 +125,14 @@ namespace PROfit{
         void SanityCheck() const;
         void Print() const;
 
+    /* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
+    void FillSpline();
+
+    /* Function: Get weight for bin for a given shift using spline */
+    double GetSplineShift(long bin, double shift);
+
+    /* Function: Get cv spectrum shifted using spline */
+    PROspec GetSplineShiftedSpectrum(double shift);
     };
 
 
@@ -160,7 +170,7 @@ namespace PROfit{
      * TODO: not finished yet
      */
     int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
-    int PROcess_CAFana(const PROconfig &inconfig);
+    int PROcess_CAFana(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
 
     int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin);
 
