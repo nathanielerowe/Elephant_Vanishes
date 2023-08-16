@@ -61,10 +61,10 @@ namespace PROfit {
       std::vector<PROspec> ratios;
       ratios.reserve(p_multi_spec.size());
       for(const auto& spec: p_multi_spec) {
-        ratios.push_back(spec.Divide(p_cv));
+        ratios.push_back(*spec / *p_cv);
       }
       spline_coeffs.reserve(p_cv->GetNbins());
-      for(size_t i = 0; i < p_cv->GetNbins(); ++i) {
+      for(long i = 0; i < p_cv->GetNbins(); ++i) {
         std::vector<std::array<double, 4>> spline;
         spline.reserve(knobval.size());
 
@@ -79,9 +79,9 @@ namespace PROfit {
         // at x=1. The matrices are simply the inverses of writing out the
         // constraints expressed above.
 
-        const double y1 = ratios[0]->GetBinContent(i);
-        const double y2 = ratios[1]->GetBinContent(i);
-        const double y3 = ratios[2]->GetBinContent(i);
+        const double y1 = ratios[0].GetBinContent(i);
+        const double y2 = ratios[1].GetBinContent(i);
+        const double y3 = ratios[2].GetBinContent(i);
         const Eigen::Vector3d v{y1, y2, (y3-y1)/2};
         const Eigen::Matrix3d m{{ 1, -1,  1},
                                 {-2,  2, -1},
@@ -90,10 +90,10 @@ namespace PROfit {
         spline.push_back({res(2), res(1), res(0), 0});
 
         for(unsigned int shiftIdx = 1; shiftIdx < ratios.size()-2; ++shiftIdx){
-          const double y0 = ratios[shiftIdx-1]->GetBinContent(i);
-          const double y1 = ratios[shiftIdx  ]->GetBinContent(i);
-          const double y2 = ratios[shiftIdx+1]->GetBinContent(i);
-          const double y3 = ratios[shiftIdx+2]->GetBinContent(i);
+          const double y0 = ratios[shiftIdx-1].GetBinContent(i);
+          const double y1 = ratios[shiftIdx  ].GetBinContent(i);
+          const double y2 = ratios[shiftIdx+1].GetBinContent(i);
+          const double y3 = ratios[shiftIdx+2].GetBinContent(i);
           const Eigen::Vector4d v{y1, y2, (y2-y0)/2, (y3-y1)/2};
           const Eigen::Matrix4d m{{ 2, -2,  1,  1},
                                   {-3,  3, -2, -1},
@@ -103,28 +103,31 @@ namespace PROfit {
           spline.push_back({res(3), res(2), res(1), res(0)});
         }
 
-        const double y0 = ratios[ratios.size() - 3]->GetBinContent(i);
-        const double y1 = ratios[ratios.size() - 2]->GetBinContent(i);
-        const double y2 = ratios[ratios.size() - 1]->GetBinContent(i);
-        const Eigen::Vector3d v{y1, y2, (y2-y0)/2};
-        const Eigen::Matrix3d m{{-1,  1, -1},
-                                { 0,  0,  1},
-                                { 1,  0,  0}};
-        const Eigen::Vector3d res = m * v;
-        spline.push_back({res(2), res(1), res(0), 0});
+        const double y4 = ratios[ratios.size() - 3].GetBinContent(i);
+        const double y5 = ratios[ratios.size() - 2].GetBinContent(i);
+        const double y6 = ratios[ratios.size() - 1].GetBinContent(i);
+        const Eigen::Vector3d vp{y5, y6, (y6-y4)/2};
+        const Eigen::Matrix3d mp{{-1,  1, -1},
+                                 { 0,  0,  1},
+                                 { 1,  0,  0}};
+        const Eigen::Vector3d resp = mp * vp;
+        spline.push_back({resp(2), resp(1), resp(0), 0});
       }
     }
 
     double SystStruct::GetSplineShift(long bin, double shift) {
       if(bin < 0 || bin >= p_cv->GetNbins()) return -1;
-      const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
+      long shiftBin = (shift < knobval[0]) ? 0 : (long)(shift - knobval[0]);
+      if(shiftBin > spline_coeffs[0].size() - 1) shiftBin = spline_coeffs[0].size() - 1;
+      // We should use the line below if we switch to c++17
+      // const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
       std::array<double, 4> coeffs = spline_coeffs[bin][shiftBin];
       return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
     }
 
     PROspec SystStruct::GetSplineShiftedSpectrum(double shift) {
       PROspec ret(p_cv->GetNbins());
-      for(size_t i = 0; i < p_cv->GetNbins(); ++i)
+      for(long i = 0; i < p_cv->GetNbins(); ++i)
         ret.Fill(i, GetSplineShift(i, shift) * p_cv->GetBinContent(i));
       return ret;
     }
@@ -392,7 +395,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
         std::vector<int> pset_indices_tmp;
         std::vector<int> pset_indices;
         std::vector<std::vector<float>> knobvals;
-        std::vector<std::vector<int>> knob_index;
+        std::vector<std::vector<float>> knob_index;
         std::vector<std::string> cafana_pset_names;
 
         int good_event = 0;
@@ -430,7 +433,7 @@ int PROcess_SBNfit(const PROconfig &inconfig){
                 cafana_pset_names.push_back(pset.name);
                 map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
                 knob_index.push_back(pset.map.at(0).vals);
-                knobvals.push_back(pser.map.at(0).vals);
+                knobvals.push_back(pset.map.at(0).vals);
                 std::sort(knobvals.back().begin(), knobvals.back().end());
             }
 
