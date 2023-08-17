@@ -20,7 +20,7 @@ PROconfig::PROconfig(const std::string &xml):
     m_write_out_variation(false), 
     m_form_covariance(true),
     m_write_out_tag("UNSET_DEFAULT"),
-    m_num_mcgen_files(0),
+    m_num_mcgen_files(0)
 {
 
     LoadFromXML(m_xmlname);
@@ -288,16 +288,20 @@ int PROconfig::LoadFromXML(const std::string &filename){
                         }
 			binedge.push_back(maxp);
 			binwidth.resize(nbinsp, step);
+                        log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
 		    }
 
                     m_channel_num_truebins.push_back(nbinsp);
                     m_channel_truebin_edges.push_back(binedge);
                     m_channel_truebin_widths.push_back(binwidth);
 
-                    log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
 
                 }
-            }
+            }else{
+		 m_channel_num_truebins.push_back(0);
+                 m_channel_truebin_edges.push_back(std::vector<double>());
+                 m_channel_truebin_widths.push_back(std::vector<double>());
+	    }
 
             // Now loop over all this channels subchanels. Not the names must be UNIQUE!!
             tinyxml2::XMLElement *pSubChan;
