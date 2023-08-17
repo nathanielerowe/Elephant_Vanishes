@@ -33,12 +33,16 @@ namespace PROfit {
     }
 
     void SystStruct::FillCV(int global_bin, double event_weight){
-	p_cv->Fill(global_bin, event_weight);
+        if(event_weight==0){
+	        p_cv->Fill(global_bin, event_weight);
+        }
 	return;
     }
 
     void SystStruct::FillUniverse(int universe, int global_bin, double event_weight){
-	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
+        if(event_weight==0){
+        	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
+        }
 	return;
     }
 

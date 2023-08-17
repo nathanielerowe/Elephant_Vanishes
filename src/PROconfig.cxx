@@ -11,6 +11,9 @@ PROconfig::PROconfig(const std::string &xml):
     m_num_bins_detector_block(0),
     m_num_bins_mode_block(0),
     m_num_bins_total(0),
+    m_num_truebins_detector_block(0),
+    m_num_truebins_mode_block(0),
+    m_num_truebins_total(0),
     m_num_bins_detector_block_collapsed(0),
     m_num_bins_mode_block_collapsed(0),
     m_num_bins_total_collapsed(0),
@@ -20,8 +23,8 @@ PROconfig::PROconfig(const std::string &xml):
     m_num_mcgen_files(0)
 {
 
+    m_has_true_bins = false;
     LoadFromXML(m_xmlname);
-
 
     //A matrix for collapsing the full-vector
     //left multiply this matrix by the full-vector to get collapsed vector
@@ -243,6 +246,39 @@ int PROconfig::LoadFromXML(const std::string &filename){
             m_channel_bin_widths.push_back(binwidth);
 
 
+            tinyxml2::XMLElement *pBinT = pChan->FirstChildElement("truebins");
+            if(pBinT){
+                const char* tmin = pBinT->Attribute("min");
+                const char* tmax = pBinT->Attribute("max");
+                const char* tnbins = pBinT->Attribute("nbins");
+                if(tmin==NULL && tmax==NULL && tnbins==NULL )
+                {
+                    log<LOG_DEBUG>(L"%1% || This variable has a NO truth binning (or attribute min,max,nbins)  ") % __func__ ;
+                    m_has_true_bins = false;
+                }else{
+                    m_has_true_bins = true;
+
+                    log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning.   ") % __func__  ;
+
+                    double minp = strtod(tmin, &end);
+                    double maxp = strtod(tmax, &end);
+                    int nbinsp = (int)strtod(tnbins, &end);
+                    double step = (maxp-minp)/(double)nbinsp;
+                    std::vector<double> binedge;
+                    std::vector<double> binwidth(nbinsp,step);
+                    for(int i=0; i<nbinsp; i++){
+                        binedge.push_back(minp+i*step);
+                    }
+
+                    m_channel_num_truebins.push_back(nbinsp);
+                    m_channel_truebin_edges.push_back(binedge);
+                    m_channel_truebin_widths.push_back(binwidth);
+
+                    log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
+
+                }
+            }
+
             // Now loop over all this channels subchanels. Not the names must be UNIQUE!!
             tinyxml2::XMLElement *pSubChan;
             m_subchannel_bool.push_back({});
@@ -398,7 +434,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             std::vector<bool> TEMP_additional_weight_bool;
             std::vector<std::string> TEMP_additional_weight_name;
-	    std::vector<std::string> TEMP_eventweight_branch_names;
+            std::vector<std::string> TEMP_eventweight_branch_names;
             std::vector<std::shared_ptr<BranchVariable>> TEMP_branch_variables;
             while(pBranch){
 
@@ -661,7 +697,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
         if(m_write_out_variation){
             if(swrite_out_tag) 
-		m_write_out_tag = std::string(swrite_out_tag);
+                m_write_out_tag = std::string(swrite_out_tag);
         }
 
         if( std::string(sform_matrix) == "false"){
@@ -685,10 +721,13 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
     }
     log<LOG_INFO>(L"%1% || num_bins_detector_block: %2%") % __func__ % m_num_bins_detector_block;
+    log<LOG_INFO>(L"%1% || num_truebins_detector_block: %2%") % __func__ % m_num_truebins_detector_block;
     log<LOG_INFO>(L"%1% || num_bins_detector_block_collapsed: %2%") % __func__ % m_num_bins_detector_block_collapsed;
     log<LOG_INFO>(L"%1% || num_bins_mode_block: %2%") % __func__ % m_num_bins_mode_block;
+    log<LOG_INFO>(L"%1% || num_true_bins_mode_block: %2%") % __func__ % m_num_truebins_mode_block;
     log<LOG_INFO>(L"%1% || num_bins_mode_block_collapsed: %2%") % __func__ % m_num_bins_mode_block_collapsed;
     log<LOG_INFO>(L"%1% || num_bins_total: %2%") % __func__ % m_num_bins_total;
+    log<LOG_INFO>(L"%1% || num_true_bins_total: %2%") % __func__ % m_num_truebins_total;
     log<LOG_INFO>(L"%1% || num_bins_total_collapsed: %2%") % __func__ % m_num_bins_total_collapsed;
 
 
@@ -703,13 +742,16 @@ void PROconfig::CalcTotalBins(){
     log<LOG_INFO>(L"%1% || Calculating number of bins involved") % __func__;
     for(int i = 0; i != m_num_channels; ++i){
         m_num_bins_detector_block += m_num_subchannels[i]*m_channel_num_bins[i];
+        m_num_truebins_detector_block += m_num_subchannels[i]*m_channel_num_truebins[i];
         m_num_bins_detector_block_collapsed += m_channel_num_bins[i];
     }
 
     m_num_bins_mode_block = m_num_bins_detector_block *  m_num_detectors;
+    m_num_bins_mode_block = m_num_truebins_detector_block *  m_num_detectors;
     m_num_bins_mode_block_collapsed = m_num_bins_detector_block_collapsed * m_num_detectors;
 
     m_num_bins_total = m_num_bins_mode_block * m_num_modes;
+    m_num_truebins_total = m_num_truebins_mode_block * m_num_modes;
     m_num_bins_total_collapsed = m_num_bins_mode_block_collapsed * m_num_modes;
 
     this->generate_index_map();
@@ -717,21 +759,21 @@ void PROconfig::CalcTotalBins(){
 }
 
 int PROconfig::GetSubchannelIndex(const std::string& fullname) const{
-   auto pos_iter = m_map_fullname_subchannel_index.find(fullname);
-   if(pos_iter == m_map_fullname_subchannel_index.end()){
-       log<LOG_ERROR>(L"%1% || Subchannel name: %2% does not exist in the indexing map!") % __func__ % fullname.c_str();
-       log<LOG_ERROR>(L"Terminating.");
-       exit(EXIT_FAILURE);
-   }
-   return pos_iter->second;
+    auto pos_iter = m_map_fullname_subchannel_index.find(fullname);
+    if(pos_iter == m_map_fullname_subchannel_index.end()){
+        log<LOG_ERROR>(L"%1% || Subchannel name: %2% does not exist in the indexing map!") % __func__ % fullname.c_str();
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+    return pos_iter->second;
 }
 
 int PROconfig::GetChannelIndex(int subchannel_index) const{
     auto pos_iter = m_map_subchannel_index_to_channel_index.find(subchannel_index);
     if(pos_iter == m_map_subchannel_index_to_channel_index.end()){
-       log<LOG_ERROR>(L"%1% || Subchannel index: %2% does not exist in the subchannel-channel indexing map!") % __func__ % subchannel_index;
-       log<LOG_ERROR>(L"Terminating.");
-       exit(EXIT_FAILURE);
+        log<LOG_ERROR>(L"%1% || Subchannel index: %2% does not exist in the subchannel-channel indexing map!") % __func__ % subchannel_index;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
     }
     return pos_iter->second;
 }
@@ -739,9 +781,9 @@ int PROconfig::GetChannelIndex(int subchannel_index) const{
 int PROconfig::GetGlobalBinStart(int subchannel_index) const{
     auto pos_iter = m_map_subchannel_index_to_global_index_start.find(subchannel_index);
     if(pos_iter == m_map_subchannel_index_to_global_index_start.end()){
-       log<LOG_ERROR>(L"%1% || Subchannel index: %2% does not exist in the subchannel-globalbin map!") % __func__ % subchannel_index;
-       log<LOG_ERROR>(L"Terminating.");
-       exit(EXIT_FAILURE);
+        log<LOG_ERROR>(L"%1% || Subchannel index: %2% does not exist in the subchannel-globalbin map!") % __func__ % subchannel_index;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
     }
     return pos_iter->second;
 }
@@ -757,6 +799,29 @@ const std::vector<double>& PROconfig::GetChannelBinEdges(int channel_index) cons
 
     return m_channel_bin_edges[channel_index];
 }
+
+int PROconfig::GetGlobalTrueBinStart(int subchannel_index) const{
+    auto pos_iter = m_map_subchannel_index_to_trueglobal_index_start.find(subchannel_index);
+    if(pos_iter == m_map_subchannel_index_to_trueglobal_index_start.end()){
+        log<LOG_ERROR>(L"%1% || Subchannel index: %2% does not exist in the subchannel-globalbin map!") % __func__ % subchannel_index;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+    return pos_iter->second;
+}
+
+const std::vector<double>& PROconfig::GetChannelTrueBinEdges(int channel_index) const{
+
+    if(channel_index < 0 || channel_index >= m_num_channels){
+        log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
+        log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+
+    return m_channel_truebin_edges[channel_index];
+}
+
 
 //------------ Start of private function ------------------
 //------------ Start of private function ------------------
@@ -834,7 +899,7 @@ void PROconfig::remove_unused_channel(){
         m_channel_plotnames = temp_channel_plotnames;
         m_channel_units = temp_channel_units;
     }
-        
+
     {
 
         //update subchannel-related info
@@ -908,27 +973,27 @@ void PROconfig::remove_unused_files(){
 
         std::unordered_set<std::string> set_all_names(m_fullnames.begin(), m_fullnames.end());
 
-    	std::vector<std::string> temp_tree_name;
-   	std::vector<std::string> temp_file_name;
-    	std::vector<long int> temp_maxevents;
-    	std::vector<double> temp_pot;
-    	std::vector<double> temp_scale;
-    	std::vector<bool> temp_fake;
-    	std::map<std::string,std::vector<std::string>> temp_file_friend_map;
-    	std::map<std::string,std::vector<std::string>> temp_file_friend_treename_map;
-    	std::vector<std::vector<std::string>> temp_additional_weight_name;
-    	std::vector<std::vector<bool>> temp_additional_weight_bool;
-    	std::vector<std::vector<std::shared_ptr<BranchVariable>>> temp_branch_variables;
-    	std::vector<std::vector<std::string>> temp_eventweight_branch_names;
+        std::vector<std::string> temp_tree_name;
+        std::vector<std::string> temp_file_name;
+        std::vector<long int> temp_maxevents;
+        std::vector<double> temp_pot;
+        std::vector<double> temp_scale;
+        std::vector<bool> temp_fake;
+        std::map<std::string,std::vector<std::string>> temp_file_friend_map;
+        std::map<std::string,std::vector<std::string>> temp_file_friend_treename_map;
+        std::vector<std::vector<std::string>> temp_additional_weight_name;
+        std::vector<std::vector<bool>> temp_additional_weight_bool;
+        std::vector<std::vector<std::shared_ptr<BranchVariable>>> temp_branch_variables;
+        std::vector<std::vector<std::string>> temp_eventweight_branch_names;
 
         for(size_t i = 0; i != m_mcgen_file_name.size(); ++i){
-    	    log<LOG_DEBUG>(L"%1% || Check on @%2% th file: %3%...") % __func__ % i % m_mcgen_file_name[i].c_str();
+            log<LOG_DEBUG>(L"%1% || Check on @%2% th file: %3%...") % __func__ % i % m_mcgen_file_name[i].c_str();
             bool this_file_needed = false;
 
             std::vector<std::string> this_file_additional_weight_name;
             std::vector<bool> this_file_additional_weight_bool;
             std::vector<std::shared_ptr<BranchVariable>> this_file_branch_variables;
-	    std::vector<std::string> this_file_eventweight_branch_names;
+            std::vector<std::string> this_file_eventweight_branch_names;
             for(size_t j = 0; j != m_branch_variables[i].size(); ++j){
 
                 if(set_all_names.find(m_branch_variables[i][j]->associated_hist) == set_all_names.end()){
@@ -940,12 +1005,12 @@ void PROconfig::remove_unused_files(){
                     this_file_additional_weight_name.push_back(m_mcgen_additional_weight_name[i][j]);
                     this_file_additional_weight_bool.push_back(m_mcgen_additional_weight_bool[i][j]);
                     this_file_branch_variables.push_back(m_branch_variables[i][j]);
-		    this_file_eventweight_branch_names.push_back(m_mcgen_eventweight_branch_names[i][j]);
+                    this_file_eventweight_branch_names.push_back(m_mcgen_eventweight_branch_names[i][j]);
                 }
             }
 
             if(this_file_needed){
-    	        log<LOG_DEBUG>(L"%1% || This file is active, keep it!") % __func__ ;
+                log<LOG_DEBUG>(L"%1% || This file is active, keep it!") % __func__ ;
                 temp_tree_name.push_back(m_mcgen_tree_name[i]);
                 temp_file_name.push_back(m_mcgen_file_name[i]);
                 temp_maxevents.push_back(m_mcgen_maxevents[i]);
@@ -958,7 +1023,7 @@ void PROconfig::remove_unused_files(){
                 temp_additional_weight_name.push_back(this_file_additional_weight_name);
                 temp_additional_weight_bool.push_back(this_file_additional_weight_bool);
                 temp_branch_variables.push_back(this_file_branch_variables);
-		temp_eventweight_branch_names.push_back(this_file_eventweight_branch_names);
+                temp_eventweight_branch_names.push_back(this_file_eventweight_branch_names);
             }
         }
 
@@ -973,7 +1038,7 @@ void PROconfig::remove_unused_files(){
         m_mcgen_additional_weight_name = temp_additional_weight_name;
         m_mcgen_additional_weight_bool = temp_additional_weight_bool;
         m_branch_variables = temp_branch_variables;
-	m_mcgen_eventweight_branch_names = temp_eventweight_branch_names;
+        m_mcgen_eventweight_branch_names = temp_eventweight_branch_names;
     }
 
     m_num_mcgen_files = m_mcgen_file_name.size();
@@ -986,31 +1051,40 @@ void PROconfig::generate_index_map(){
     log<LOG_INFO>(L"%1% || Generate map between subchannel and global indices..") % __func__;
     m_map_fullname_subchannel_index.clear();
     m_map_subchannel_index_to_global_index_start.clear();
+    m_map_subchannel_index_to_trueglobal_index_start.clear();
     m_map_subchannel_index_to_channel_index.clear();
 
     int global_subchannel_index = 0;
     for(int im = 0; im < m_num_modes; im++){
 
         int mode_bin_start = im*m_num_bins_mode_block;
+        int mode_truebin_start = im*m_num_truebins_mode_block;
 
         for(int id =0; id < m_num_detectors; id++){
 
             int detector_bin_start = id*m_num_bins_detector_block;
             int channel_bin_start = 0;
 
+            int detector_truebin_start = id*m_num_truebins_detector_block;
+            int channel_truebin_start = 0;
+
+
             for(int ic = 0; ic < m_num_channels; ic++){
                 for(int sc = 0; sc < m_num_subchannels[ic]; sc++){
 
                     std::string temp_name  = m_mode_names[im] +"_" +m_detector_names[id]+"_"+m_channel_names[ic]+"_"+m_subchannel_names[ic][sc];
                     int global_bin_index = mode_bin_start + detector_bin_start + channel_bin_start + sc*m_channel_num_bins[ic];
+                    int global_truebin_index = mode_truebin_start + detector_truebin_start + channel_truebin_start + sc*m_channel_num_truebins[ic];
 
-		    m_map_fullname_subchannel_index[temp_name] = global_subchannel_index;
+                    m_map_fullname_subchannel_index[temp_name] = global_subchannel_index;
                     m_map_subchannel_index_to_global_index_start[global_subchannel_index] = global_bin_index;
+                    m_map_subchannel_index_to_trueglobal_index_start[global_subchannel_index] = global_truebin_index;
                     m_map_subchannel_index_to_channel_index[global_subchannel_index] = ic;
 
                     ++global_subchannel_index;
                 }
                 channel_bin_start += m_channel_num_bins[ic]*m_num_subchannels[ic];
+                channel_truebin_start += m_channel_num_truebins[ic]*m_num_subchannels[ic];
             }
         }
     }
