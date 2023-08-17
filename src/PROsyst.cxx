@@ -298,5 +298,15 @@ bool PROsyst::isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_mat
         }
         return ret;
     }
+
+Eigen::MatrixXd PROsyst::GrabMatrix(const std::string& sys) const{
+    if(covmat_map.find(sys) != covmat_map.end())
+	return covmat_map.at(sys);	
+    else{
+	log<LOG_ERROR>(L"%1% || Systematic you asked for : %2% doesn't have matrix saved yet..") % __func__ % sys;
+	log<LOG_ERROR>(L"%1% || Return empty matrix .") % __func__ ;
+    }
+    return Eigen::MatrixXd();
+}
 };
 

@@ -21,6 +21,8 @@ public:
     	PROsyst(const std::vector<SystStruct>& systs);
 
 
+	/* Function: given the systematic name, return corresponding fractional covariance matrix */
+	Eigen::MatrixXd GrabMatrix(const std::string& sys) const;
 
 	//----- Spline and Covariance matrix related ---
 	//----- Spline and Covariance matrix related ---
