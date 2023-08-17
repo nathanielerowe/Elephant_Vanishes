@@ -258,7 +258,7 @@ namespace PROfit {
                 { 0,  0,  1},
                 { 1,  0,  0}};
             const Eigen::Vector3f resp = mp * vp;
-            spline.push_back({syst.knobval[syst.knobval.size() - 1], {resp(2), resp(1), resp(0), 0}});
+            spline.push_back({syst.knobval[syst.knobval.size() - 2], {resp(2), resp(1), resp(0), 0}});
 
             spline_coeffs.push_back(spline);
         }
