@@ -147,10 +147,10 @@ namespace PROfit{
         int i_wgt_size ; //rec.slc..length
         int i_wgt_totsize ; //rec.mc.nu.wgt..totalarraysize
 
-        float v_wgt_univ[30000];
-        int v_wgt_univ_idx[30000];
-        int v_wgt_idx[2000];
-        int v_wgt_univ_length[2000];
+        float v_wgt_univ[100000];
+        int v_wgt_univ_idx[50000];
+        int v_wgt_idx[5000];
+        int v_wgt_univ_length[5000];
         int v_truth_index[100] ;
 
         CAFweightHelper(){
@@ -162,12 +162,22 @@ namespace PROfit{
         float GetUniverseWeight(int which_index , int which_uni){
             for(int s = 0; s<i_wgt_size;s++){
                 if(v_truth_index[s]==0){
+
                     return v_wgt_univ[v_wgt_univ_idx[v_wgt_idx[s] + which_index] + which_uni];
                 }
             }
 
             return 0;
         };
+
+	/* Given neutrino idnex, systematic index and the LOCAL universe index (for given systematic), return corresponding weight */
+        float GetUniverseWeight(int nu_index, int syst_index , int uni_index){
+	    size_t index = v_wgt_univ_idx[v_wgt_idx[nu_index] + syst_index] + uni_index;
+	    if(index > 100000)
+		log<LOG_ERROR>(L"%1% || array size is too small to contain all universe weights. Try to access index: %2% ")%__func__% index;	
+            return v_wgt_univ[index];
+        }
+
 
     };
 
@@ -178,7 +188,9 @@ namespace PROfit{
     int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
     int PROcess_CAFana(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
 
+
     int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, int global_bin);
+
 
     /* Function: given configuration, generate spectrum at central value. 
      * Note: assume the input config has SBNfit-style files, TODO: check if compatible with CAF-style

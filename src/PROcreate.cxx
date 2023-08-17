@@ -562,7 +562,6 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
             log<LOG_DEBUG>(L"%1% || Variation: %2% --> %3% universes") % __func__ % sys_pair.first.c_str() % sys_pair.second;
         }
 
-        int total_num_systematics = map_systematic_num_universe.size();
 
         //sanity check 
         for(const auto& s : syst_vector)

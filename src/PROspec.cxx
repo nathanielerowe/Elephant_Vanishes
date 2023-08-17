@@ -19,22 +19,23 @@ void PROspec::Zero(){
 }
 
 void PROspec::Print() const {
-    //std::cout<<spec<<std::endl;
     std::string spec_string = "";
     for(auto &f : spec) spec_string+=" "+std::to_string(f); 
     log<LOG_INFO>(L"%1% || %2%" ) % __func__ % spec_string.c_str();
     return;
 }
 
+
 void PROspec::Fill(int bin_index, double weight){
-    log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    #Removed to help speed up filling
+    #log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec(bin_index) += weight;
     error(bin_index) = std::sqrt(pow(error(bin_index), 2.0) + std::pow(weight, 2.0));
     return;
 }
 
 void PROspec::QuickFill(int bin_index, double weight){
-    log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    #log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec(bin_index) += weight;
     return;
 }
