@@ -14,8 +14,7 @@ namespace PROfit {
 
 class PROsyst {
 public:
-    	using Spline = std::vector<std::vector<std::array<float, 4>>>;
-   
+    using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
 
     	//constructor
     	PROsyst(){}
@@ -63,6 +62,17 @@ public:
 	static bool isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix);
 
     
+   	/* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
+   	void FillSpline(const SystStruct& syst);
+
+   	/* Function: Get weight for bin for a given shift using spline */
+   	float GetSplineShift(std::string name, float shift, int bin);
+
+  	/* Function: Get cv spectrum shifted using spline */
+  	PROspec GetSplineShiftedSpectrum(const PROspec& cv, std::string name, float shift);
+    PROspec GetSplineShiftedSpectrum(const PROspec& cv, std::vector<std::string> names, std::vector<float> shifts);
+
+
 private:
     std::unordered_map<std::string, Spline> splines;
     std::unordered_map<std::string, Eigen::MatrixXd> covmat_map;

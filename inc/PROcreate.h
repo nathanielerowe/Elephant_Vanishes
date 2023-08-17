@@ -86,19 +86,6 @@ namespace PROfit{
 	/*Function: return the spectrum for variation at given universe */
 	const PROspec& Variation(int universe) const;
 
-
-	//----- Spline and Covariance matrix related ---
-	//----- Spline and Covariance matrix related ---
-    
-	/* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
-    	void FillSpline();
-
-    	/* Function: Get weight for bin for a given shift using spline */
-    	double GetSplineShift(int bin, double shift);
-
-    	/* Function: Get cv spectrum shifted using spline */
-    	PROspec GetSplineShiftedSpectrum(double shift);
-
 	//---------- Helper Functions --------
 	//---------- Helper Functions --------
 	
