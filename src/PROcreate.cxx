@@ -12,7 +12,7 @@ namespace PROfit {
         return;
     }
 
-    void SystStruct::CreateSpecs(long int num_bins){
+    void SystStruct::CreateSpecs(int num_bins){
         this->CleanSpecs();
         log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
 	
@@ -32,13 +32,13 @@ namespace PROfit {
    	return *(p_multi_spec.at(universe));
     }
 
-    void SystStruct::FillCV(long int global_bin, double event_weight){
+    void SystStruct::FillCV(int global_bin, double event_weight){
 	p_cv->Fill(global_bin, event_weight);
 	return;
     }
 
-    void SystStruct::FillUniverse(int universe, long int global_bin, double event_weight){
-	p_multi_spec.at(universe)->Fill(global_bin, event_weight);
+    void SystStruct::FillUniverse(int universe, int global_bin, double event_weight){
+	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
 	return;
     }
 
@@ -74,7 +74,7 @@ namespace PROfit {
         if(knobval[i] == -1) ratios.push_back(*p_cv / *p_cv);
       }
       spline_coeffs.reserve(p_cv->GetNbins());
-      for(long i = 0; i < p_cv->GetNbins(); ++i) {
+      for(int i = 0; i < p_cv->GetNbins(); ++i) {
         std::vector<std::array<double, 4>> spline;
         spline.reserve(knobval.size());
 
@@ -127,9 +127,9 @@ namespace PROfit {
       }
     }
 
-    double SystStruct::GetSplineShift(long bin, double shift) {
+    double SystStruct::GetSplineShift(int bin, double shift) {
       if(bin < 0 || bin >= p_cv->GetNbins()) return -1;
-      long shiftBin = (shift < knobval[0]) ? 0 : (long)(shift - knobval[0]);
+      int shiftBin = (shift < knobval[0]) ? 0 : (int)(shift - knobval[0]);
       if(shiftBin > spline_coeffs[0].size() - 1) shiftBin = spline_coeffs[0].size() - 1;
       // We should use the line below if we switch to c++17
       // const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
@@ -141,7 +141,7 @@ namespace PROfit {
 
     PROspec SystStruct::GetSplineShiftedSpectrum(double shift) {
       PROspec ret(p_cv->GetNbins());
-      for(long i = 0; i < p_cv->GetNbins(); ++i)
+      for(int i = 0; i < p_cv->GetNbins(); ++i)
         ret.Fill(i, GetSplineShift(i, shift) * p_cv->GetBinContent(i));
       return ret;
     }
@@ -322,7 +322,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
     }
 
 
-    time_t start_time = time(nullptr);
+    time_t start_time = time(nullptr), time_stamp = time(nullptr);
     log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
     for(int fid=0; fid < num_files; ++fid) {
         const auto& fn = inconfig.m_mcgen_file_name.at(fid);
@@ -357,8 +357,11 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
 	// loop over all entries
         for(long int i=0; i < nevents; ++i) {
-
-            if(i%1000==0)	log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
+            if(i%1000==0){
+	    	time_t time_passed = time(nullptr) - time_stamp;
+		log<LOG_INFO>(L"%1% || File %2% -- uni : %3% / %4%  took %5% seconds") % __func__ % fid % i % nevents % time_passed;
+	        time_stamp = time(nullptr);
+	    }
 	    trees[fid]->GetEntry(i);
             
 
@@ -605,7 +608,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                     double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
                     double additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
-                    long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+                    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     if(global_bin < 0 )  //out or range
                         continue;
                     PROcess_CAFana_Event(inconfig, sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin);
@@ -630,7 +633,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
         return 0;
     }
 
-    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin){
+    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, int global_bin){
 
         int is = 0;
         for(SystStruct & syst : syst_vector){
@@ -644,7 +647,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
             }
 
             int nuniv = syst.GetNUniverse();
-            for(long int u =0; u<nuniv; u++){
+            for(int u =0; u<nuniv; u++){
                 int i = 0;
                 if(syst.mode == "multisigma") {
                   for(; i < nuniv; ++i) {
@@ -805,7 +808,7 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
 		    continue;
 
 		//find bins
-		long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+		int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
 		if(global_bin < 0 )  //out of range
 		    continue;
 
@@ -832,7 +835,7 @@ void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<Branc
     int total_num_sys = syst_vector.size(); 
     double reco_value = *(static_cast<double*>(branch->GetValue()));
     double mc_weight = branch->GetMonteCarloWeight(); 
-    long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
+    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
     if(global_bin < 0 )  //out of range
         return;
 
@@ -865,7 +868,7 @@ Eigen::MatrixXd SystStruct::GenerateCovarMatrix(const SystStruct& sys_obj){
     std::string sys_name = sys_obj.GetSysName();
     
     const PROspec& cv_spec = sys_obj.CV();
-    long int nbins = cv_spec.GetNbins();
+    int nbins = cv_spec.GetNbins();
     log<LOG_INFO>(L"%1% || Generating covariance matrix.. size: %2% x %3%") % __func__ % nbins % nbins;
 
     //build full covariance matrix 
@@ -880,6 +883,30 @@ Eigen::MatrixXd SystStruct::GenerateCovarMatrix(const SystStruct& sys_obj){
     Eigen::MatrixXd cv_spec_matrix =  Eigen::MatrixXd::Identity(nbins, nbins);
     for(int i =0; i != nbins; ++i)
 	cv_spec_matrix(i, i) = 1.0/cv_spec.GetBinContent(i);
+
+    //second, get fractioal covar
+    Eigen::MatrixXd frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
+
+    return frac_covar_matrix;
+}
+
+Eigen::MatrixXd SystStruct::GenerateCovarMatrix() const{
+    
+    int nbins = p_cv->GetNbins();
+    log<LOG_INFO>(L"%1% || Generating covariance matrix.. size: %2% x %3%") % __func__ % nbins % nbins;
+
+    //build full covariance matrix 
+    Eigen::MatrixXd full_covar_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
+    for(int i = 0; i != n_univ; ++i){
+	PROspec spec_diff  = *p_cv - *(p_multi_spec.at(i));
+	full_covar_matrix += (spec_diff.Spec() * spec_diff.Spec().transpose() ) / static_cast<double>(n_univ);
+    }
+ 
+    //build fractional covariance matrix 
+    //first, get the matrix with diagonal being reciprocal of CV spectrum prdiction
+    Eigen::MatrixXd cv_spec_matrix =  Eigen::MatrixXd::Identity(nbins, nbins);
+    for(int i =0; i != nbins; ++i)
+	cv_spec_matrix(i, i) = 1.0/p_cv->GetBinContent(i);
 
     //second, get fractioal covar
     Eigen::MatrixXd frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
