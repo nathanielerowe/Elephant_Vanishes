@@ -33,12 +33,12 @@ namespace PROfit {
     }
 
     void SystStruct::FillCV(int global_bin, double event_weight){
-	p_cv->Fill(global_bin, event_weight);
+	        p_cv->Fill(global_bin, event_weight);
 	return;
     }
 
     void SystStruct::FillUniverse(int universe, int global_bin, double event_weight){
-	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
+        	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
 	return;
     }
 
@@ -526,7 +526,11 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                     double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
                     double additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
+                    if(additional_weight == 0)
+                        continue;
+
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+                    
                     if(global_bin < 0 )  //out or range
                         continue;
                     PROcess_CAFana_Event(inconfig, sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin);

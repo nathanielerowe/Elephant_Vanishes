@@ -8,7 +8,8 @@
 <channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
         <bins
         edges=" 0 1 2 3 1000" 
-                />
+            />
+        <truebins min="0" max="5" nbins="50"/>
     <subchannel name="cc" plotname="#nu_{#mu} CC" osc = "22" />
 </channel>
 
@@ -20,7 +21,7 @@
       <denylist>piminus_Flux</denylist>
 </variation_list>
 
-<MCFile treename="recTree" filename="/home/mark/work/PROfit/build/test.flat.caf.root" scale = "1.0" maxevents="50000" pot="1"> 
+<MCFile treename="recTree" filename="icarus_test.flat.caf.root" scale = "1.0" maxevents="50000" pot="1"> 
      <branch
          name="rec.slc.truth.E[Sum$((rec.slc.truth.index>=0)*Iteration$)]" 
          type="double"
@@ -28,6 +29,7 @@
          oscillate = "true"
          true_param_name = "rec.slc.truth.E"
          true_L_name = "rec.slc.truth.baseline"
+          additional_weight = "Sum$(rec.slc.truth.index>=0) == 1"
          />
 </MCFile>
 

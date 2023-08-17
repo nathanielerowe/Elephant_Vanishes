@@ -60,12 +60,14 @@ int main(int argc, char* argv[])
 
     PROconfig myConf(xmlname);
 
+
     std::vector<SystStruct> systsstructs;
     PROcess_CAFana(myConf, systsstructs);
     PROsyst systs(systsstructs);
     PROspec p05 = systs.GetSplineShiftedSpectrum(systsstructs[0].CV(), "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", 0.5);
     p05.Print();
     std::cout << systs.GrabMatrix("piplus_Flux") << std::endl;
+
     //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
 
