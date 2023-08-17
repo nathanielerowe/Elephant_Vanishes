@@ -2,6 +2,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
+#include "PROpeller.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -59,6 +60,18 @@ int main(int argc, char* argv[])
 
 
     PROconfig myConf(xmlname);
+   /* Ibrahims Test Space
+   PROpeller myprop;
+    std::vector<SystStruct> systs;
+    PROcess_CAFs(myConf, systs, myprop);
+    std::cout<< "starting loop!!" << std::endl;
+    
+    for(int i=0; i<=myprop.truth.size(); ++i){
+        std::cout<< myprop.truth[i] << " "<< myprop.reco[i] <<" "<< myprop.pdg[i] << std::endl;
+
+    }
+ */
+
 
 
     std::vector<SystStruct> systsstructs;

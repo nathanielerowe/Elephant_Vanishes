@@ -1,4 +1,5 @@
 #include "PROcreate.h"
+#include "PROpeller.h"
 #include "Eigen/src/Core/Matrix.h"
 #include "TTree.h"
 #include "TFile.h"
@@ -309,10 +310,9 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 }
 
 
-    int PROcess_CAFana(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector){
+    int PROcess_CAFs(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop){
 
-        log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
-
+        log<LOG_DEBUG>(L"%1% || Starting to process input root files  ") % __func__ ;
 
         std::vector<std::string> variations;
         std::vector<std::string> variations_tmp;
@@ -325,7 +325,8 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
         std::vector<std::unique_ptr<TFile>> files(num_files);
         std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
         std::map<std::string, int> map_systematic_num_universe;
-
+        std::vector<double> pot_scale(num_files, 1.0);
+        
         //CAFANA related things
         std::vector<int> pset_indices_tmp;
         std::vector<int> pset_indices;
@@ -353,6 +354,11 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
             }
             log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
 
+            //calculate POT scale factor
+            //if(inconfig.m_mcgen_pot.at(fid) != -1){
+            //    pot_scale[fid] = spec_pot/inconfig.m_mcgen_pot.at(fid);
+            //                                       }
+            //pot_scale[fid] *= inconfig.m_mcgen_scale[fid];
 
             log<LOG_DEBUG>(L"%1% || On file %2% - %3% Getting SRglobal ") % __func__ % fid % inconfig.m_mcgen_file_name.at(fid).c_str()  ;
             caf::SRGlobal* global = NULL;
@@ -409,6 +415,8 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                 branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), trees[fid]);
                 log<LOG_INFO>(L"%1% || Setting up reco variable for this branch: %2%") % __func__ %  branch_variable->name.c_str();
 
+                branch_variable->branch_true_pdg_formula  =  std::make_shared<TTreeFormula>(("branch_add_pdg_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->pdg_name.c_str(),trees[fid]);
+                branch_variable->branch_true_value_formula  =  std::make_shared<TTreeFormula>(("branch_add_trueE_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->true_param_name.c_str(),trees[fid]);
 
                 //grab monte carlo weight
                 if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
@@ -418,12 +426,9 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
             } //end of branch loop
 
-
-            //calculate how many "universes" each systematoc has.
+            //calculate how many "universes" each systematic has.
             log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
             trees.at(fid)->GetEntry(good_event);
-
-
 
 
             log<LOG_DEBUG>(L"%1% || On file %2% - %3% Starting on cafana pset loop to build SysVec ") % __func__ % fid % fn.c_str()  ;
@@ -499,7 +504,6 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
             long int nevents = std::min(inconfig.m_mcgen_maxevents[fid], nentries[fid]);
             log<LOG_DEBUG>(L"%1% || Start @files: %2% which has %3% events") % __func__ % fn.c_str() % nevents;
 
-
             std::vector<std::unique_ptr<TTreeFormula>> sys_weight_formula;
             for(const auto& s : syst_vector){
                 sys_weight_formula.push_back(std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+ s.GetSysName()).c_str(), s.GetWeightFormula().c_str(),trees[fid]));
@@ -524,23 +528,34 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
                 for(int ib = 0; ib != num_branch; ++ib) {
                     double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
-                    double additional_weight = branches[ib]->GetMonteCarloWeight();
+                    float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
+
+                    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+                    int pdg_id = branches[ib]->GetTruePDG();
+                    double true_param = *(static_cast<double*>(branches[ib]->GetTrueValue()));
+
                     if(additional_weight == 0)
                         continue;
+
+                    inprop.reco.push_back((float)reco_value);
+                    inprop.added_weights.push_back(additional_weight);
+                    inprop.bin_indices.push_back(global_bin);
+                    inprop.pdg.push_back(pdg_id);
+                    inprop.truth.push_back((float)true_param);
 
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     
                     if(global_bin < 0 )  //out or range
                         continue;
-                    PROcess_CAFana_Event(inconfig, sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin);
+
+                    PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin);
 
                 }//end of branch 
 
             } //end of entry loop
 
         } //end of file loop
-
 
         time_t time_took = time(nullptr) - start_time;
         log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
@@ -555,7 +570,9 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
         return 0;
     }
 
-    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, int global_bin){
+
+    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin){
+
 
         int is = 0;
         for(SystStruct & syst : syst_vector){
