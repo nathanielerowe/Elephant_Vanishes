@@ -747,7 +747,7 @@ void PROconfig::CalcTotalBins(){
     }
 
     m_num_bins_mode_block = m_num_bins_detector_block *  m_num_detectors;
-    m_num_bins_mode_block = m_num_truebins_detector_block *  m_num_detectors;
+    m_num_truebins_mode_block = m_num_truebins_detector_block *  m_num_detectors;
     m_num_bins_mode_block_collapsed = m_num_bins_detector_block_collapsed * m_num_detectors;
 
     m_num_bins_total = m_num_bins_mode_block * m_num_modes;
