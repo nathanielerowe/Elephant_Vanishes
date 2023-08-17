@@ -109,7 +109,7 @@ namespace PROfit{
     	void FillSpline();
 
     	/* Function: Get weight for bin for a given shift using spline */
-    	double GetSplineShift(long bin, double shift);
+    	double GetSplineShift(int bin, double shift);
 
     	/* Function: Get cv spectrum shifted using spline */
     	PROspec GetSplineShiftedSpectrum(double shift);
