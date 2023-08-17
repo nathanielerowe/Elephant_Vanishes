@@ -90,14 +90,18 @@ namespace PROfit{
 	//----- Spline and Covariance matrix related ---
 	//----- Spline and Covariance matrix related ---
 
-	/* Function: generate covariance matrix using cv and multi-universe spectra stored */	
-        Eigen::MatrixXd GenerateCovarMatrix() const;
+	/* Function: generate covariance matrix using cv and multi-universe spectra stored 
+         * Return: fractional covariance matrix, correlation covariance matrix
+         */
+        std::pair<Eigen::MatrixXd, Eigen::MatrixXd>  GenerateCovarMatrix() const;
 
         /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it. */ 
         static Eigen::MatrixXd GenerateCovarMatrix(const SystStruct& sys_obj);
         Eigen::MatrixXd GenerateCorrMatrix(const Eigen::MatrixXd& frac_matrix) const;
 
-
+	/* Function: check if matrix has nan, or infinite value */
+	static bool isFiniteMatrix(const Eigen::MatrixXd& in_matrix);
+	static bool toFiniteMatrix(const Eigen::MatrixXd& in_matrix);
 
         /* Function: check if given matrix is positive semi-definite with tolerance. UST THIS ONE!!*/
 	static bool isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance=1.0e-16);

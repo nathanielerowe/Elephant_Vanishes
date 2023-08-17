@@ -910,7 +910,27 @@ Eigen::MatrixXd SystStruct::GenerateCovarMatrix() const{
     //second, get fractioal covar
     Eigen::MatrixXd frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
 
+    if(!SystStruct::isPositiveSemiDefinite_WithTolerance(frac_matrix)){
+         LOG<LOG_ERROR>(L"%1% || Fractional Covariance Matrix is not positive semi-definite!") % __func__;
+         log<LOG_ERROR>(L"Terminating.");
+         exit(EXIT_FAILURE);
+    }
+
     return frac_covar_matrix;
+}
+
+bool SystStruct::toFiniteMatrix(const Eigen::MatrixXd& in_matrix){
+    return true;
+}
+
+bool SystStruct::isFiniteMatrix(const Eigen::MatrixXd& in_matrix){
+
+    //check for nan and infinite
+    if(!in_matrix.allFinite()){
+	LOG<LOG_ERROR>(L"%1% || Matrix has Nan or non-finite values.") % __func__ ;
+	return false;
+    }
+    return true;
 }
 
 bool SystStruct::isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix){
@@ -949,7 +969,7 @@ bool SystStruct::isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_
     Eigen::VectorXd eigenvals = eigensolver.eigenvalues();
     for(auto val : eigenvals ){
 	if(val < 0 && fabs(val) > tolerance){
-	   log<LOG_ERROR>(L"%1% || Found negative eigenvalues beyond tolerance (%2%): %3%") % __func__ % tolerance % val;
+	   log<LOG_ERROR>(L"%1% || Matrix is not PSD. Found negative eigenvalues beyond tolerance (%2%): %3%") % __func__ % tolerance % val;
 	   return false;
 	}
     }
