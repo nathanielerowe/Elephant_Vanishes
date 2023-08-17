@@ -171,6 +171,7 @@ namespace PROfit{
             //map from subchannel name/index to global index and channel index
             std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
             std::unordered_map<int, int> m_map_subchannel_index_to_global_index_start;
+            std::unordered_map<int, int> m_map_subchannel_index_to_trueglobal_index_start;
             std::unordered_map<int, int> m_map_subchannel_index_to_channel_index;
 
 
@@ -213,9 +214,15 @@ namespace PROfit{
             std::vector<std::vector<double> > m_channel_bin_edges;
             std::vector<std::vector<double> > m_channel_bin_widths;
 
+            /* New true bins to save the truth level variables in addition 
+             */
+            bool m_has_true_bins;
+            std::vector<int> m_channel_num_truebins;
+            std::vector<std::vector<double> > m_channel_truebin_edges;
+            std::vector<std::vector<double> > m_channel_truebin_widths;
+
+
             bool m_has_oscillation_patterns;
-
-
 
 
             //the xml names are the way we track which channels and subchannels we want to use later
@@ -238,6 +245,10 @@ namespace PROfit{
             int m_num_bins_detector_block;
             int m_num_bins_mode_block;
             int m_num_bins_total;
+
+            int m_num_truebins_detector_block;
+            int m_num_truebins_mode_block;
+            int m_num_truebins_total;
 
             int m_num_bins_detector_block_collapsed;
             int m_num_bins_mode_block_collapsed;
@@ -308,6 +319,15 @@ namespace PROfit{
 
             /* Function: given channel index, return list of bin edges for this channel */
             const std::vector<double>& GetChannelBinEdges(int channel_index) const;
+
+            /* Function: given subchannel global index, return corresponding global bin start
+             * Note: global bin index start from 0, not 1
+             */
+            int GetGlobalTrueBinStart(int subchannel_index) const;
+
+            /* Function: given channel index, return list of bin edges for this channel */
+            const std::vector<double>& GetChannelTrueBinEdges(int channel_index) const;
+
     };
 
 
