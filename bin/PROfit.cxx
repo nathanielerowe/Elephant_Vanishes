@@ -60,22 +60,9 @@ int main(int argc, char* argv[])
 
 
     PROconfig myConf(xmlname);
-   /* Ibrahims Test Space
-   PROpeller myprop;
-    std::vector<SystStruct> systs;
-    PROcess_CAFs(myConf, systs, myprop);
-    std::cout<< "starting loop!!" << std::endl;
-    
-    for(int i=0; i<=myprop.truth.size(); ++i){
-        std::cout<< myprop.truth[i] << " "<< myprop.reco[i] <<" "<< myprop.pdg[i] << std::endl;
-
-    }
- */
-
-
-
+    PROpeller myprop;
     std::vector<SystStruct> systsstructs;
-    PROcess_CAFana(myConf, systsstructs);
+    PROcess_CAFs(myConf, systsstructs, myprop);
     PROsyst systs(systsstructs);
     PROspec p05 = systs.GetSplineShiftedSpectrum(systsstructs[0].CV(), "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", 0.5);
     p05.Print();
