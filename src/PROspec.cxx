@@ -1,13 +1,13 @@
 #include "PROspec.h"
 using namespace PROfit;
 
-PROspec::PROspec(long int num_bins):
+PROspec::PROspec(int num_bins):
     nbins(num_bins),
     spec(Eigen::VectorXd::Zero(num_bins)),
     error(Eigen::VectorXd::Zero(num_bins)){
     }
 
-long int PROspec::GetNbins() const{
+int PROspec::GetNbins() const{
    return nbins;
 }
 
@@ -19,24 +19,31 @@ void PROspec::Zero(){
 }
 
 void PROspec::Print() const {
-    //std::cout<<spec<<std::endl;
     std::string spec_string = "";
     for(auto &f : spec) spec_string+=" "+std::to_string(f); 
     log<LOG_INFO>(L"%1% || %2%" ) % __func__ % spec_string.c_str();
     return;
 }
 
-void PROspec::Fill(long int bin_index, double weight){
-    log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
-    spec[bin_index] += weight;
-    error[bin_index] = std::sqrt(pow(error[bin_index], 2.0) + std::pow(weight, 2.0));
+
+void PROspec::Fill(int bin_index, double weight){
+    #Removed to help speed up filling
+    #log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    spec(bin_index) += weight;
+    error(bin_index) = std::sqrt(pow(error(bin_index), 2.0) + std::pow(weight, 2.0));
+    return;
+}
+
+void PROspec::QuickFill(int bin_index, double weight){
+    #log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    spec(bin_index) += weight;
     return;
 }
 
 
 TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
 
-    long int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
+    int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
     int channel_index = inconfig.GetChannelIndex(subchannel_index);
 
     //set up hist specs
@@ -50,8 +57,8 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
     TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
     hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());
     for(int i = 1; i <= nbins; ++i){
-        hSpec.SetBinContent(i, spec[global_bin_start + i -1]);
-        hSpec.SetBinError(i, error[global_bin_start + i -1]);
+        hSpec.SetBinContent(i, spec(global_bin_start + i -1));
+        hSpec.SetBinError(i, error(global_bin_start + i -1));
     }
 
     return hSpec;

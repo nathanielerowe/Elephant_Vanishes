@@ -72,13 +72,13 @@ namespace PROfit{
 
 	/* Function: create EMPTY spectra with given length 
  	 */ 
-        void CreateSpecs(long int num_bins);
+        void CreateSpecs(int num_bins);
 
 	/* Function: given global bin index, and event weight, fill the central value spectrum */
-	void FillCV(long int global_bin, double event_weight);
+	void FillCV(int global_bin, double event_weight);
 
 	/* Function: given global bin index, and event weight, fill the spectrum of given universe */
-	void FillUniverse(int universe, long int global_bin, double event_weight);
+	void FillUniverse(int universe, int global_bin, double event_weight);
 
 	/* Function: return CV spectrum in PROspec */
 	const PROspec& CV() const;
@@ -89,14 +89,17 @@ namespace PROfit{
 
 	//----- Spline and Covariance matrix related ---
 	//----- Spline and Covariance matrix related ---
-	
+
+	/* Function: generate covariance matrix using cv and multi-universe spectra stored */	
+        Eigen::MatrixXd GenerateCovarMatrix() const;
+
         /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it. */ 
         static Eigen::MatrixXd GenerateCovarMatrix(const SystStruct& sys_obj);
         Eigen::MatrixXd GenerateCorrMatrix(const Eigen::MatrixXd& frac_matrix) const;
 
 
 
-        /* Function: check if given matrix is positive semi-definite with tolerance*/
+        /* Function: check if given matrix is positive semi-definite with tolerance. UST THIS ONE!!*/
 	static bool isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance=1.0e-16);
 
         /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
@@ -107,7 +110,7 @@ namespace PROfit{
     	void FillSpline();
 
     	/* Function: Get weight for bin for a given shift using spline */
-    	double GetSplineShift(long bin, double shift);
+    	double GetSplineShift(int bin, double shift);
 
     	/* Function: Get cv spectrum shifted using spline */
     	PROspec GetSplineShiftedSpectrum(double shift);
@@ -145,10 +148,10 @@ namespace PROfit{
         int i_wgt_size ; //rec.slc..length
         int i_wgt_totsize ; //rec.mc.nu.wgt..totalarraysize
 
-        float v_wgt_univ[30000];
-        int v_wgt_univ_idx[30000];
-        int v_wgt_idx[2000];
-        int v_wgt_univ_length[2000];
+        float v_wgt_univ[100000];
+        int v_wgt_univ_idx[50000];
+        int v_wgt_idx[5000];
+        int v_wgt_univ_length[5000];
         int v_truth_index[100] ;
 
         CAFweightHelper(){
@@ -160,12 +163,22 @@ namespace PROfit{
         float GetUniverseWeight(int which_index , int which_uni){
             for(int s = 0; s<i_wgt_size;s++){
                 if(v_truth_index[s]==0){
+
                     return v_wgt_univ[v_wgt_univ_idx[v_wgt_idx[s] + which_index] + which_uni];
                 }
             }
 
             return 0;
         };
+
+	/* Given neutrino idnex, systematic index and the LOCAL universe index (for given systematic), return corresponding weight */
+        float GetUniverseWeight(int nu_index, int syst_index , int uni_index){
+	    size_t index = v_wgt_univ_idx[v_wgt_idx[nu_index] + syst_index] + uni_index;
+	    if(index > 100000)
+		log<LOG_ERROR>(L"%1% || array size is too small to contain all universe weights. Try to access index: %2% ")%__func__% index;	
+            return v_wgt_univ[index];
+        }
+
 
     };
 
@@ -176,7 +189,9 @@ namespace PROfit{
     int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
     int PROcess_CAFana(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
 
-    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin);
+
+    int PROcess_CAFana_Event(const PROconfig &inconfig, std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, int global_bin);
+
 
     /* Function: given configuration, generate spectrum at central value. 
      * Note: assume the input config has SBNfit-style files, TODO: check if compatible with CAF-style
