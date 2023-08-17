@@ -213,11 +213,16 @@ Eigen::VectorXd PROspec::eigenvector_division(const Eigen::VectorXd& a, const Ei
     Eigen::VectorXd ratio_spec = Eigen::VectorXd::Zero(nbin);
     for(int i = 0; i != nbin; ++i){
 	if(b(i) == 0){
-	    log<LOG_ERROR>(L"%1% || Divide by Zero") % __func__ ;
-	    log<LOG_ERROR>(L"Terminating.");
-            exit(EXIT_FAILURE);
-	}
-	ratio_spec(i) = a(i) / b(i);
+	    if(a(i) !=0 ){
+	        log<LOG_ERROR>(L"%1% || Divide by Zero. Numerator: %2%, denominator: %3% ") % __func__ % a(i) % b(i);
+	        log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+	    }else{
+		log<LOG_DEBUG>(L"%1% || Both numerator and denominator are zero, setting the ratio to 1.") % __func__;
+		ratio_spec(i) = 1.0;
+	    }
+	}else
+	    ratio_spec(i) = a(i) / b(i);
     }
     return ratio_spec;
 }
