@@ -605,8 +605,9 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                 if(i%1000==0)log<LOG_DEBUG>(L"%1% || ---- universe %2%/%3% ") % __func__  % files[fid]->GetName() % nevents ;
 
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    float reco_value = *(static_cast<float*>(branches[ib]->GetValue()));
-                    inprop.reco.push_back(reco_value);
+                    double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
+                    std::cout << reco_value << std::endl;
+                    inprop.reco.push_back((float)reco_value);
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
                     inprop.added_weights.push_back(additional_weight);
@@ -614,8 +615,8 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                     inprop.bin_indices.push_back(global_bin);
                     int pdg_id = branches[ib]->GetTruePDG();
                     inprop.pdg.push_back(pdg_id);
-                    float true_param = *(static_cast<float*>(branches[ib]->GetTrueValue()));
-                    inprop.truth.push_back(true_param);
+                    double true_param = *(static_cast<double*>(branches[ib]->GetTrueValue()));
+                    inprop.truth.push_back((float)true_param);
 
 		    if(global_bin < 0)  //out or range
                         continue;
