@@ -11,6 +11,7 @@
 #include "LBFGSB.h"
 
 #include "TFile.h"
+#include "TTree.h"
 
 #include <memory>
 #include <string>
