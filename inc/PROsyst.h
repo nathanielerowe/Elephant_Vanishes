@@ -14,15 +14,54 @@ namespace PROfit {
 
 class PROsyst {
 public:
-    using Spline = std::vector<std::vector<std::array<float, 4>>>;
+    	using Spline = std::vector<std::vector<std::array<float, 4>>>;
    
 
-    //constructor
-    PROsyst(){}
-    PROsyst(const std::vector<SystStruct>& systs);
+    	//constructor
+    	PROsyst(){}
+    	PROsyst(const std::vector<SystStruct>& systs);
 
-    /*Function: add a covariance matrix to covmat_map */
-    void AddMatrix(const SystStruct& syst);
+
+
+	//----- Spline and Covariance matrix related ---
+	//----- Spline and Covariance matrix related ---
+
+	Eigen::MatrixXd SumMatrices() const;
+	Eigen::MatrixXd SumMatrices(const std::vector<std::string>& sysnames) const;
+
+    	/* Function: Given a SystStruct, generate fractinal covariance matrix, and correlation matrix, and add matrices to covmat_map and corrtmat_map
+ 	 * Note: this function is lazy. It wouldn't do anything if it found covariance matrix with the same name already in the map.
+ 	 */
+    	void CreateMatrix(const SystStruct& syst);
+
+
+        /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, as well as correlation matrix 
+         * Return: {fractional covariance matrix, correlation covariance matrix}
+         */
+        static std::pair<Eigen::MatrixXd, Eigen::MatrixXd> GenerateCovarMatrices(const SystStruct& sys_obj);
+
+        /* Function: given a SystStruct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it
+ 	 * Note: it assumes the SystStruct is filled 
+ 	 */
+	static Eigen::MatrixXd GenerateFracCovarMatrix(const SystStruct& sys_obj);
+
+	/* Given fractional covariance matrix, calculate the correlation matrix */
+	static Eigen::MatrixXd GenerateCorrMatrix(const Eigen::MatrixXd& frac_matrix);
+
+	/* Function: check if matrix has nan, or infinite value */
+	static bool isFiniteMatrix(const Eigen::MatrixXd& in_matrix);
+
+	/* Function: if matrix has nan/inf values, change to 0. 
+ 	 * Note: this modifies the matrix !! 
+ 	 */
+	static void toFiniteMatrix(Eigen::MatrixXd& in_matrix);
+
+        /* Function: check if given matrix is positive semi-definite with tolerance. UST THIS ONE!!*/
+	static bool isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance=1.0e-16);
+
+        /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
+	static bool isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix);
+
     
 private:
     std::unordered_map<std::string, Spline> splines;
