@@ -216,7 +216,6 @@ namespace PROfit{
 
             /* New true bins to save the truth level variables in addition 
              */
-            bool m_has_true_bins;
             std::vector<int> m_channel_num_truebins;
             std::vector<std::vector<double> > m_channel_truebin_edges;
             std::vector<std::vector<double> > m_channel_truebin_widths;

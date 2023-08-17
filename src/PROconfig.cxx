@@ -20,10 +20,9 @@ PROconfig::PROconfig(const std::string &xml):
     m_write_out_variation(false), 
     m_form_covariance(true),
     m_write_out_tag("UNSET_DEFAULT"),
-    m_num_mcgen_files(0)
+    m_num_mcgen_files(0),
 {
 
-    m_has_true_bins = false;
     LoadFromXML(m_xmlname);
 
     //A matrix for collapsing the full-vector
@@ -251,24 +250,45 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 const char* tmin = pBinT->Attribute("min");
                 const char* tmax = pBinT->Attribute("max");
                 const char* tnbins = pBinT->Attribute("nbins");
-                if(tmin==NULL && tmax==NULL && tnbins==NULL )
+		const char* tedges =pBinT->Attribute("edges");
+                if(tmin==NULL && tmax==NULL && tnbins==NULL && tedges == NULL)
                 {
                     log<LOG_DEBUG>(L"%1% || This variable has a NO truth binning (or attribute min,max,nbins)  ") % __func__ ;
-                    m_has_true_bins = false;
+                    m_channel_num_truebins.push_back(0);
+                    m_channel_truebin_edges.push_back(std::vector<double>());
+                    m_channel_truebin_widths.push_back(std::vector<double>());
                 }else{
-                    m_has_true_bins = true;
 
                     log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning.   ") % __func__  ;
 
-                    double minp = strtod(tmin, &end);
-                    double maxp = strtod(tmax, &end);
-                    int nbinsp = (int)strtod(tnbins, &end);
-                    double step = (maxp-minp)/(double)nbinsp;
-                    std::vector<double> binedge;
-                    std::vector<double> binwidth(nbinsp,step);
-                    for(int i=0; i<nbinsp; i++){
-                        binedge.push_back(minp+i*step);
-                    }
+                    int nbinsp;
+                    std::vector<double> binedge, binwidth;
+
+		    // use edges if defined, otherwise use min-max-nbins 
+		    if(tedges != NULL){
+				
+			std::stringstream true_iss(tedges);
+		        double number;
+		        while ( true_iss >> number ){
+			   binedge.push_back(number );
+		        }
+
+			nbinsp = binedge.size() - 1;
+			for(int i = 0; i != nbinsp; ++i){
+			    binwidth.push_back(binedge[i+1] - binedge[i]);
+			}
+
+		    }else{
+                        double minp = strtod(tmin, &end);
+                        double maxp = strtod(tmax, &end);
+			nbinsp = (int)strtod(tnbins, &end);
+                        double step = (maxp-minp)/(double)nbinsp;
+                        for(int i=0; i<nbinsp; i++){
+                             binedge.push_back(minp+i*step);
+                        }
+			binedge.push_back(maxp);
+			binwidth.resize(nbinsp, step);
+		    }
 
                     m_channel_num_truebins.push_back(nbinsp);
                     m_channel_truebin_edges.push_back(binedge);
@@ -875,6 +895,10 @@ void PROconfig::remove_unused_channel(){
         std::vector<std::vector<double>> temp_channel_bin_edges(m_num_channels, std::vector<double>());
         std::vector<std::vector<double>> temp_channel_bin_widths(m_num_channels, std::vector<double>());
 
+        std::vector<int> temp_channel_num_truebins(m_num_channels, 0);
+        std::vector<std::vector<double>> temp_channel_truebin_edges(m_num_channels, std::vector<double>());
+        std::vector<std::vector<double>> temp_channel_truebin_widths(m_num_channels, std::vector<double>());
+
         std::vector<std::string> temp_channel_names(m_num_channels);
         std::vector<std::string> temp_channel_plotnames(m_num_channels);
         std::vector<std::string> temp_channel_units(m_num_channels);
@@ -883,6 +907,10 @@ void PROconfig::remove_unused_channel(){
                 temp_channel_num_bins[chan_index] = m_channel_num_bins[i];
                 temp_channel_bin_edges[chan_index] = m_channel_bin_edges[i];
                 temp_channel_bin_widths[chan_index] = m_channel_bin_widths[i];
+
+                temp_channel_num_truebins[chan_index] = m_channel_num_truebins[i];
+                temp_channel_truebin_edges[chan_index] = m_channel_truebin_edges[i];
+                temp_channel_truebin_widths[chan_index] = m_channel_truebin_widths[i];
 
                 temp_channel_names[chan_index] = m_channel_names[i];
                 temp_channel_plotnames[chan_index] = m_channel_plotnames[i];
@@ -895,6 +923,9 @@ void PROconfig::remove_unused_channel(){
         m_channel_num_bins = temp_channel_num_bins;
         m_channel_bin_edges = temp_channel_bin_edges;
         m_channel_bin_widths = temp_channel_bin_widths;
+        m_channel_num_truebins = temp_channel_num_truebins;
+        m_channel_truebin_edges = temp_channel_truebin_edges;
+        m_channel_truebin_widths = temp_channel_truebin_widths;
         m_channel_names = temp_channel_names;
         m_channel_plotnames = temp_channel_plotnames;
         m_channel_units = temp_channel_units;
