@@ -27,15 +27,15 @@ void PROspec::Print() const {
 
 
 void PROspec::Fill(int bin_index, double weight){
-    #Removed to help speed up filling
-    #log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    //Removed to help speed up filling
+    //log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec(bin_index) += weight;
     error(bin_index) = std::sqrt(pow(error(bin_index), 2.0) + std::pow(weight, 2.0));
     return;
 }
 
 void PROspec::QuickFill(int bin_index, double weight){
-    #log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
+    //log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec(bin_index) += weight;
     return;
 }

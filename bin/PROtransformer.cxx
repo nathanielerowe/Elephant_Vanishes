@@ -1,6 +1,5 @@
 #include "PROconfig.h"
 #include "PROspec.h"
-#include "PROcovariancegen.h"
 #include "PROcreate.h"
 #include "PROtocall.h"
 #include "sbnanaobj/StandardRecord/SRGlobal.h"
@@ -12,6 +11,7 @@
 #include "LBFGSB.h"
 
 #include "TFile.h"
+#include "TTree.h"
 
 #include <memory>
 #include <string>
