@@ -1,5 +1,6 @@
 #include "PROconfig.h"
 #include "PROspec.h"
+#include "PROsyst.h"
 #include "PROcreate.h"
 #include "PROpeller.h"
 
@@ -59,7 +60,8 @@ int main(int argc, char* argv[])
 
 
     PROconfig myConf(xmlname);
-    PROpeller myprop;
+   /* Ibrahims Test Space
+   PROpeller myprop;
     std::vector<SystStruct> systs;
     PROcess_CAFs(myConf, systs, myprop);
     std::cout<< "starting loop!!" << std::endl;
@@ -68,10 +70,17 @@ int main(int argc, char* argv[])
         std::cout<< myprop.truth[i] << " "<< myprop.reco[i] <<" "<< myprop.pdg[i] << std::endl;
 
     }
-    //systs[0].FillSpline();
-    //systs[0].CV().Print();
-    //PROspec p05 = systs[0].GetSplineShiftedSpectrum(0.5);
-    //p05.Print();
+ */
+
+
+
+    std::vector<SystStruct> systsstructs;
+    PROcess_CAFana(myConf, systsstructs);
+    PROsyst systs(systsstructs);
+    PROspec p05 = systs.GetSplineShiftedSpectrum(systsstructs[0].CV(), "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", 0.5);
+    p05.Print();
+    std::cout << systs.GrabMatrix("piplus_Flux") << std::endl;
+
     //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
 

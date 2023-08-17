@@ -13,7 +13,7 @@ namespace PROfit {
         return;
     }
 
-    void SystStruct::CreateSpecs(long int num_bins){
+    void SystStruct::CreateSpecs(int num_bins){
         this->CleanSpecs();
         log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
 	
@@ -33,13 +33,13 @@ namespace PROfit {
    	return *(p_multi_spec.at(universe));
     }
 
-    void SystStruct::FillCV(long int global_bin, double event_weight){
-	p_cv->Fill(global_bin, event_weight);
+    void SystStruct::FillCV(int global_bin, double event_weight){
+	        p_cv->Fill(global_bin, event_weight);
 	return;
     }
 
-    void SystStruct::FillUniverse(int universe, long int global_bin, double event_weight){
-	p_multi_spec.at(universe)->Fill(global_bin, event_weight);
+    void SystStruct::FillUniverse(int universe, int global_bin, double event_weight){
+        	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
 	return;
     }
 
@@ -66,87 +66,6 @@ namespace PROfit {
 
         return;
     }
-
-    void SystStruct::FillSpline() {
-      std::vector<PROspec> ratios;
-      ratios.reserve(p_multi_spec.size());
-      for(size_t i = 0; i < p_multi_spec.size(); ++i) {
-        ratios.push_back(*p_multi_spec[i] / *p_cv);
-        if(knobval[i] == -1) ratios.push_back(*p_cv / *p_cv);
-      }
-      spline_coeffs.reserve(p_cv->GetNbins());
-      for(long i = 0; i < p_cv->GetNbins(); ++i) {
-        std::vector<std::array<double, 4>> spline;
-        spline.reserve(knobval.size());
-
-        // This is cubic interpolation. For each adjacent set of four points we
-        // determine coefficients for a cubic which will be the curve between the
-        // center two. We constrain the function to match the two center points
-        // and to have the right mean gradient at them. This causes this patch to
-        // match smoothly with the next one along. The resulting function is
-        // continuous and first and second differentiable. At the ends of the
-        // range we fit a quadratic instead with only one constraint on the
-        // slope. The coordinate conventions are that point y1 sits at x=0 and y2
-        // at x=1. The matrices are simply the inverses of writing out the
-        // constraints expressed above.
-
-        const double y1 = ratios[0].GetBinContent(i);
-        const double y2 = ratios[1].GetBinContent(i);
-        const double y3 = ratios[2].GetBinContent(i);
-        const Eigen::Vector3d v{y1, y2, (y3-y1)/2};
-        const Eigen::Matrix3d m{{ 1, -1,  1},
-                                {-2,  2, -1},
-                                { 1,  0,  0}};
-        const Eigen::Vector3d res = m * v;
-        spline.push_back({res(2), res(1), res(0), 0});
-
-        for(unsigned int shiftIdx = 1; shiftIdx < ratios.size()-2; ++shiftIdx){
-          const double y0 = ratios[shiftIdx-1].GetBinContent(i);
-          const double y1 = ratios[shiftIdx  ].GetBinContent(i);
-          const double y2 = ratios[shiftIdx+1].GetBinContent(i);
-          const double y3 = ratios[shiftIdx+2].GetBinContent(i);
-          const Eigen::Vector4d v{y1, y2, (y2-y0)/2, (y3-y1)/2};
-          const Eigen::Matrix4d m{{ 2, -2,  1,  1},
-                                  {-3,  3, -2, -1},
-                                  { 0,  0,  1,  0},
-                                  { 1,  0,  0,  0}};
-          const Eigen::Vector4d res = m * v;
-          spline.push_back({res(3), res(2), res(1), res(0)});
-        }
-
-        const double y4 = ratios[ratios.size() - 3].GetBinContent(i);
-        const double y5 = ratios[ratios.size() - 2].GetBinContent(i);
-        const double y6 = ratios[ratios.size() - 1].GetBinContent(i);
-        const Eigen::Vector3d vp{y5, y6, (y6-y4)/2};
-        const Eigen::Matrix3d mp{{-1,  1, -1},
-                                 { 0,  0,  1},
-                                 { 1,  0,  0}};
-        const Eigen::Vector3d resp = mp * vp;
-        spline.push_back({resp(2), resp(1), resp(0), 0});
-        
-        spline_coeffs.push_back(spline);
-      }
-    }
-
-    double SystStruct::GetSplineShift(long bin, double shift) {
-      if(bin < 0 || bin >= p_cv->GetNbins()) return -1;
-      long shiftBin = (shift < knobval[0]) ? 0 : (long)(shift - knobval[0]);
-      if(shiftBin > spline_coeffs[0].size() - 1) shiftBin = spline_coeffs[0].size() - 1;
-      // We should use the line below if we switch to c++17
-      // const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
-      std::array<double, 4> coeffs = spline_coeffs[bin][shiftBin];
-      if(shiftBin == spline_coeffs.size() - 1 || knobval[shiftBin] > 1) shift -= knobval[shiftBin - 1];
-      else if(knobval[shiftBin] < 1) shift -= knobval[shiftBin];
-      return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
-    }
-
-    PROspec SystStruct::GetSplineShiftedSpectrum(double shift) {
-      PROspec ret(p_cv->GetNbins());
-      for(long i = 0; i < p_cv->GetNbins(); ++i)
-        ret.Fill(i, GetSplineShift(i, shift) * p_cv->GetBinContent(i));
-      return ret;
-    }
-
 
 int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector){
  
@@ -323,7 +242,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
     }
 
 
-    time_t start_time = time(nullptr);
+    time_t start_time = time(nullptr), time_stamp = time(nullptr);
     log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
     for(int fid=0; fid < num_files; ++fid) {
         const auto& fn = inconfig.m_mcgen_file_name.at(fid);
@@ -358,8 +277,11 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
 	// loop over all entries
         for(long int i=0; i < nevents; ++i) {
-
-            if(i%1000==0)	log<LOG_DEBUG>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
+            if(i%1000==0){
+	    	time_t time_passed = time(nullptr) - time_stamp;
+		log<LOG_INFO>(L"%1% || File %2% -- uni : %3% / %4%  took %5% seconds") % __func__ % fid % i % nevents % time_passed;
+	        time_stamp = time(nullptr);
+	    }
 	    trees[fid]->GetEntry(i);
             
 
@@ -606,20 +528,27 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
                 for(int ib = 0; ib != num_branch; ++ib) {
                     double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
-                    std::cout << reco_value << std::endl;
-                    inprop.reco.push_back((float)reco_value);
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
-                    inprop.added_weights.push_back(additional_weight);
+
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
-                    inprop.bin_indices.push_back(global_bin);
                     int pdg_id = branches[ib]->GetTruePDG();
-                    inprop.pdg.push_back(pdg_id);
                     double true_param = *(static_cast<double*>(branches[ib]->GetTrueValue()));
+
+                    if(additional_weight == 0)
+                        continue;
+
+                    inprop.reco.push_back((float)reco_value);
+                    inprop.added_weights.push_back(additional_weight);
+                    inprop.bin_indices.push_back(global_bin);
+                    inprop.pdg.push_back(pdg_id);
                     inprop.truth.push_back((float)true_param);
 
-		    if(global_bin < 0)  //out or range
+                    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+                    
+                    if(global_bin < 0 )  //out or range
                         continue;
+
                     PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin);
 
                 }//end of branch 
@@ -641,168 +570,9 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
         return 0;
     }
 
-    int PROcess_WeightMap(const std::string& infile_flatcaf, const std::string& infile_post_selection, std::string destination_file){
-
-        log<LOG_DEBUG>(L"%1% || Starting to generate SBNfit-style file with eventweight map") % __func__ ;
-        log<LOG_DEBUG>(L"%1% || Input flat CAF file: %2%") % __func__ % infile_flatcaf.c_str();
-
-
-        //CAFANA related things
-        std::vector<int> pset_indices;
-        std::vector<std::string> cafana_pset_names;
-        std::map<std::string, int> map_systematic_num_universe;
-        std::map<std::string, std::vector<float>> map_systematic_vector_weights;
-
-
-	//open flat caf file
-        auto flat_caf = std::make_unique<TFile>(infile_flatcaf.c_str(),"read");
-        if(flat_caf->IsOpen()){
-            log<LOG_INFO>(L"%1% || Flat CAF file succesfully opened: %2%") % __func__  % infile_flatcaf.c_str();
-        }else{
-            log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % infile_flatcaf.c_str();
-            exit(EXIT_FAILURE);
-        }
-
-        TTree * recTree = (TTree*)(flat_caf->Get("recTree"));
-        TTree * globalTree = (TTree*)(flat_caf->Get("globalTree"));
-        int flat_caf_entries = recTree->GetEntries(); 
-        log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ % flat_caf_entries;
-
-
-	// get systematic name, index and corresponding number of universes
-        log<LOG_DEBUG>(L"%1% || Getting SRglobal ")  % __func__ ;
-        caf::SRGlobal* global = NULL;
-        globalTree->SetBranchAddress("global", &global);
-        log<LOG_DEBUG>(L"%1% || Getting first entry from global tree ") % __func__ ;
-        globalTree->GetEntry(0);
-
-        log<LOG_DEBUG>(L"%1% || Grabbing Weights ") % __func__ ;
-        for(unsigned int i = 0; i < global->wgts.size(); ++i) {
-            const caf::SRWeightPSet& pset = global->wgts[i];
-            pset_indices.push_back(i);
-            cafana_pset_names.push_back(pset.name);
-            map_systematic_num_universe[pset.name] = std::max(map_systematic_num_universe[pset.name], pset.nuniv);
-	    log<LOG_DEBUG>(L"%1% || Grabbing Weight with index : %2%, name : %3% , number of universe: %4%")%__func__% i % pset.name.c_str() % pset.nuniv;
-        }
-
-
-        //Setup things for grabbing the CAFana weights
-        PROfit::CAFweightHelper cafhelper;
-	recTree->SetBranchAddress("rec.mc.nu..length", &(cafhelper.i_wgt_size));  //number of true neutrinos in an event - integer
-	recTree->SetBranchAddress("rec.mc.nu.index", cafhelper.v_truth_index);    // index of true neutrinos: 0 - first neutrino, 1 - second so on..
-	recTree->SetBranchAddress("rec.mc.nu.wgt..idx", cafhelper.v_wgt_idx);      // starting index of first systematic weight string for each true neutrino
-	recTree->SetBranchAddress("rec.mc.nu.wgt..totarraysize",&(cafhelper.i_wgt_totsize));    // total number of systematic weight strings in one event - integer (might have 1 or more neutrinos, [# neutrino * # syst strings])
-	recTree->SetBranchAddress("rec.mc.nu.wgt.univ..idx", cafhelper.v_wgt_univ_idx);	      // index of first universe for all systematic weight strings
-	recTree->SetBranchAddress("rec.mc.nu.wgt.univ..length",cafhelper.v_wgt_univ_length);    // number of univers for each systematic string.
-        recTree->SetBranchAddress("rec.mc.nu.wgt.univ..totarraysize", &(cafhelper.i_wgt_univ_size));    // total number of universes - integer (ie. size of the long 1D weight array)
-	recTree->SetBranchAddress("rec.mc.nu.wgt.univ", cafhelper.v_wgt_univ);			      // long vector containing weights of all universes of all neutrinos
-
-
-	//read root file that contains slices passing event selection
-	auto f_post_selection = std::make_unique<TFile>(infile_post_selection.c_str(),"read");
-        if(f_post_selection->IsOpen()){
-            log<LOG_INFO>(L"%1% || Post-selection file succesfully opened: %2%") % __func__  % infile_post_selection.c_str();
-        }else{
-            log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % infile_post_selection.c_str();
-            exit(EXIT_FAILURE);
-        }
- 	TTree* afterTree = (TTree*)f_post_selection->Get("nutree");
-	double recoE, trueE, baseline, mc_weight, nuPDG, isCC;
-	long long entry_index;
-	double nu_index;
-	afterTree->SetBranchAddress("trueE", &trueE);
-	afterTree->SetBranchAddress("recoE", &recoE);
-	afterTree->SetBranchAddress("baseline", &baseline);
-	afterTree->SetBranchAddress("PDG", &nuPDG);
-	afterTree->SetBranchAddress("isCC", &isCC);
-	afterTree->SetBranchAddress("mc_weight", &mc_weight);
-	afterTree->SetBranchAddress("entry_index", &entry_index);
-	afterTree->SetBranchAddress("nu_index", &nu_index);
-
-	//output file and tree	
-	if(destination_file == "NULLDEFAULT")
-	    destination_file = infile_post_selection + ".addweightmap.root";	
-	auto fout = std::make_unique<TFile>(destination_file.c_str(),"recreate");
-        if(fout->IsOpen()){
-            log<LOG_INFO>(L"%1% || Output file succesfully created: %2%") % __func__  % destination_file.c_str();
-        }else{
-            log<LOG_ERROR>(L"%1% || Fail to create root file: %2%") % __func__  % destination_file.c_str();
-            exit(EXIT_FAILURE);
-        }
-
-        double new_mc_weight;
-
-	fout->cd();
-	TTree* outTree = new TTree("nutree", "nutree");
-	int in_nuPDG, in_isCC, in_nu_index;
-        double in_trueE, in_baseline;
-	outTree->Branch("trueE", &in_trueE);
-	outTree->Branch("recoE", &recoE);
-	outTree->Branch("baseline", &in_baseline);
-	outTree->Branch("mc_weight", &new_mc_weight);
-	outTree->Branch("PDG", &in_nuPDG);
-	outTree->Branch("isCC", &in_isCC);
-	outTree->Branch("entry_index", &entry_index);
-	outTree->Branch("nu_index", &in_nu_index);
-	outTree->Branch("event_weight",&map_systematic_vector_weights);
-
-
-        time_t start_time = time(nullptr);
-        log<LOG_INFO>(L"%1% || Start reading the files and grab weights..") % __func__;
-	for(int i = 0 ; i != afterTree->GetEntries(); ++i){
-	    afterTree->GetEntry(i);
-	    in_nuPDG = static_cast<int>(nuPDG);
-	    in_isCC = static_cast<int>(isCC);
-	    in_nu_index = isnan(nu_index) ? -1 : static_cast<int>(nu_index);
-            new_mc_weight = isnan(mc_weight) ? 1.0 : static_cast<double>(mc_weight);
-            in_trueE = isnan(trueE) ? -999. : static_cast<double>(trueE);
-            in_baseline = isnan(baseline) ? -999. : static_cast<double>(baseline);
-	    map_systematic_vector_weights.clear();
-
-            if(i%500==0){
-		std::string neutrino_index_print = in_nu_index == -1 ? "Nan" : std::to_string(in_nu_index);
-		log<LOG_INFO>(L"%1% || On Neutrino Entry: %2%, corresponding to original event entry: %3%, true neutrino index: %4%") % __func__ % i % entry_index % neutrino_index_print.c_str() ;
-	    }
-
-
-	    //iterate through all systematics and fill in weight map
-	    recTree->GetEntry(entry_index);
-	    for(size_t s = 0; s != pset_indices.size(); ++s){
-		std::string& sname = cafana_pset_names[s];
-		int s_index = pset_indices[s];
-		int s_num_universe = map_systematic_num_universe[sname];
-
-		if(in_nu_index == -1){
-		    map_systematic_vector_weights[sname]={};
-		    continue;
-		}
-		for(int iuni = 0; iuni != s_num_universe; ++iuni){
-		     map_systematic_vector_weights[sname].push_back(cafhelper.GetUniverseWeight(in_nu_index, s_index, iuni));
-		     if(false && i == 1 && iuni < 50)
-			log<LOG_INFO>(L"%1% || name: %2%, weight : %3%") % __func__ % sname.c_str() % map_systematic_vector_weights[sname].back();
-		}
-
-	    }
-	
-	    outTree->Fill();
-
-	}
-
-
-        time_t time_took = time(nullptr) - start_time;
-        log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
-
-	fout->cd();
-	outTree->Write();
-	fout->Close();
-
-	flat_caf->Close();
-	f_post_selection->Close();
-        log<LOG_INFO>(L"%1% || DONE") %__func__ ;
-        return 0;
-    }
 
     int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin){
+
 
         int is = 0;
         for(SystStruct & syst : syst_vector){
@@ -816,7 +586,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
             }
 
             int nuniv = syst.GetNUniverse();
-            for(long int u =0; u<nuniv; u++){
+            for(int u =0; u<nuniv; u++){
                 int i = 0;
                 if(syst.mode == "multisigma") {
                   for(; i < nuniv; ++i) {
@@ -977,7 +747,7 @@ PROspec CreatePROspecCV(const PROconfig& inconfig){
 		    continue;
 
 		//find bins
-		long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+		int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
 		if(global_bin < 0 )  //out of range
 		    continue;
 
@@ -1004,7 +774,7 @@ void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<Branc
     int total_num_sys = syst_vector.size(); 
     double reco_value = *(static_cast<double*>(branch->GetValue()));
     double mc_weight = branch->GetMonteCarloWeight(); 
-    long int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
+    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
     if(global_bin < 0 )  //out of range
         return;
 
@@ -1032,75 +802,5 @@ void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<Branc
 }
 
 
-Eigen::MatrixXd SystStruct::GenerateCovarMatrix(const SystStruct& sys_obj){
-    int n_universe = sys_obj.GetNUniverse(); 
-    std::string sys_name = sys_obj.GetSysName();
-    
-    const PROspec& cv_spec = sys_obj.CV();
-    long int nbins = cv_spec.GetNbins();
-    log<LOG_INFO>(L"%1% || Generating covariance matrix.. size: %2% x %3%") % __func__ % nbins % nbins;
-
-    //build full covariance matrix 
-    Eigen::MatrixXd full_covar_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
-    for(int i = 0; i != n_universe; ++i){
-	PROspec spec_diff  = cv_spec - sys_obj.Variation(i);
-	full_covar_matrix += (spec_diff.Spec() * spec_diff.Spec().transpose() ) / static_cast<double>(n_universe);
-    }
- 
-    //build fractional covariance matrix 
-    //first, get the matrix with diagonal being reciprocal of CV spectrum prdiction
-    Eigen::MatrixXd cv_spec_matrix =  Eigen::MatrixXd::Identity(nbins, nbins);
-    for(int i =0; i != nbins; ++i)
-	cv_spec_matrix(i, i) = 1.0/cv_spec.GetBinContent(i);
-
-    //second, get fractioal covar
-    Eigen::MatrixXd frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
-
-    return frac_covar_matrix;
-}
-
-bool SystStruct::isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix){
-
-    //first, check if it's symmetric 
-    if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
-	log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<double>::dummy_precision();
-	return false;
-    }
-
-    //second, check if it's positive semi-definite;
-    Eigen::LDLT<Eigen::MatrixXd> llt(in_matrix);
-    if((llt.info() == Eigen::NumericalIssue ) || (!llt.isPositive()) )
-	return false;
-
-    return true;
-
-}
-
-bool SystStruct::isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance ){
-
-    //first, check if it's symmetric 
-    if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
-	log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<double>::dummy_precision();
-	return false;
-    }
-   
-
-    //second, check if it's positive semi-definite;
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(in_matrix);
-    if(eigensolver.info() != Eigen::Success){
-	log<LOG_ERROR>(L"%1% || Failing to get eigenvalues..") % __func__ ;
-	return false;
-    }
-   
-    Eigen::VectorXd eigenvals = eigensolver.eigenvalues();
-    for(auto val : eigenvals ){
-	if(val < 0 && fabs(val) > tolerance){
-	   log<LOG_ERROR>(L"%1% || Found negative eigenvalues beyond tolerance (%2%): %3%") % __func__ % tolerance % val;
-	   return false;
-	}
-    }
-    return true;
-
-}
 }//namespace
 

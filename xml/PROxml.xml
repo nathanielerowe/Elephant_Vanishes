@@ -6,21 +6,20 @@
 <detector name="SBND" />
 
 <channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
-        <bins
-        edges=" 0 1 2 3 1000" 
-                />
+        <bins edges=" 0 1 2 3 1000" />
+        <truebins min="0" max="5" nbins="50"/>
     <subchannel name="cc" plotname="#nu_{#mu} CC" osc = "22" />
 </channel>
 
 <plotpot value="1"/>
 
 <variation_list>
-      <allowlist>GENIEReWeight_ICARUS_v1_multisigma_MaCCQE</allowlist>
+      <allowlist>GENIEReWeight_ICARUS_v1_multisigma_CCRES</allowlist>
       <denylist>piplus_Flux</denylist>
       <denylist>piminus_Flux</denylist>
 </variation_list>
 
-<MCFile treename="recTree" filename="/icarus/data/users/jlarkin/icarus_test.flat.caf.root" scale = "1.0" maxevents="50000" pot="1"> 
+<MCFile treename="recTree" filename="icarus_test.flat.caf.root" scale = "1.0" maxevents="50000" pot="1"> 
      <branch
          name                  = "rec.slc.truth.E[Sum$((rec.slc.truth.index>=0)*Iteration$)]" 
          type                  = "double"

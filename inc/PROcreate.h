@@ -73,44 +73,19 @@ namespace PROfit{
 
 	/* Function: create EMPTY spectra with given length 
  	 */ 
-        void CreateSpecs(long int num_bins);
+        void CreateSpecs(int num_bins);
 
 	/* Function: given global bin index, and event weight, fill the central value spectrum */
-	void FillCV(long int global_bin, double event_weight);
+	void FillCV(int global_bin, double event_weight);
 
 	/* Function: given global bin index, and event weight, fill the spectrum of given universe */
-	void FillUniverse(int universe, long int global_bin, double event_weight);
+	void FillUniverse(int universe, int global_bin, double event_weight);
 
 	/* Function: return CV spectrum in PROspec */
 	const PROspec& CV() const;
 
 	/*Function: return the spectrum for variation at given universe */
 	const PROspec& Variation(int universe) const;
-
-
-	//----- Spline and Covariance matrix related ---
-	//----- Spline and Covariance matrix related ---
-	
-        /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it. */ 
-        static Eigen::MatrixXd GenerateCovarMatrix(const SystStruct& sys_obj);
-
-
-
-        /* Function: check if given matrix is positive semi-definite with tolerance*/
-	static bool isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance=1.0e-16);
-
-        /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
-	static bool isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix);
-
-    
-	/* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
-    	void FillSpline();
-
-    	/* Function: Get weight for bin for a given shift using spline */
-    	double GetSplineShift(long bin, double shift);
-
-    	/* Function: Get cv spectrum shifted using spline */
-    	PROspec GetSplineShiftedSpectrum(double shift);
 
 	//---------- Helper Functions --------
 	//---------- Helper Functions --------
@@ -186,15 +161,6 @@ namespace PROfit{
     int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
     int PROcess_CAFs(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop);
 
-    /* Function: function to read flat caf file and form eventweight map and write to flat root file 
-     * Note: intended to be a temporary function
-     *
-     * Parameter:
-     * 	 infile_flatcaf: 	 path to flat caf file 
-     * 	 infile_post_selection:  path to flat root file containing the entry index and corresponding true neutrino idnex of selected events
-     * 	 destination_file:	 name of output file. If not provided, will be set to [infile_post_selection + ".addweightmap.root"]
-     */
-    int PROcess_WeightMap(const std::string& infile_flatcaf, const std::string& infile_post_selection, std::string destination_file="NULLDEFAULT");
 
     int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin);
 
