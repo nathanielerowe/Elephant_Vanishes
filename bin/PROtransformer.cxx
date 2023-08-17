@@ -4,7 +4,6 @@
 #include "PROtocall.h"
 #include "sbnanaobj/StandardRecord/SRGlobal.h"
 #include "sbnanaobj/StandardRecord/SRWeightPSet.h"
-#include <bits/stdc++.h>
 #include <chrono>
 
 #include "CLI11.h"
