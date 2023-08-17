@@ -544,8 +544,6 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                     inprop.pdg.push_back(pdg_id);
                     inprop.truth.push_back((float)true_param);
 
-                    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
-                    
                     if(global_bin < 0 )  //out or range
                         continue;
 
