@@ -56,14 +56,16 @@ namespace PROfit{
         std::shared_ptr<TTreeFormula> branch_monte_carlo_weight_formula = nullptr;
         std::shared_ptr<TTreeFormula> branch_true_value_formula=nullptr;
         std::shared_ptr<TTreeFormula> branch_true_L_formula=nullptr;
+        std::shared_ptr<TTreeFormula> branch_true_pdg_formula=nullptr;
 
         bool oscillate;
         std::string true_param_name;
         std::string true_L_name;
-
+        std::string pdg_name;
         float value_f;
         float true_value_f;
         float true_L_f;
+        int true_pdg;
 
         double value_d;
         double true_value_d;
@@ -74,6 +76,15 @@ namespace PROfit{
         virtual void* GetValue(){return nullptr;};  //Function: evaluate branch 'name' and return the value. Usually its reconstructed quantity
         virtual void* GetTrueValue(){return nullptr;};  //Function: evaluate formula 'true_param_name' and return the value. Usually it's true energy  
         virtual void* GetTrueL(){return nullptr;};      //Function: evaluate formula 'true_L_name' and return the value. Usually it's true baseline.
+        int GetTruePDG(){
+             if(branch_true_pdg_formula == NULL) return true_pdg;
+            else{
+                branch_true_pdg_formula->GetNdata();
+                true_pdg = (int)branch_true_pdg_formula->EvalInstance();
+                return true_pdg;
+            }
+
+        }
 
 
 	/* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
@@ -128,7 +139,7 @@ namespace PROfit{
     };
 
     struct BranchVariable_f: public BranchVariable{
-        BranchVariable_f(std::string n, std::string t, std::string a) : BranchVariable(n,t,a) {value_f=0;true_value_f=0; true_L_f = 0;};
+        BranchVariable_f(std::string n, std::string t, std::string a) : BranchVariable(n,t,a) {value_f=0;true_value_f=0; true_L_f = 0; true_pdg = 0;};
         void* GetValue(){ 
             if(branch_formula == NULL) return &value_f;
             else{
@@ -155,6 +166,7 @@ namespace PROfit{
                 return &true_L_f;
             }
         }
+        
     };
 
 

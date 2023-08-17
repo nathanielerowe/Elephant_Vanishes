@@ -20,14 +20,16 @@
       <denylist>piminus_Flux</denylist>
 </variation_list>
 
-<MCFile treename="recTree" filename="/home/mark/work/PROfit/build/test.flat.caf.root" scale = "1.0" maxevents="50000" pot="1"> 
+<MCFile treename="recTree" filename="/icarus/data/users/jlarkin/icarus_test.flat.caf.root" scale = "1.0" maxevents="50000" pot="1"> 
      <branch
-         name="rec.slc.truth.E[Sum$((rec.slc.truth.index>=0)*Iteration$)]" 
-         type="double"
-         associated_subchannel="nu_SBND_numu_cc"
-         oscillate = "true"
-         true_param_name = "rec.slc.truth.E"
-         true_L_name = "rec.slc.truth.baseline"
+         name                  = "rec.slc.truth.E[Sum$((rec.slc.truth.index>=0)*Iteration$)]" 
+         type                  = "double"
+         associated_subchannel = "nu_SBND_numu_cc"
+         oscillate             = "true"
+         true_param_name       = "rec.slc.truth.E[Sum$((rec.slc.truth.index>=0)*Iteration$)]" 
+         true_L_name           = "rec.slc.truth.baseline[Sum$((rec.slc.truth.index>=0)*Iteration$]"
+         pdg_name              = "rec.slc.truth.pdg[Sum$((rec.slc.truth.index>=0)*Iteration$)]"
+         additional_weight     = "Sum$(rec.slc.truth.index>=0) == 1" 
          />
 </MCFile>
 

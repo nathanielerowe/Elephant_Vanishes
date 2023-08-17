@@ -1,6 +1,7 @@
 #include "PROconfig.h"
 #include "PROspec.h"
 #include "PROcreate.h"
+#include "PROpeller.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -58,13 +59,19 @@ int main(int argc, char* argv[])
 
 
     PROconfig myConf(xmlname);
-
+    PROpeller myprop;
     std::vector<SystStruct> systs;
-    PROcess_CAFana(myConf, systs);
-    systs[0].FillSpline();
-    systs[0].CV().Print();
-    PROspec p05 = systs[0].GetSplineShiftedSpectrum(0.5);
-    p05.Print();
+    PROcess_CAFs(myConf, systs, myprop);
+    std::cout<< "starting loop!!" << std::endl;
+    
+    for(int i=0; i<=myprop.truth.size(); ++i){
+        std::cout<< myprop.truth[i] << " "<< myprop.reco[i] <<" "<< myprop.pdg[i] << std::endl;
+
+    }
+    //systs[0].FillSpline();
+    //systs[0].CV().Print();
+    //PROspec p05 = systs[0].GetSplineShiftedSpectrum(0.5);
+    //p05.Print();
     //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
 
