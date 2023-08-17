@@ -39,7 +39,7 @@ namespace PROfit {
     }
 
     void SystStruct::FillUniverse(int universe, int global_bin, double event_weight){
-        	p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
+        p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
 	return;
     }
 
