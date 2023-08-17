@@ -170,7 +170,7 @@ namespace PROfit{
 
             //map from subchannel name/index to global index and channel index
             std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
-            std::unordered_map<int, long int> m_map_subchannel_index_to_global_index_start;
+            std::unordered_map<int, int> m_map_subchannel_index_to_global_index_start;
             std::unordered_map<int, int> m_map_subchannel_index_to_channel_index;
 
 
@@ -303,7 +303,7 @@ namespace PROfit{
             /* Function: given subchannel global index, return corresponding global bin start
              * Note: global bin index start from 0, not 1
              */
-            long int GetGlobalBinStart(int subchannel_index) const;
+            int GetGlobalBinStart(int subchannel_index) const;
 
 
             /* Function: given channel index, return list of bin edges for this channel */

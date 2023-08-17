@@ -25,7 +25,7 @@ namespace PROfit{
 
 	private:
             //Base
-            long int nbins;
+            int nbins;
             Eigen::VectorXd spec;
             Eigen::VectorXd error;
             //Eigen::VectorXd bins;
@@ -48,7 +48,7 @@ namespace PROfit{
             PROspec(const Eigen::VectorXd &in_spec, const Eigen::VectorXd &in_error) : nbins(in_spec.size()), spec(in_spec), error(in_error){}
 
 	    /* Function: create PROspec of given size */
-	    PROspec(long int num_bins);
+	    PROspec(int num_bins);
 
             //PROspec(PROconfig const & configin); //Load in config file EMPTY hists
             //PROspec(std::string &xmlname); //Load directly from XML 
@@ -69,8 +69,8 @@ namespace PROfit{
  	     * 	 Fill() updates the bin content and error, while QuickFill() only updates bin content and doesn't care error
  	     *
  	     */
-	    void Fill(long int bin_index, double weight);
-	    void QuickFill(long int bin_index, double weight);
+	    void Fill(int bin_index, double weight);
+	    void QuickFill(int bin_index, double weight);
 
 	    /* Function: zero out the spectrum and error, but keep the dimension */
 	    void Zero();
@@ -79,7 +79,7 @@ namespace PROfit{
 	    void Print() const;
 
 	    /*Return number of bins in spectrum */
-	    long int GetNbins() const;
+	    int GetNbins() const;
 
 	
 
@@ -87,7 +87,7 @@ namespace PROfit{
              * Note: bin index starts at 0
              */
 	    inline
-	    double GetBinContent(long int bin) const{
+	    double GetBinContent(int bin) const{
 		return spec(bin);
  	    }
 
@@ -95,7 +95,7 @@ namespace PROfit{
              * Note: bin index starts at 0
              */
 	    inline
-	    double GetBinError(long int bin) const{
+	    double GetBinError(int bin) const{
 		return error(bin);
  	    }
 
