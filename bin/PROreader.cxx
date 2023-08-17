@@ -53,13 +53,14 @@ int main(int argc, char* argv[])
         std::cout << pset.name << " (type " << pset.type << "): with " << pset.nuniv << " universes and index: "<<i<<"\n";
         std::cout << pset.map.at(0).param.name << std::endl;
         std::cout << " Mean: "<<pset.map.at(0).param.mean <<" Width: "<<pset.map.at(0).param.width <<  std::endl;
+        std::cout << "Number of knob vals: " << pset.map.at(0).vals.size() << std::endl;
 
         for(const auto& val: pset.map.at(0).vals) {
-            std::cout << val << ' ';
+            //std::cout << val << ' ';
             vals.push_back(val);
         }
         std::cout <<" On psetinext i "<<i<< std::endl;
-        if(i==35)break;
+        //if(i==35)break;
         i++;
     }
 
