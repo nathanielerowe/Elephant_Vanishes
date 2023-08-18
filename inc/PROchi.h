@@ -41,24 +41,45 @@ namespace PROfit{
                 std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
 
                 PROspec result = FillRecoSpectra(*config, *peller, *syst, *osc, shifts, fitparams);
+          
+                std::cout<<"Spec "<<result.Spec()<<" .. "<<std::endl;
+                result.Print();
 
                 // Calcuate Full Covariance matrix
                 Eigen::MatrixXd diag = result.Spec().array().matrix().asDiagonal(); 
                 Eigen::MatrixXd full_covariance =  diag*(syst->fractional_covariance)*diag;
-                
+                std::cout<<"Full: "<<full_covariance.size()<<std::endl;
+                std::cout<<full_covariance<<std::endl;
+
                 // Collapse Covariance and Spectra 
                 Eigen::MatrixXd collapsed_full_covariance =  CollapseMatrix(*config,full_covariance);  
+                std::cout<<"cFull: "<<collapsed_full_covariance.size()<<std::endl;
+                std::cout<<collapsed_full_covariance<<std::endl;
+
+                Eigen::MatrixXd stat_covariance = data.Spec().array().matrix().asDiagonal();
+                Eigen::MatrixXd collapsed_stat_covariance = CollapseMatrix(*config, stat_covariance); 
+                std::cout<<"cStat: "<<collapsed_stat_covariance.size()<<std::endl;
+                std::cout<<collapsed_stat_covariance<<std::endl;
+               
 
                 // Invert Collaped Matrix Matrix 
-                Eigen::MatrixXd inverted_collapsed_full_covariance = collapsed_full_covariance.inverse();
+                Eigen::MatrixXd inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
+
+                std::cout<<"shape: "<<inverted_collapsed_full_covariance.size()<<std::endl;
+                std::cout<<inverted_collapsed_full_covariance<<std::endl;
 
                 // Calculate Chi^2  value
                 Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
-                float value = (delta)*inverted_collapsed_full_covariance*(delta.transpose())  + subvector2.array().square().sum();
+                float pull = subvector2.array().square().sum(); 
+                float value = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
 
                 // Simple gradient here
                 Eigen::VectorXd diff = param-last_param;
                 gradient = (value-last_value)/diff.array();
+
+                std::cout<<"Grad: "<<gradient<<std::endl;
+
+                log<LOG_DEBUG>(L"%1% || value %2%, last_value %3%, pull") % __func__ % value  % last_value % pull;
 
                 //Update last param
                 last_param = param;
