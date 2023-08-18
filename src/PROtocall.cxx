@@ -38,6 +38,11 @@ int FindGlobalTrueBin(const PROconfig &inconfig, double true_value, const std::s
 int FindGlobalTrueBin(const PROconfig &inconfig, double true_value, int subchannel_index){
     int global_bin_start = inconfig.GetGlobalTrueBinStart(subchannel_index);
     int channel_index = inconfig.GetChannelIndex(subchannel_index);
+    if(inconfig.GetChannelNTrueBins(channel_index) == 0){
+	log<LOG_ERROR>(L"%1% || Subchannel %2% does not have true bins") % __func__ % subchannel_index;
+	log<LOG_ERROR>(L"%1% || Return global bin of -1") % __func__ ;
+	return -1;
+    }
     int local_bin = FindLocalTrueBin(inconfig, true_value, channel_index);
     return local_bin == -1 ? -1 : global_bin_start + local_bin;
 }
@@ -56,6 +61,13 @@ int FindLocalTrueBin(const PROconfig &inconfig, double true_value, int channel_i
 	return -1; 
     }
     return pos_iter - bin_edges.begin() - 1; 
+}
+
+int FindSubchannelIndexFromGlobalBin(const PROconfig &inconfig, int global_bin, bool reco_bin ){
+   if(reco_bin)
+   	return inconfig.GetSubchannelIndexFromGlobalBin(global_bin);
+   else
+	return inconfig.GetSubchannelIndexFromGlobalTrueBin(global_bin);
 }
 
 };
