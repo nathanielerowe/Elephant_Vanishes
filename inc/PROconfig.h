@@ -190,6 +190,8 @@ namespace PROfit{
 
             //---- PRIVATE FUNCTION ------
 
+	    /* Function: construct a matrix T, which will be used to collapse matrix and vectors */
+	    void construct_collapsing_matrix();
 
             /* Function: remove any mode/detector/channel/subchannels in the configuration xml that are not used from consideration
             */
@@ -267,6 +269,8 @@ namespace PROfit{
             int m_num_bins_mode_block_collapsed;
             int m_num_bins_total_collapsed;
 
+	    Eigen::MatrixXd collapsing_matrix;
+
             //This section entirely for montecarlo generation of a covariance matrix or PROspec 
             //For generating a covariance matrix from scratch, this contains the number of montecarlos (weights in weight vector) and their names.
             bool m_write_out_variation;
@@ -307,6 +311,14 @@ namespace PROfit{
 
             //----- PUBLIC FUNCTIONS ------
             //
+
+	    
+	    /* Function: return matrix T, of size (m_num_bins_total, m_num_bins_total_collapsed), which will be used to collapse matrix and vectors 
+ 	     * Note: To collapse a full matrix M, please do T.transpose() * M * T
+ 	     * 	     To collapse a full vector V, please do T.transpose() * V
+ 	     */
+	    inline 
+	    Eigen::MatrixXd GetCollapsingMatrix() const {return collapsing_matrix; }
 
             /* Function: Calculate how big each mode block and decector block are, for any given number of channels/subchannels, before and after the collapse
              * Note: only consider mode/detector/channel/subchannels that are actually used 
