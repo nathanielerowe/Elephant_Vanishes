@@ -48,6 +48,11 @@ namespace PROfit{
      */
     int FindSubchannelIndexFromGlobalBin(const PROconfig &inconfig, int global_bin, bool reco_bin = true);
 
+    /* Function: given a full matrix, collapse the matrix */
+    Eigen::MatrixXd CollapseMatrix(const PROconfig &inconfig, const Eigen::MatrixXd& full_matrix);
+
+    /* Function: given a full vector (that contains reco), collapse the vector */
+    Eigen::VectorXd CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXd& full_vector);
 };
 
 #endif
