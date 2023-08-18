@@ -327,5 +327,9 @@ namespace PROfit {
             return {};
         }
     }
+
+    PROsyst::SystType PROsyst::GetSystType(const std::string &syst) {
+        return syst_map.at(syst).second;
+    }
 };
 
