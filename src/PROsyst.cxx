@@ -13,7 +13,9 @@ namespace PROfit {
                 this->CreateMatrix(syst);
             }
         }
+        fractional_covariance = this->SumMatrices();
     }
+
 
     Eigen::MatrixXd PROsyst::SumMatrices() const{
 

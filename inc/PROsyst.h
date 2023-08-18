@@ -95,6 +95,8 @@ namespace PROfit {
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift);
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts);
 
+            /* the fractional covariance that is the sum of all during constructor*/
+            Eigen::MatrixXd fractional_covariance;
 
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
