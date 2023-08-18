@@ -97,15 +97,14 @@ int main(int argc, char* argv[])
 
     int dim = 2+5; //systs.GetNumSplines();
 
-    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc);
+    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.front().CV());
 
     // Bounds
-    Eigen::VectorXd lb = Eigen::VectorXd::Constant(dim, 0.0);
-    Eigen::VectorXd ub = Eigen::VectorXd::Constant(dim, std::numeric_limits<double>::infinity());
+    Eigen::VectorXd lb = {0.01 , 0  , -3}
+    Eigen::VectorXd ub = {100, 1, 3 };
 
     // Initial guess
-    Eigen::VectorXd x = Eigen::VectorXd::Constant(dim, 1.0);
-
+    Eigen::VectorXd x = {3, 0.5, 0.0};
 
     // x will be overwritten to be the best point found
     double fx;
