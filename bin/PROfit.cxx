@@ -4,6 +4,7 @@
 #include "PROcreate.h"
 #include "PROpeller.h"
 #include "PROchi.h"
+#include "PROcess.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -65,9 +66,21 @@ int main(int argc, char* argv[])
     std::vector<SystStruct> systsstructs;
     PROcess_CAFs(myConf, systsstructs, myprop);
     PROsyst systs(systsstructs);
-    PROspec p05 = systs.GetSplineShiftedSpectrum(myConf, myprop, "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", .5);
-    p05.Print();
-    std::cout << systs.GrabMatrix("piplus_Flux") << std::endl;
+    PROsc myosc;
+    PROspec myfittingspec;
+
+    std::vector<float> myvec;
+    myvec.push_back(0.5);    
+
+    std::vector<float> fitparams;
+    fitparams.push_back(1.0);
+    fitparams.push_back(0.3);
+
+    myfittingspec = FillRecoSpectra(myConf, myprop, systs, myosc, myvec, fitparams);
+    myfittingspec.Print();
+    //PROspec p05 = systs.GetSplineShiftedSpectrum(myConf, myprop, "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", .5);
+    //p05.Print();
+    //std::cout << systs.GrabMatrix("piplus_Flux") << std::endl;
 
     //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
