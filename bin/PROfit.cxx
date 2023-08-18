@@ -2,6 +2,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
+#include "PROpeller.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -59,10 +60,9 @@ int main(int argc, char* argv[])
 
 
     PROconfig myConf(xmlname);
-
-
+    PROpeller myprop;
     std::vector<SystStruct> systsstructs;
-    PROcess_CAFana(myConf, systsstructs);
+    PROcess_CAFs(myConf, systsstructs, myprop);
     PROsyst systs(systsstructs);
     PROspec p05 = systs.GetSplineShiftedSpectrum(systsstructs[0].CV(), "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", 0.5);
     p05.Print();

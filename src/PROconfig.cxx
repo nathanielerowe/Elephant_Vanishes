@@ -469,7 +469,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 const char* bcentral = pBranch->Attribute("central_value");
                 const char* bwname = pBranch->Attribute("eventweight_branch_name");
                 const char* badditional_weight = pBranch->Attribute("additional_weight");
-
+                
                 if(bwname== NULL){
                     log<LOG_WARNING>(L"%1% || WARNING: No eventweight branch name passed, defaulting to 'weights' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
                     TEMP_eventweight_branch_names.push_back("weights");
@@ -552,6 +552,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     log<LOG_DEBUG>(L"%1% || Oscillations are Set to  ON ") % __func__;
                     TEMP_branch_variables.back()->SetOscillate(true);
                     TEMP_branch_variables.back()->true_param_name = pBranch->Attribute("true_param_name");
+                    TEMP_branch_variables.back()->pdg_name = pBranch->Attribute("pdg_name");
                     if(pBranch->Attribute("true_L_name") != NULL){
                         //for oscillation that needs both E and L
                         TEMP_branch_variables.back()->true_L_name = pBranch->Attribute("true_L_name");
@@ -822,6 +823,16 @@ const std::vector<double>& PROconfig::GetChannelBinEdges(int channel_index) cons
     }
 
     return m_channel_bin_edges[channel_index];
+}
+
+int PROconfig::GetChannelNTrueBins(int channel_index) const{
+    if(channel_index < 0 || channel_index >= m_num_channels){
+        log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
+        log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+    return m_channel_num_truebins[channel_index];
 }
 
 int PROconfig::GetGlobalTrueBinStart(int subchannel_index) const{
