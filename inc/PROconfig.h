@@ -310,6 +310,7 @@ namespace PROfit{
              */
             int GetChannelIndex(int subchannel_index) const;
 
+
             /* Function: given subchannel global index, return corresponding global bin start
              * Note: global bin index start from 0, not 1
              */
@@ -318,6 +319,9 @@ namespace PROfit{
 
             /* Function: given channel index, return list of bin edges for this channel */
             const std::vector<double>& GetChannelBinEdges(int channel_index) const;
+
+            /* Function: given channel index, return number of true bins for this channel */
+	    int GetChannelNTrueBins(int channel_index) const;
 
             /* Function: given subchannel global index, return corresponding global bin start
              * Note: global bin index start from 0, not 1

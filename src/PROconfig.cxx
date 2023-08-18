@@ -824,6 +824,16 @@ const std::vector<double>& PROconfig::GetChannelBinEdges(int channel_index) cons
     return m_channel_bin_edges[channel_index];
 }
 
+int PROconfig::GetChannelNTrueBins(int channel_index) const{
+    if(channel_index < 0 || channel_index >= m_num_channels){
+        log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
+        log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+    return m_channel_num_truebins[channel_index];
+}
+
 int PROconfig::GetGlobalTrueBinStart(int subchannel_index) const{
     auto pos_iter = m_map_subchannel_index_to_trueglobal_index_start.find(subchannel_index);
     if(pos_iter == m_map_subchannel_index_to_trueglobal_index_start.end()){
