@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <cmath>
 
 // Our include
 #include "PROcreate.h"
@@ -40,6 +41,11 @@ public:
          * Return: {fractional covariance matrix, correlation covariance matrix}
          */
         static std::pair<Eigen::MatrixXd, Eigen::MatrixXd> GenerateCovarMatrices(const SystStruct& sys_obj);
+
+        /* Function: given a SystStruct with cv and variation spectra, build full covariance matrix for the systematics, and return it
+ 	 * Note: it assumes the SystStruct is filled 
+ 	 */
+	static Eigen::MatrixXd GenerateFullCovarMatrix(const SystStruct& sys_obj);
 
         /* Function: given a SystStruct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it
  	 * Note: it assumes the SystStruct is filled 
