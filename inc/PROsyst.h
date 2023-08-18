@@ -71,8 +71,8 @@ public:
    	float GetSplineShift(std::string name, float shift, int bin);
 
   	/* Function: Get cv spectrum shifted using spline */
-  	PROspec GetSplineShiftedSpectrum(const PROspec& cv, std::string name, float shift);
-    PROspec GetSplineShiftedSpectrum(const PROspec& cv, std::vector<std::string> names, std::vector<float> shifts);
+  	PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift);
+    PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts);
 
 
 private:
