@@ -8,21 +8,12 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <memory>
-#include <map>
-#include <unordered_map>
-#include <unordered_set>
-#include <unordered_map>
 #include <climits>
 #include <cstdlib>
+#include <cmath>
 
 // TINYXML2
 #include "tinyxml2.h"
-
-// EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
 
 //PROfit
 #include "PROlog.h"
@@ -37,11 +28,11 @@ namespace PROfit{
 
             PROsc(){};
 
-            double Pmue(double dmsq, double sinsq2thmue, double enu, double baseline)               
+            float Pmue(float dmsq, float sinsq2thmue, float enu, float baseline)               
 
                 {
-                double sinterm = sin(1.27*dmsq*(baseline/enu));
-	        double prob    = sinsq2thmue*sinterm*sinterm;
+                float sinterm = std::sin(1.27*dmsq*(baseline/enu));
+	        float prob    = sinsq2thmue*sinterm*sinterm;
 
                 if(prob<0.0 || prob >1.0){
                     log<LOG_ERROR>(L"Your probability is outside the bounds of math.");
@@ -51,11 +42,11 @@ namespace PROfit{
                 return prob;
                 }
 
-            double Pmumu(double dmsq, double sinsq2thmumu, double enu, double baseline)
+            float Pmumu(float dmsq, float sinsq2thmumu, float enu, float baseline)
 
                 {
-                double sinterm = sin(1.27*dmsq*(baseline/enu));
-                double prob    = 1.0 - (sinsq2thmumu*sinterm*sinterm);
+                float sinterm = std::sin(1.27*dmsq*(baseline/enu));
+                float prob    = 1.0 - (sinsq2thmumu*sinterm*sinterm);
 
                 if(prob<0.0 || prob >1.0){
                     log<LOG_ERROR>(L"Your probability is outside the bounds of math.");
