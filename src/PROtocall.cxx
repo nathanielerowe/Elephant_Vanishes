@@ -70,4 +70,28 @@ int FindSubchannelIndexFromGlobalBin(const PROconfig &inconfig, int global_bin, 
 	return inconfig.GetSubchannelIndexFromGlobalTrueBin(global_bin);
 }
 
+Eigen::MatrixXd CollapseMatrix(const PROconfig &inconfig, const Eigen::MatrixXd& full_matrix){
+    Eigen::MatrixXd collapsing_matrix = inconfig.GetCollapsingMatrix();
+    int num_bin_before_collapse = collapsing_matrix.rows();
+    if(full_matrix.rows() != num_bin_before_collapse || full_matrix.cols() != num_bin_before_collapse){
+	log<LOG_ERROR>(L"%1% || Matrix dimension doesn't match expected size. Provided matrix: %2% x %3%. Expected matrix size: %4% x %5%") % __func__ % full_matrix.rows() % full_matrix.cols() % num_bin_before_collapse% num_bin_before_collapse;
+	log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+
+    log<LOG_DEBUG>(L"%1% || Collapsed matrix will be %2% x %3%") % __func__ % collapsing_matrix.cols() % collapsing_matrix.cols();
+    Eigen::MatrixXd result_matrix = collapsing_matrix.transpose() * full_matrix * collapsing_matrix;
+    return result_matrix;
+}
+
+Eigen::VectorXd CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXd& full_vector){
+    Eigen::MatrixXd collapsing_matrix = inconfig.GetCollapsingMatrix();
+    if(full_vector.size() != collapsing_matrix.rows()){
+	log<LOG_ERROR>(L"%1% || Vector dimension doesn't match expected size. Provided vector size: %2% . Expected size: %3%") % __func__ % full_vector.size() % collapsing_matrix.rows();
+	log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+    Eigen::VectorXd result_vector = collapsing_matrix.transpose() * full_vector;
+    return result_vector;
+}
 };

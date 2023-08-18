@@ -25,6 +25,7 @@ PROconfig::PROconfig(const std::string &xml):
 
     LoadFromXML(m_xmlname);
 
+    construct_collapsing_matrix();
     //A matrix for collapsing the full-vector
     //left multiply this matrix by the full-vector to get collapsed vector
     //TODO: check corr=init for multi detector
@@ -1186,3 +1187,41 @@ int PROconfig::find_global_subchannel_index_from_global_bin(int global_index, co
    return subchannel_index;
 }
 
+void PROconfig::construct_collapsing_matrix(){
+
+    collapsing_matrix = Eigen::MatrixXd::Zero(m_num_bins_total, m_num_bins_total_collapsed);
+
+    //construct the matrix by detector block
+    Eigen::MatrixXd block_collapser = Eigen::MatrixXd::Zero(m_num_bins_detector_block, m_num_bins_detector_block_collapsed);
+
+    int channel_row_start = 0, channel_col_start = 0;
+    for(int ic =0; ic != m_num_channels; ++ic){
+    
+	//first, build matrix for each channel block
+	int total_num_bins_channel = m_num_subchannels[ic] * m_channel_num_bins[ic];
+
+	Eigen::MatrixXd channel_collapser = Eigen::MatrixXd::Zero(total_num_bins_channel, m_channel_num_bins[ic]);
+	for(int col = 0; col != m_channel_num_bins[ic]; ++col){
+	    for(int subch = 0; subch != m_num_subchannels[ic]; ++subch){
+		int row = subch * m_channel_num_bins[ic] + col;
+		channel_collapser(row, col) = 1.0;
+	    }
+	}
+
+	// now, copy this matrix to detector block
+	block_collapser(Eigen::seqN(channel_row_start, total_num_bins_channel), Eigen::seqN(channel_col_start, m_channel_num_bins[ic])) = channel_collapser;
+	channel_row_start += total_num_bins_channel;
+	channel_col_start += m_channel_num_bins[ic];
+    }
+
+    //okay! now stuff every detector block into the final collapse matrix
+    for(int im = 0; im != m_num_modes; ++im){
+	for(int id =0; id != m_num_detectors; ++id){
+	     int row_block_start = im * m_num_bins_mode_block + id * m_num_bins_detector_block;
+	     int col_block_start = im * m_num_bins_mode_block_collapsed + id * m_num_bins_detector_block_collapsed;
+	     collapsing_matrix(Eigen::seqN(row_block_start, m_num_bins_detector_block), Eigen::seqN(col_block_start, m_num_bins_detector_block_collapsed)) = block_collapser;
+	}
+    }
+
+    return;
+}
