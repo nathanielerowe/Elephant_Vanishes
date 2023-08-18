@@ -1,5 +1,4 @@
 #include "PROcreate.h"
-#include "PROpeller.h"
 #include "Eigen/src/Core/Matrix.h"
 #include "TTree.h"
 #include "TFile.h"
@@ -531,7 +530,6 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                     double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
-
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     int pdg_id = branches[ib]->GetTruePDG();
                     double true_param = *(static_cast<double*>(branches[ib]->GetTrueValue()));
