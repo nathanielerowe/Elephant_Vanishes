@@ -40,7 +40,14 @@ namespace PROfit{
     int FindGlobalTrueBin(const PROconfig &inconfig, double true_value, const std::string& subchannel_fullname);
 
 
-
+    /* Function: given a global bin index in the full vector, return the index of the subchannle this bin belongs to
+     * Parameter:
+     * 	 	inconfig:     a reference to PROconfig object, needed for calculating index 
+     * 	 	global_bin:   global bin index. It can be a global true bin index, or global reco bin index
+     * 	 	reco_bin:     boolean. If set to true, function will assume given bin is global reco bin, and return associated global subchannel index. Otherwise return subchnnale index for true bin.
+     * 	 		      Default to true.
+     */
+    int FindSubchannelIndexFromGlobalBin(const PROconfig &inconfig, int global_bin, bool reco_bin = true);
 };
 
 #endif

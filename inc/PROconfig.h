@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <climits>
 #include <cstdlib>
+#include <numeric>
 
 // TINYXML2
 #include "tinyxml2.h"
@@ -191,7 +192,8 @@ namespace PROfit{
             /* Function: fill in mapping between subchannel name/index to global indices */
             void generate_index_map();
 
-
+	    /* Function: given global bin index, return associated global subchannel index */
+	    int find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const;
         public:
 
 
@@ -304,6 +306,16 @@ namespace PROfit{
              * Note: index start from 0, not 1
              */
             int GetSubchannelIndex(const std::string& fullname) const;
+
+	    /* Function: given global index (in the full vector), return global subchannel index of associated subchannel
+ 	     * Note: returns a 0-based index 
+ 	     */
+            int GetSubchannelIndexFromGlobalBin(int global_index) const;
+
+	    /* Function: given global true index , return global subchannel index of associated subchannel
+ 	     * Note: returns a 0-based index 
+ 	     */
+            int GetSubchannelIndexFromGlobalTrueBin(int global_trueindex) const;
 
             /* Function: given subchannel global index, return corresponding channel index 
              * Note: index start from 0, not 1

@@ -836,6 +836,7 @@ int PROconfig::GetGlobalTrueBinStart(int subchannel_index) const{
 
 const std::vector<double>& PROconfig::GetChannelTrueBinEdges(int channel_index) const{
 
+    //check for out of bound
     if(channel_index < 0 || channel_index >= m_num_channels){
         log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
         log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
@@ -846,6 +847,13 @@ const std::vector<double>& PROconfig::GetChannelTrueBinEdges(int channel_index) 
     return m_channel_truebin_edges[channel_index];
 }
 
+int PROconfig::GetSubchannelIndexFromGlobalBin(int global_index) const {
+   return this->find_global_subchannel_index_from_global_bin(global_index, this->m_num_subchannels, this->m_channel_num_bins, this->m_num_channels, this->m_num_bins_total);
+}
+
+int PROconfig::GetSubchannelIndexFromGlobalTrueBin(int global_trueindex) const{
+   return this->find_global_subchannel_index_from_global_bin(global_trueindex, this->m_num_subchannels, this->m_channel_num_truebins, this->m_num_channels, this->m_num_truebins_total);
+}
 
 //------------ Start of private function ------------------
 //------------ Start of private function ------------------
@@ -1125,3 +1133,45 @@ void PROconfig::generate_index_map(){
     }
     return;
 }
+
+int PROconfig::find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const{
+
+   //check for out of bound
+   if(global_index <0 || global_index >= num_bins_total){
+        log<LOG_ERROR>(L"%1% || Given index: %2% is out of bound") % __func__ % global_index;
+        log<LOG_ERROR>(L"%1% || Total number of bins : %2%") % __func__ % num_bins_total;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+   }
+
+   // get number of bins per detector block 
+   int num_bins_per_detector_block = 0;
+   for( int ic = 0; ic != num_channels; ++ic)
+	num_bins_per_detector_block += num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
+   if(num_bins_per_detector_block == 0){
+        log<LOG_ERROR>(L"%1% || There is zero bins for each detector!! Provided global bin index: %2% ") % __func__ % global_index;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+   }
+
+   // get number of subchannels in detector block  
+   int num_subchannel_in_detector_block = std::accumulate(num_subchannel_in_channel.begin(), num_subchannel_in_channel.end(), 0);
+   int subchannel_index = (global_index / num_bins_per_detector_block) * num_subchannel_in_detector_block;
+
+   global_index %= num_bins_per_detector_block;   //get the index inside a block 
+   //check for each channel
+   for( int ic = 0; ic != num_channels; ++ic){
+	int total_bins_in_channel = num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
+	if(global_index >= total_bins_in_channel){
+	    global_index -= total_bins_in_channel;
+	    subchannel_index += num_subchannel_in_channel[ic];
+	}
+	else{
+	    subchannel_index += global_index / num_bins_in_channel[ic];
+	    break;
+	}
+	   
+   }
+   return subchannel_index;
+}
+

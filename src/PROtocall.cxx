@@ -58,4 +58,11 @@ int FindLocalTrueBin(const PROconfig &inconfig, double true_value, int channel_i
     return pos_iter - bin_edges.begin() - 1; 
 }
 
+int FindSubchannelIndexFromGlobalBin(const PROconfig &inconfig, int global_bin, bool reco_bin ){
+   if(reco_bin)
+   	return inconfig.GetSubchannelIndexFromGlobalBin(global_bin);
+   else
+	return inconfig.GetSubchannelIndexFromGlobalTrueBin(global_bin);
+}
+
 };
