@@ -6,16 +6,18 @@
 <detector name="SBND" />
 
 <channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
-        <bins edges=" 0 1 2 3 1000" />
-        <truebins min="0" max="5" nbins="50"/>
+        <bins
+        edges=" 0 1 2 3" 
+            />
+        <truebins min="0" max="2" nbins="3"/>
     <subchannel name="cc" plotname="#nu_{#mu} CC" osc = "22" />
 </channel>
 
 <plotpot value="1"/>
 
 <variation_list>
-      <allowlist>GENIEReWeight_ICARUS_v1_multisigma_CCRES</allowlist>
-      <denylist>piplus_Flux</denylist>
+      <allowlist>GENIEReWeight_ICARUS_v1_multisigma_MaCCRES</allowlist>
+      <!--<allowlist>piplus_Flux</allowlist>-->
       <denylist>piminus_Flux</denylist>
 </variation_list>
 
@@ -26,7 +28,7 @@
          associated_subchannel = "nu_SBND_numu_cc"
          oscillate             = "true"
          true_param_name       = "rec.slc.truth.E[Sum$((rec.slc.truth.index>=0)*Iteration$)]" 
-         true_L_name           = "rec.slc.truth.baseline[Sum$((rec.slc.truth.index>=0)*Iteration$]"
+         true_L_name           = "rec.slc.truth.baseline[Sum$((rec.slc.truth.index>=0)*Iteration$)]/1000"
          pdg_name              = "rec.slc.truth.pdg[Sum$((rec.slc.truth.index>=0)*Iteration$)]"
          additional_weight     = "Sum$(rec.slc.truth.index>=0) == 1" 
          />

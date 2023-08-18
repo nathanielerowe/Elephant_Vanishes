@@ -1,5 +1,4 @@
 #include "PROcreate.h"
-#include "PROpeller.h"
 #include "Eigen/src/Core/Matrix.h"
 #include "TTree.h"
 #include "TFile.h"
@@ -417,6 +416,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
                 branch_variable->branch_true_pdg_formula  =  std::make_shared<TTreeFormula>(("branch_add_pdg_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->pdg_name.c_str(),trees[fid]);
                 branch_variable->branch_true_value_formula  =  std::make_shared<TTreeFormula>(("branch_add_trueE_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->true_param_name.c_str(),trees[fid]);
+                branch_variable->branch_true_L_formula  =  std::make_shared<TTreeFormula>(("branch_add_trueL_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->true_L_name.c_str(),trees[fid]);
 
                 //grab monte carlo weight
                 if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
@@ -493,7 +493,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
 
         //create 2D multi-universe spec.
         for(auto& s : syst_vector){
-            s.CreateSpecs(inconfig.m_num_bins_total);	
+            s.CreateSpecs(s.mode == "multisigma" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
 
@@ -530,10 +530,11 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                     double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
-
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     int pdg_id = branches[ib]->GetTruePDG();
                     double true_param = *(static_cast<double*>(branches[ib]->GetTrueValue()));
+                    double baseline = *(static_cast<double*>(branches[ib]->GetTrueL()));
+                    int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
 
                     if(additional_weight == 0)
                         continue;
@@ -543,11 +544,12 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                     inprop.bin_indices.push_back(global_bin);
                     inprop.pdg.push_back(pdg_id);
                     inprop.truth.push_back((float)true_param);
+                    inprop.baseline.push_back((float)baseline);
 
                     if(global_bin < 0 )  //out or range
                         continue;
 
-                    PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin);
+                    PROcess_CAF_Event(sys_weight_formula, syst_vector, inprop, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
 
                 }//end of branch 
 
@@ -569,12 +571,13 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
     }
 
 
-    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin){
+    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, PROpeller& inprop, CAFweightHelper &caf_helper, double add_weight, long int global_bin, long int global_true_bin){
 
 
         int is = 0;
         for(SystStruct & syst : syst_vector){
-            syst.FillCV(global_bin, add_weight);
+            long bin = syst.mode == "multisigma" ? global_true_bin : global_bin;
+            syst.FillCV(bin, add_weight);
             formulas[is]->GetNdata();
             double sys_weight_value =formulas[is]->EvalInstance();
 
@@ -594,7 +597,7 @@ int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vect
                   i = u;
                 }
                 float this_weight = caf_helper.GetUniverseWeight(syst.index, i);
-		syst.FillUniverse(u, global_bin, add_weight*this_weight);
+		        syst.FillUniverse(u, bin, add_weight*this_weight);
                 //std::cout<<"WEI "<<is<<" "<<u<<global_bin<<" "<<add_weight<<" "<<this_weight<<std::endl;
             }
             is++;

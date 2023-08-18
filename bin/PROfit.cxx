@@ -3,6 +3,8 @@
 #include "PROsyst.h"
 #include "PROcreate.h"
 #include "PROpeller.h"
+#include "PROchi.h"
+#include "PROcess.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -64,35 +66,50 @@ int main(int argc, char* argv[])
     std::vector<SystStruct> systsstructs;
     PROcess_CAFs(myConf, systsstructs, myprop);
     PROsyst systs(systsstructs);
-    PROspec p05 = systs.GetSplineShiftedSpectrum(systsstructs[0].CV(), "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", 0.5);
-    p05.Print();
-    std::cout << systs.GrabMatrix("piplus_Flux") << std::endl;
+    PROsc myosc;
+    PROspec myfittingspec;
+
+    std::vector<float> myvec;
+    myvec.push_back(0.5);    
+
+    std::vector<float> fitparams;
+    fitparams.push_back(1.0);
+    fitparams.push_back(0.3);
+
+    myfittingspec = FillRecoSpectra(myConf, myprop, systs, myosc, myvec, fitparams);
+    myfittingspec.Print();
+    //PROspec p05 = systs.GetSplineShiftedSpectrum(myConf, myprop, "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", .5);
+    //p05.Print();
+    //std::cout << systs.GrabMatrix("piplus_Flux") << std::endl;
 
     //PROspec mySpec(myConf);
     //TH1D hmm = mySpec.toTH1D(myConf);
 
 
     return 0;
+
+    PROsc osc;
+
     LBFGSpp::LBFGSBParam<double> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
     LBFGSpp::LBFGSBSolver<double> solver(param); 
 
-    int n=78;
-    ChiTest fun(n);
+    int dim = 2+5; //systs.GetNumSplines();
+
+    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc);
 
     // Bounds
-    Eigen::VectorXd lb = Eigen::VectorXd::Constant(n, 0.0);
-    Eigen::VectorXd ub = Eigen::VectorXd::Constant(n, std::numeric_limits<double>::infinity());
+    Eigen::VectorXd lb = Eigen::VectorXd::Constant(dim, 0.0);
+    Eigen::VectorXd ub = Eigen::VectorXd::Constant(dim, std::numeric_limits<double>::infinity());
 
     // Initial guess
-    Eigen::VectorXd x = Eigen::VectorXd::Constant(n, 2.0);
+    Eigen::VectorXd x = Eigen::VectorXd::Constant(dim, 1.0);
 
 
     // x will be overwritten to be the best point found
     double fx;
-    int niter = solver.minimize(fun, x, fx, lb, ub);
-
+    int niter = solver.minimize(chi, x, fx, lb, ub);
 
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n" << x.transpose() << std::endl;

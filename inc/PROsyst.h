@@ -13,80 +13,96 @@
 
 namespace PROfit {
 
-class PROsyst {
-public:
-    using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
+    class PROsyst {
+        public:
+            using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
 
-    	//constructor
-    	PROsyst(){}
-    	PROsyst(const std::vector<SystStruct>& systs);
+            enum class SystType {
+                Spline, Covariance, MFA
+            };
 
-
-	/* Function: given the systematic name, return corresponding fractional covariance matrix */
-	Eigen::MatrixXd GrabMatrix(const std::string& sys) const;
-
-	//----- Spline and Covariance matrix related ---
-	//----- Spline and Covariance matrix related ---
-
-	Eigen::MatrixXd SumMatrices() const;
-	Eigen::MatrixXd SumMatrices(const std::vector<std::string>& sysnames) const;
-
-    	/* Function: Given a SystStruct, generate fractinal covariance matrix, and correlation matrix, and add matrices to covmat_map and corrtmat_map
- 	 * Note: this function is lazy. It wouldn't do anything if it found covariance matrix with the same name already in the map.
- 	 */
-    	void CreateMatrix(const SystStruct& syst);
+            //constructor
+            PROsyst(){}
+            PROsyst(const std::vector<SystStruct>& systs);
 
 
-        /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, as well as correlation matrix 
-         * Return: {fractional covariance matrix, correlation covariance matrix}
-         */
-        static std::pair<Eigen::MatrixXd, Eigen::MatrixXd> GenerateCovarMatrices(const SystStruct& sys_obj);
+            /* Function: given the systematic name, return corresponding fractional covariance matrix */
+            Eigen::MatrixXd GrabMatrix(const std::string& sys) const;
 
-        /* Function: given a SystStruct with cv and variation spectra, build full covariance matrix for the systematics, and return it
- 	 * Note: it assumes the SystStruct is filled 
- 	 */
-	static Eigen::MatrixXd GenerateFullCovarMatrix(const SystStruct& sys_obj);
+            /* Function: given the systematic name, return corresponding Spline */
+            Spline GrabSpline(const std::string& sys) const;
 
-        /* Function: given a SystStruct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it
- 	 * Note: it assumes the SystStruct is filled 
- 	 */
-	static Eigen::MatrixXd GenerateFracCovarMatrix(const SystStruct& sys_obj);
+            /* Function: given systematic name, return type of systematic */
+            SystType GetSystType(const std::string& syst);
 
-	/* Given fractional covariance matrix, calculate the correlation matrix */
-	static Eigen::MatrixXd GenerateCorrMatrix(const Eigen::MatrixXd& frac_matrix);
+            //----- Spline and Covariance matrix related ---
+            //----- Spline and Covariance matrix related ---
 
-	/* Function: check if matrix has nan, or infinite value */
-	static bool isFiniteMatrix(const Eigen::MatrixXd& in_matrix);
+            Eigen::MatrixXd SumMatrices() const;
+            Eigen::MatrixXd SumMatrices(const std::vector<std::string>& sysnames) const;
 
-	/* Function: if matrix has nan/inf values, change to 0. 
- 	 * Note: this modifies the matrix !! 
- 	 */
-	static void toFiniteMatrix(Eigen::MatrixXd& in_matrix);
+            /* Function: given a SystStruct with cv and variation spectra, build full covariance matrix for the systematics, and return it
+            * Note: it assumes the SystStruct is filled 
+            */
+            static Eigen::MatrixXd GenerateFullCovarMatrix(const SystStruct& sys_obj);
 
-        /* Function: check if given matrix is positive semi-definite with tolerance. UST THIS ONE!!*/
-	static bool isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance=1.0e-16);
+            /* Function: given a SystStruct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it
+            * Note: it assumes the SystStruct is filled 
+             */
+            static Eigen::MatrixXd GenerateFracCovarMatrix(const SystStruct& sys_obj);
 
-        /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
-	static bool isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix);
+            /* Function: Given a SystStruct, generate fractinal covariance matrix, and correlation matrix, and add matrices to covmat_map and corrtmat_map
+             * Note: this function is lazy. It wouldn't do anything if it found covariance matrix with the same name already in the map.
+             */
+            void CreateMatrix(const SystStruct& syst);
 
-    
-   	/* Function: Fill spline_coeffs assuming p_cv and p_multi_spec have been filled */
-   	void FillSpline(const SystStruct& syst);
+            /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, as well as correlation matrix 
+             * Return: {fractional covariance matrix, correlation covariance matrix}
+             */
+            static std::pair<Eigen::MatrixXd, Eigen::MatrixXd> GenerateCovarMatrices(const SystStruct& sys_obj);
 
-   	/* Function: Get weight for bin for a given shift using spline */
-   	float GetSplineShift(std::string name, float shift, int bin);
+            /* Function: given a SystStruct with cv and variation spectra, build fractional covariance matrix for the systematics, and return it
+             * Note: it assumes the SystStruct is filled 
+             */
+            static Eigen::MatrixXd GenerateFracCovarMatrix(const SystStruct& sys_obj);
 
-  	/* Function: Get cv spectrum shifted using spline */
-  	PROspec GetSplineShiftedSpectrum(const PROspec& cv, std::string name, float shift);
-    PROspec GetSplineShiftedSpectrum(const PROspec& cv, std::vector<std::string> names, std::vector<float> shifts);
+            /* Given fractional covariance matrix, calculate the correlation matrix */
+            static Eigen::MatrixXd GenerateCorrMatrix(const Eigen::MatrixXd& frac_matrix);
+
+            /* Function: check if matrix has nan, or infinite value */
+            static bool isFiniteMatrix(const Eigen::MatrixXd& in_matrix);
+
+            /* Function: if matrix has nan/inf values, change to 0. 
+             * Note: this modifies the matrix !! 
+             */
+            static void toFiniteMatrix(Eigen::MatrixXd& in_matrix);
+
+            /* Function: check if given matrix is positive semi-definite with tolerance. UST THIS ONE!!*/
+            static bool isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance=1.0e-16);
+
+            /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
+            static bool isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix);
 
 
-private:
-    std::unordered_map<std::string, Spline> splines;
-    std::unordered_map<std::string, Eigen::MatrixXd> covmat_map;
-    std::unordered_map<std::string, Eigen::MatrixXd> corrmat_map;
-    //std::<std:string, MFA> mfa;
-};
+            /* Function: Fill splines assuming p_cv and p_multi_spec have been filled in the SystStruct*/
+            void FillSpline(const SystStruct& syst);
+
+            /* Function: Get weight for bin for a given shift using spline */
+            float GetSplineShift(int syst_num, float shift, int bin) const;
+            float GetSplineShift(std::string name, float shift, int bin) const;
+
+            /* Function: Get cv spectrum shifted using spline */
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift);
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts);
+
+
+        private:
+            std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
+            std::vector<Spline> splines;
+            std::vector<Eigen::MatrixXd> covmat;
+            std::vector<Eigen::MatrixXd> corrmat;
+            //std::vector<MFA> mfa;
+    };
 
 };
 
