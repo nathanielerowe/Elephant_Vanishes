@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     std::vector<SystStruct> systsstructs;
     PROcess_CAFs(myConf, systsstructs, myprop);
     PROsyst systs(systsstructs);
-    PROspec p05 = systs.GetSplineShiftedSpectrum(systsstructs[0].CV(), "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", 0.5);
+    PROspec p05 = systs.GetSplineShiftedSpectrum(myConf, myprop, "GENIEReWeight_ICARUS_v1_multisigma_MaCCRES", .5);
     p05.Print();
     std::cout << systs.GrabMatrix("piplus_Flux") << std::endl;
 
