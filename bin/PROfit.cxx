@@ -74,7 +74,8 @@ int main(int argc, char* argv[])
 
 
     return 0;
-    
+
+    PROsc osc;
 
     LBFGSpp::LBFGSBParam<double> param;  
     param.epsilon = 1e-6;
@@ -83,7 +84,7 @@ int main(int argc, char* argv[])
 
     int dim = 2+5; //systs.GetNumSplines();
 
-    PROchi chi("3plus1",&myConf,&myprop,&systs);
+    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc);
 
     // Bounds
     Eigen::VectorXd lb = Eigen::VectorXd::Constant(dim, 0.0);

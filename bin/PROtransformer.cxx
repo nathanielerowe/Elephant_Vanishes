@@ -87,7 +87,7 @@ int main(int argc, char* argv[]){
   std::cout<<"starting the config piece"<<std::endl;
   PROconfig myConf(xmlname); 
   std::vector<long int> digitized_reco;
-  for(int i = 0 ; i <= v_recoE.size(); ++i){
+  for(int i = 0 ; i <= (int)v_recoE.size(); ++i){
       long int this_bin = FindGlobalBin(myConf, v_recoE[i], "nu_SBND_numu_cc");
       digitized_reco.push_back(this_bin);
       }
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]){
   int nbins   = myConf.m_num_bins_total;
   PROspec   mySpec(nbins);
   std::vector<float> powfvec;
-  for(int i = 0 ; i <= v_recoE.size(); ++i){
+  for(int i = 0 ; i <= (int)v_recoE.size(); ++i){
       mySpec.Fill(digitized_reco[i], 1.0);
       float x = sinf(L_over_E[i]);
       powfvec.push_back(x*x);

@@ -267,10 +267,10 @@ namespace PROfit {
     }
 
     float PROsyst::GetSplineShift(std::string name, float shift , int bin) {
-        if(bin < 0 || bin >= splines[name].size()) return -1;
+        if(bin < 0 || bin >= (int)splines[name].size()) return -1;
         const float lowest_knobval = splines[name][0][0].first;
         int shiftBin = (shift < lowest_knobval) ? 0 : (int)(shift - lowest_knobval);
-        if(shiftBin > splines[name][0].size() - 1) shiftBin = splines[name][0].size() - 1;
+        if(shiftBin > (int)splines[name][0].size() - 1) shiftBin = splines[name][0].size() - 1;
         // We should use the line below if we switch to c++17
         // const long shiftBin = std::clamp((int)(shift - lowest_knobval), 0, splines[name][0].size() - 1);
         std::array<float, 4> coeffs = splines[name][bin][shiftBin].second;
