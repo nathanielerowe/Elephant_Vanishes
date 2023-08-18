@@ -1,5 +1,7 @@
 #include "PROsyst.h"
+#include "PROconfig.h"
 #include "PROcreate.h"
+#include "PROtocall.h"
 
 namespace PROfit {
 
@@ -9,7 +11,6 @@ namespace PROfit {
                 FillSpline(syst);
             } else if(syst.mode == "multisim") {
                 this->CreateMatrix(syst);
-
             }
         }
     }
@@ -228,8 +229,8 @@ namespace PROfit {
             const float y3 = ratios[2].GetBinContent(i);
             const Eigen::Vector3f v{y1, y2, (y3-y1)/2};
             const Eigen::Matrix3f m{{ 1, -1,  1},
-                {-2,  2, -1},
-                { 1,  0,  0}};
+                                    {-2,  2, -1},
+                                    { 1,  0,  0}};
             const Eigen::Vector3f res = m * v;
             spline.push_back({syst.knobval[0], {res(2), res(1), res(0), 0}});
 
@@ -240,9 +241,9 @@ namespace PROfit {
                 const float y3 = ratios[shiftIdx+2].GetBinContent(i);
                 const Eigen::Vector4f v{y1, y2, (y2-y0)/2, (y3-y1)/2};
                 const Eigen::Matrix4f m{{ 2, -2,  1,  1},
-                    {-3,  3, -2, -1},
-                    { 0,  0,  1,  0},
-                    { 1,  0,  0,  0}};
+                                        {-3,  3, -2, -1},
+                                        { 0,  0,  1,  0},
+                                        { 1,  0,  0,  0}};
                 const Eigen::Vector4f res = m * v;
                 float knobval = syst.knobval[shiftIdx] <  0 ? syst.knobval[shiftIdx] :
                     syst.knobval[shiftIdx] == 1 ? 0 :
@@ -255,8 +256,8 @@ namespace PROfit {
             const float y6 = ratios[ratios.size() - 1].GetBinContent(i);
             const Eigen::Vector3f vp{y5, y6, (y6-y4)/2};
             const Eigen::Matrix3f mp{{-1,  1, -1},
-                { 0,  0,  1},
-                { 1,  0,  0}};
+                                     { 0,  0,  1},
+                                     { 1,  0,  0}};
             const Eigen::Vector3f resp = mp * vp;
             spline.push_back({syst.knobval[syst.knobval.size() - 2], {resp(2), resp(1), resp(0), 0}});
 
@@ -268,33 +269,36 @@ namespace PROfit {
     float PROsyst::GetSplineShift(std::string name, float shift , int bin) {
         if(bin < 0 || bin >= splines[name].size()) return -1;
         const float lowest_knobval = splines[name][0][0].first;
-        int shiftBin = (shift < lowest_knobval) ? 0 : (long)(shift - lowest_knobval);
+        int shiftBin = (shift < lowest_knobval) ? 0 : (int)(shift - lowest_knobval);
         if(shiftBin > splines[name][0].size() - 1) shiftBin = splines[name][0].size() - 1;
         // We should use the line below if we switch to c++17
-        // const long shiftBin = std::clamp((long)(shift - knobval[0]), 0, spline_coeffs[0].size() - 1);
+        // const long shiftBin = std::clamp((int)(shift - lowest_knobval), 0, splines[name][0].size() - 1);
         std::array<float, 4> coeffs = splines[name][bin][shiftBin].second;
         shift -= splines[name][bin][shiftBin].first;
         return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
     }
 
-    PROspec PROsyst::GetSplineShiftedSpectrum(const PROspec& cv, std::string name, float shift) {
-        assert(cv.GetNbins() == splines[name].size());
-        PROspec ret(cv.GetNbins());
-        for(int i = 0; i < cv.GetNbins(); ++i)
-            ret.Fill(i, GetSplineShift(name, shift, i) * cv.GetBinContent(i));
+    PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift) {
+        PROspec ret(config.m_num_bins_total);
+        for(size_t i = 0; i < prop.baseline.size(); ++i) {
+            const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
+            const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
+            ret.Fill(prop.bin_indices[i], GetSplineShift(name, shift, true_bin) * prop.added_weights[i]);
+        }
         return ret;
     }
 
-    PROspec PROsyst::GetSplineShiftedSpectrum(const PROspec& cv, std::vector<std::string> names, std::vector<float> shifts) {
-        assert(cv.GetNbins() == splines[names[0]].size());
+    PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts) {
         assert(names.size() == shifts.size());
-        PROspec ret(cv.GetNbins());
-        for(int i = 0; i < cv.GetNbins(); ++i) {
+        PROspec ret(config.m_num_bins_total);
+        for(size_t i = 0; i < prop.baseline.size(); ++i) {
+            const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
+            const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
             float weight = 1;
             for(size_t j = 0; j < names.size(); ++j) {
-                weight *= GetSplineShift(names[j], shifts[j], i);
+                weight *= GetSplineShift(names[j], shifts[j], true_bin);
             }
-            ret.Fill(i, weight * cv.GetBinContent(i));
+            ret.Fill(prop.bin_indices[i], weight * prop.added_weights[i]);
         }
         return ret;
     }
