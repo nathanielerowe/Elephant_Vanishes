@@ -78,8 +78,8 @@ namespace PROfit {
             void FillSpline(const SystStruct& syst);
 
             /* Function: Get weight for bin for a given shift using spline */
-            float GetSplineShift(int syst_num, float shift, int bin);
-            float GetSplineShift(std::string name, float shift, int bin);
+            float GetSplineShift(int syst_num, float shift, int bin) const;
+            float GetSplineShift(std::string name, float shift, int bin) const;
 
             /* Function: Get cv spectrum shifted using spline */
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift);

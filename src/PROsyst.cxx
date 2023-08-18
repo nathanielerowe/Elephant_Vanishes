@@ -268,7 +268,7 @@ namespace PROfit {
         splines.push_back(spline_coeffs);
     }
 
-    float PROsyst::GetSplineShift(int spline_num, float shift , int bin) {
+    float PROsyst::GetSplineShift(int spline_num, float shift , int bin) const {
         if(bin < 0 || bin >= splines[spline_num].size()) return -1;
         const float lowest_knobval = splines[spline_num][0][0].first;
         int shiftBin = (shift < lowest_knobval) ? 0 : (int)(shift - lowest_knobval);
@@ -280,8 +280,8 @@ namespace PROfit {
         return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
     }
 
-    float PROsyst::GetSplineShift(std::string name, float shift, int bin) {
-        return GetSplineShift(syst_map[name].first, shift, bin);
+    float PROsyst::GetSplineShift(std::string name, float shift, int bin) const {
+        return GetSplineShift(syst_map.at(name).first, shift, bin);
     }
 
     PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift) {
