@@ -9,10 +9,6 @@
 // PROfit include 
 #include "PROlog.h"
 #include "PROconfig.h"
-#include "PROsc.h"
-#include "PROpeller.h"
-#include "PROspec.h"
-#include "PROsyst.h"
 
 namespace PROfit{
 
@@ -41,12 +37,6 @@ namespace PROfit{
      */
     int FindGlobalTrueBin(const PROconfig &inconfig, double true_value, int subchannel_index);
     int FindGlobalTrueBin(const PROconfig &inconfig, double true_value, const std::string& subchannel_fullname);
-
-    /* Function: this is the master weighting function that combines all weights before filling into spectrum.
-     * Given an event */
-    float FillRecoSpectra(const PROconfig &infonfig, const PROpeller &inprop, const PROsyst &insyst, PROsc &inosc, std::vector<string> &insystname, std::vector<float> &inshifts, std::vector<float> physparams);
-    float GetOscWeight(int ev_idx, const PROpeller &inprop, PROsc &inosc, std::vector<float> &inphysparams);
-    float GetSystWeight(int ev_idx, const PROpeller &inprop, const PROsyst &insyst, float inshift, std::string insystname);
 
 };
 
