@@ -111,6 +111,7 @@ namespace PROfit {
         //build fractional covariance matrix 
         //first, get the matrix with diagonal being reciprocal of CV spectrum prdiction
         const PROspec& cv_spec = sys_obj.CV();
+        int nbins = cv_spec.GetNbins();
         Eigen::MatrixXd cv_spec_matrix =  Eigen::MatrixXd::Identity(nbins, nbins);
         for(int i =0; i != nbins; ++i)
             cv_spec_matrix(i, i) = 1.0/cv_spec.GetBinContent(i);
