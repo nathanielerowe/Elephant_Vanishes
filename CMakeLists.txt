@@ -4,7 +4,7 @@ cmake_minimum_required (VERSION 3.19)
 project (
     PROfit
     VERSION 0.1
-    DESCRIPTION "A PROfessional PROfitable Fitter"
+    DESCRIPTION "A PROfessional PROfitable PROtractable Fitter"
     LANGUAGES CXX)
 
 include(FetchContent)

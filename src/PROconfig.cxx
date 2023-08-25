@@ -251,7 +251,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 const char* tmin = pBinT->Attribute("min");
                 const char* tmax = pBinT->Attribute("max");
                 const char* tnbins = pBinT->Attribute("nbins");
-		const char* tedges =pBinT->Attribute("edges");
+                const char* tedges =pBinT->Attribute("edges");
                 if(tmin==NULL && tmax==NULL && tnbins==NULL && tedges == NULL)
                 {
                     log<LOG_DEBUG>(L"%1% || This variable has a NO truth binning (or attribute min,max,nbins)  ") % __func__ ;
@@ -265,32 +265,32 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     int nbinsp;
                     std::vector<double> binedge, binwidth;
 
-		    // use edges if defined, otherwise use min-max-nbins 
-		    if(tedges != NULL){
-				
-			std::stringstream true_iss(tedges);
-		        double number;
-		        while ( true_iss >> number ){
-			   binedge.push_back(number );
-		        }
+                    // use edges if defined, otherwise use min-max-nbins 
+                    if(tedges != NULL){
 
-			nbinsp = binedge.size() - 1;
-			for(int i = 0; i != nbinsp; ++i){
-			    binwidth.push_back(binedge[i+1] - binedge[i]);
-			}
+                        std::stringstream true_iss(tedges);
+                        double number;
+                        while ( true_iss >> number ){
+                            binedge.push_back(number );
+                        }
 
-		    }else{
+                        nbinsp = binedge.size() - 1;
+                        for(int i = 0; i != nbinsp; ++i){
+                            binwidth.push_back(binedge[i+1] - binedge[i]);
+                        }
+
+                    }else{
                         double minp = strtod(tmin, &end);
                         double maxp = strtod(tmax, &end);
-			nbinsp = (int)strtod(tnbins, &end);
+                        nbinsp = (int)strtod(tnbins, &end);
                         double step = (maxp-minp)/(double)nbinsp;
                         for(int i=0; i<nbinsp; i++){
-                             binedge.push_back(minp+i*step);
+                            binedge.push_back(minp+i*step);
                         }
-			binedge.push_back(maxp);
-			binwidth.resize(nbinsp, step);
+                        binedge.push_back(maxp);
+                        binwidth.resize(nbinsp, step);
                         log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
-		    }
+                    }
 
                     m_channel_num_truebins.push_back(nbinsp);
                     m_channel_truebin_edges.push_back(binedge);
@@ -299,10 +299,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 }
             }else{
-		 m_channel_num_truebins.push_back(0);
-                 m_channel_truebin_edges.push_back(std::vector<double>());
-                 m_channel_truebin_widths.push_back(std::vector<double>());
-	    }
+                m_channel_num_truebins.push_back(0);
+                m_channel_truebin_edges.push_back(std::vector<double>());
+                m_channel_truebin_widths.push_back(std::vector<double>());
+            }
 
             // Now loop over all this channels subchanels. Not the names must be UNIQUE!!
             tinyxml2::XMLElement *pSubChan;
@@ -470,7 +470,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 const char* bcentral = pBranch->Attribute("central_value");
                 const char* bwname = pBranch->Attribute("eventweight_branch_name");
                 const char* badditional_weight = pBranch->Attribute("additional_weight");
-                
+
                 if(bwname== NULL){
                     log<LOG_WARNING>(L"%1% || WARNING: No eventweight branch name passed, defaulting to 'weights' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
                     TEMP_eventweight_branch_names.push_back("weights");
@@ -860,11 +860,11 @@ const std::vector<double>& PROconfig::GetChannelTrueBinEdges(int channel_index) 
 }
 
 int PROconfig::GetSubchannelIndexFromGlobalBin(int global_index) const {
-   return this->find_global_subchannel_index_from_global_bin(global_index, this->m_num_subchannels, this->m_channel_num_bins, this->m_num_channels, this->m_num_bins_total);
+    return this->find_global_subchannel_index_from_global_bin(global_index, this->m_num_subchannels, this->m_channel_num_bins, this->m_num_channels, this->m_num_bins_total);
 }
 
 int PROconfig::GetSubchannelIndexFromGlobalTrueBin(int global_trueindex) const{
-   return this->find_global_subchannel_index_from_global_bin(global_trueindex, this->m_num_subchannels, this->m_channel_num_truebins, this->m_num_channels, this->m_num_truebins_total);
+    return this->find_global_subchannel_index_from_global_bin(global_trueindex, this->m_num_subchannels, this->m_channel_num_truebins, this->m_num_channels, this->m_num_truebins_total);
 }
 
 //------------ Start of private function ------------------
@@ -1148,43 +1148,43 @@ void PROconfig::generate_index_map(){
 
 int PROconfig::find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const{
 
-   //check for out of bound
-   if(global_index <0 || global_index >= num_bins_total){
+    //check for out of bound
+    if(global_index <0 || global_index >= num_bins_total){
         log<LOG_ERROR>(L"%1% || Given index: %2% is out of bound") % __func__ % global_index;
         log<LOG_ERROR>(L"%1% || Total number of bins : %2%") % __func__ % num_bins_total;
         log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
-   }
+    }
 
-   // get number of bins per detector block 
-   int num_bins_per_detector_block = 0;
-   for( int ic = 0; ic != num_channels; ++ic)
-	num_bins_per_detector_block += num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
-   if(num_bins_per_detector_block == 0){
+    // get number of bins per detector block 
+    int num_bins_per_detector_block = 0;
+    for( int ic = 0; ic != num_channels; ++ic)
+        num_bins_per_detector_block += num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
+    if(num_bins_per_detector_block == 0){
         log<LOG_ERROR>(L"%1% || There is zero bins for each detector!! Provided global bin index: %2% ") % __func__ % global_index;
         log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
-   }
+    }
 
-   // get number of subchannels in detector block  
-   int num_subchannel_in_detector_block = std::accumulate(num_subchannel_in_channel.begin(), num_subchannel_in_channel.end(), 0);
-   int subchannel_index = (global_index / num_bins_per_detector_block) * num_subchannel_in_detector_block;
+    // get number of subchannels in detector block  
+    int num_subchannel_in_detector_block = std::accumulate(num_subchannel_in_channel.begin(), num_subchannel_in_channel.end(), 0);
+    int subchannel_index = (global_index / num_bins_per_detector_block) * num_subchannel_in_detector_block;
 
-   global_index %= num_bins_per_detector_block;   //get the index inside a block 
-   //check for each channel
-   for( int ic = 0; ic != num_channels; ++ic){
-	int total_bins_in_channel = num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
-	if(global_index >= total_bins_in_channel){
-	    global_index -= total_bins_in_channel;
-	    subchannel_index += num_subchannel_in_channel[ic];
-	}
-	else{
-	    subchannel_index += global_index / num_bins_in_channel[ic];
-	    break;
-	}
-	   
-   }
-   return subchannel_index;
+    global_index %= num_bins_per_detector_block;   //get the index inside a block 
+    //check for each channel
+    for( int ic = 0; ic != num_channels; ++ic){
+        int total_bins_in_channel = num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
+        if(global_index >= total_bins_in_channel){
+            global_index -= total_bins_in_channel;
+            subchannel_index += num_subchannel_in_channel[ic];
+        }
+        else{
+            subchannel_index += global_index / num_bins_in_channel[ic];
+            break;
+        }
+
+    }
+    return subchannel_index;
 }
 
 void PROconfig::construct_collapsing_matrix(){
@@ -1196,31 +1196,31 @@ void PROconfig::construct_collapsing_matrix(){
 
     int channel_row_start = 0, channel_col_start = 0;
     for(int ic =0; ic != m_num_channels; ++ic){
-    
-	//first, build matrix for each channel block
-	int total_num_bins_channel = m_num_subchannels[ic] * m_channel_num_bins[ic];
 
-	Eigen::MatrixXd channel_collapser = Eigen::MatrixXd::Zero(total_num_bins_channel, m_channel_num_bins[ic]);
-	for(int col = 0; col != m_channel_num_bins[ic]; ++col){
-	    for(int subch = 0; subch != m_num_subchannels[ic]; ++subch){
-		int row = subch * m_channel_num_bins[ic] + col;
-		channel_collapser(row, col) = 1.0;
-	    }
-	}
+        //first, build matrix for each channel block
+        int total_num_bins_channel = m_num_subchannels[ic] * m_channel_num_bins[ic];
 
-	// now, copy this matrix to detector block
-	block_collapser(Eigen::seqN(channel_row_start, total_num_bins_channel), Eigen::seqN(channel_col_start, m_channel_num_bins[ic])) = channel_collapser;
-	channel_row_start += total_num_bins_channel;
-	channel_col_start += m_channel_num_bins[ic];
+        Eigen::MatrixXd channel_collapser = Eigen::MatrixXd::Zero(total_num_bins_channel, m_channel_num_bins[ic]);
+        for(int col = 0; col != m_channel_num_bins[ic]; ++col){
+            for(int subch = 0; subch != m_num_subchannels[ic]; ++subch){
+                int row = subch * m_channel_num_bins[ic] + col;
+                channel_collapser(row, col) = 1.0;
+            }
+        }
+
+        // now, copy this matrix to detector block
+        block_collapser(Eigen::seqN(channel_row_start, total_num_bins_channel), Eigen::seqN(channel_col_start, m_channel_num_bins[ic])) = channel_collapser;
+        channel_row_start += total_num_bins_channel;
+        channel_col_start += m_channel_num_bins[ic];
     }
 
     //okay! now stuff every detector block into the final collapse matrix
     for(int im = 0; im != m_num_modes; ++im){
-	for(int id =0; id != m_num_detectors; ++id){
-	     int row_block_start = im * m_num_bins_mode_block + id * m_num_bins_detector_block;
-	     int col_block_start = im * m_num_bins_mode_block_collapsed + id * m_num_bins_detector_block_collapsed;
-	     collapsing_matrix(Eigen::seqN(row_block_start, m_num_bins_detector_block), Eigen::seqN(col_block_start, m_num_bins_detector_block_collapsed)) = block_collapser;
-	}
+        for(int id =0; id != m_num_detectors; ++id){
+            int row_block_start = im * m_num_bins_mode_block + id * m_num_bins_detector_block;
+            int col_block_start = im * m_num_bins_mode_block_collapsed + id * m_num_bins_detector_block_collapsed;
+            collapsing_matrix(Eigen::seqN(row_block_start, m_num_bins_detector_block), Eigen::seqN(col_block_start, m_num_bins_detector_block_collapsed)) = block_collapser;
+        }
     }
     return;
 }

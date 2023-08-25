@@ -8,7 +8,7 @@ PROspec::PROspec(int num_bins):
     }
 
 int PROspec::GetNbins() const{
-   return nbins;
+    return nbins;
 }
 
 void PROspec::Zero(){
@@ -30,12 +30,12 @@ void PROspec::Fill(int bin_index, double weight){
     //Removed to help speed up filling
     //log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec(bin_index) += weight;
-    error(bin_index) = std::sqrt(pow(error(bin_index), 2.0) + std::pow(weight, 2.0));
+    float tmp_err = error(bin_index);
+    error(bin_index) = std::sqrt(tmp_err*tmp_err + weight*weight);
     return;
 }
 
 void PROspec::QuickFill(int bin_index, double weight){
-    //log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec(bin_index) += weight;
     return;
 }
@@ -78,22 +78,22 @@ void PROspec::toROOT(const PROconfig& inconfig, const std::string& output_name){
     const std::vector<std::string>& all_subchannels = inconfig.m_fullnames;
 
     for(size_t i = 0; i!= all_subchannels.size(); ++i){
-	auto& subchannel_fullname = all_subchannels[i];
+        auto& subchannel_fullname = all_subchannels[i];
 
-	TH1D h = this->toTH1D(inconfig, subchannel_fullname);
-	h.Write();
+        TH1D h = this->toTH1D(inconfig, subchannel_fullname);
+        h.Write();
     }
     f->Write();
     f->Close();
-   
+
     delete f;
     return;
 }
 
 bool PROspec::SameDim(const PROspec& a, const PROspec& b){
     if(a.nbins != b.nbins){
-	 log<LOG_ERROR>(L"%1% || Two spectra have different bins: %2 vs. %3") % __func__ % a.nbins % b.nbins;
-	 return false;
+        log<LOG_ERROR>(L"%1% || Two spectra have different bins: %2 vs. %3") % __func__ % a.nbins % b.nbins;
+        return false;
     }
     return true;
 }
@@ -101,7 +101,7 @@ bool PROspec::SameDim(const PROspec& a, const PROspec& b){
 PROspec PROspec::operator+(const PROspec& b) const{
     //check if dimension 
     if(!PROspec::SameDim(*this, b)){
-	log<LOG_ERROR>(L"Terminating.");
+        log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
     }
 
@@ -114,7 +114,7 @@ PROspec PROspec::operator+(const PROspec& b) const{
 PROspec& PROspec::operator+=(const PROspec& b){
     //check if dimension 
     if(!PROspec::SameDim(*this, b)){
-	log<LOG_ERROR>(L"Terminating.");
+        log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
     }
 
@@ -128,7 +128,7 @@ PROspec& PROspec::operator+=(const PROspec& b){
 PROspec PROspec::operator-(const PROspec& b) const{
     //check if dimension 
     if(!PROspec::SameDim(*this, b)){
-	log<LOG_ERROR>(L"Terminating.");
+        log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
     }
 
@@ -141,7 +141,7 @@ PROspec PROspec::operator-(const PROspec& b) const{
 PROspec& PROspec::operator-=(const PROspec& b){
     //check if dimension 
     if(!PROspec::SameDim(*this, b)){
-	log<LOG_ERROR>(L"Terminating.");
+        log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
     }
 
@@ -155,7 +155,7 @@ PROspec& PROspec::operator-=(const PROspec& b){
 PROspec PROspec::operator/(const PROspec& b) const{
     //check if dimension 
     if(!PROspec::SameDim(*this, b)){
-	log<LOG_ERROR>(L"Terminating.");
+        log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
     }
 
@@ -173,12 +173,12 @@ PROspec PROspec::operator/(const PROspec& b) const{
 PROspec& PROspec::operator/=(const PROspec& b) {
     //check if dimension 
     if(!PROspec::SameDim(*this, b)){
-	log<LOG_ERROR>(L"Terminating.");
+        log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
     }
 
 
-    
+
     this->spec =  this->eigenvector_division(this->spec, b.spec);
     //calculate relative error, and sqrt of quadratic sum of relative error
     Eigen::VectorXd this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
@@ -212,17 +212,17 @@ Eigen::VectorXd PROspec::eigenvector_division(const Eigen::VectorXd& a, const Ei
     int nbin = a.size();
     Eigen::VectorXd ratio_spec = Eigen::VectorXd::Zero(nbin);
     for(int i = 0; i != nbin; ++i){
-	if(b(i) == 0){
-	    if(a(i) !=0 ){
-	        log<LOG_ERROR>(L"%1% || Divide by Zero. Numerator: %2%, denominator: %3% ") % __func__ % a(i) % b(i);
-	        log<LOG_ERROR>(L"Terminating.");
+        if(b(i) == 0){
+            if(a(i) !=0 ){
+                log<LOG_ERROR>(L"%1% || Divide by Zero. Numerator: %2%, denominator: %3% ") % __func__ % a(i) % b(i);
+                log<LOG_ERROR>(L"Terminating.");
                 exit(EXIT_FAILURE);
-	    }else{
-		log<LOG_DEBUG>(L"%1% || Both numerator and denominator are zero, setting the ratio to 1.") % __func__;
-		ratio_spec(i) = 1.0;
-	    }
-	}else
-	    ratio_spec(i) = a(i) / b(i);
+            }else{
+                log<LOG_DEBUG>(L"%1% || Both numerator and denominator are zero, setting the ratio to 1.") % __func__;
+                ratio_spec(i) = 1.0;
+            }
+        }else
+            ratio_spec(i) = a(i) / b(i);
     }
     return ratio_spec;
 }
@@ -231,7 +231,7 @@ Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, co
     int nbin = a.size();
     Eigen::VectorXd ratio_spec = Eigen::VectorXd::Zero(nbin);
     for(int i = 0; i != nbin; ++i){
-	ratio_spec(i) = a(i) * b(i);
+        ratio_spec(i) = a(i) * b(i);
     }
     return ratio_spec;
 }

@@ -8,7 +8,9 @@
 
 using namespace std;
 
-
+/*
+ * Logging for PROfit contained in this quick wrapper for easy command line or globel set verbosity
+ */
 enum log_level_t {
     LOG_CRITICAL = 0,
     LOG_ERROR = 1,

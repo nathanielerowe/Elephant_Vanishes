@@ -1,6 +1,7 @@
 #ifndef PROCREATE_H_
 #define PROCREATE_H_
 
+// STANDARD
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -31,6 +32,10 @@
 
 namespace PROfit{
 
+    /*Struct: Core systeatics object, one per systematics, handels both 1D splines, Covariances and MFA
+     *Notes:
+     *  
+     */
     struct SystStruct {
 
         //members
@@ -38,21 +43,24 @@ namespace PROfit{
         int n_univ;
         std::string mode;  //'multisim', 'minmax', and 'multisig'
         std::string weight_formula;
+
         std::vector<float> knobval;
         std::vector<float> knob_index;
+
         int index;
         std::vector<std::vector<std::array<double, 4>>> spline_coeffs;
 
         //std::vector<PROspec> m_multi_spec;
 
-	// pointer to cv spectrum and multi-universe spectrum from systematic variation
-	std::unique_ptr<PROspec> p_cv;	
+        // pointer to cv spectrum and multi-universe spectrum from systematic variation
+        std::unique_ptr<PROspec> p_cv;	
         std::vector<std::unique_ptr<PROspec>> p_multi_spec;
 
-        // functions 
+        /*Function: Constructor for a blank systematic*/
         SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},{},0){}
-        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const std::vector<float>& in_knob_index, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), knob_index(in_knob_index), index(in_index){}
 
+        /*Function: Constructor for a systematic from knobs*/
+        SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const std::vector<float>& in_knob_index, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), knob_index(in_knob_index), index(in_index){}
 
         inline
             void SetMode(const std::string& in_mode){mode = in_mode; return;}
@@ -64,33 +72,33 @@ namespace PROfit{
         std::vector<std::vector<eweight_type>> GetCovVec();
         std::vector<eweight_type> GetKnobs(int index, std::string variation);
 
-	//----- Spectrum related functions ---
-	//----- Spectrum related functions ---
+        //----- Spectrum related functions ---
+        //----- Spectrum related functions ---
 
-	/* Function: clean up all the member spectra (but ONLY spectra) */
+        /* Function: clean up all the member spectra (but ONLY spectra) */
         void CleanSpecs();
 
 
-	/* Function: create EMPTY spectra with given length 
- 	 */ 
+        /* Function: create EMPTY spectra with given length 
+        */ 
         void CreateSpecs(int num_bins);
 
-	/* Function: given global bin index, and event weight, fill the central value spectrum */
-	void FillCV(int global_bin, double event_weight);
+        /* Function: given global bin index, and event weight, fill the central value spectrum */
+        void FillCV(int global_bin, double event_weight);
 
-	/* Function: given global bin index, and event weight, fill the spectrum of given universe */
-	void FillUniverse(int universe, int global_bin, double event_weight);
+        /* Function: given global bin index, and event weight, fill the spectrum of given universe */
+        void FillUniverse(int universe, int global_bin, double event_weight);
 
-	/* Function: return CV spectrum in PROspec */
-	const PROspec& CV() const;
+        /* Function: return CV spectrum in PROspec */
+        const PROspec& CV() const;
 
-	/*Function: return the spectrum for variation at given universe */
-	const PROspec& Variation(int universe) const;
+        /*Function: return the spectrum for variation at given universe */
+        const PROspec& Variation(int universe) const;
 
-	//---------- Helper Functions --------
-	//---------- Helper Functions --------
-	
-	/* Return number of universes for this systematic */
+        //---------- Helper Functions --------
+        //---------- Helper Functions --------
+
+        /* Return number of universes for this systematic */
         inline
             int GetNUniverse() const {return n_univ;}
 
@@ -98,22 +106,28 @@ namespace PROfit{
         inline 
             const std::string& GetSysName() const {return systname;}
 
-	/* Check if weight formula is set for this ysstematic */
-	inline 
-	    bool HasWeightFormula() const {return weight_formula == "1";}
+        /* Check if weight formula is set for this ysstematic */
+        inline 
+            bool HasWeightFormula() const {return weight_formula == "1";}
 
-	/* Return a string of weight formula for this systematic */
+        /* Return a string of weight formula for this systematic */
         inline 
             const std::string& GetWeightFormula() const {return weight_formula;}
 
         /* Function: check if num of universes of this systematics matches with its type 
- 	 * Note: multisim mode can have many universes, while minmax mode can only have 2
- 	 */
+         * Note: multisim mode can have many universes, while minmax mode can only have 2
+         */
         void SanityCheck() const;
         void Print() const;
 
     };
 
+    /*Struct: manage flat CAF file index matching. 
+     *Notes:
+     *  
+     *Todo:
+     *  Remove hardcoded int values!!
+     */
 
     struct CAFweightHelper{
         int i_wgt_univ_size ; //rec.mc.nu.wgt.univ..totarraysize
@@ -143,11 +157,11 @@ namespace PROfit{
             return 0;
         };
 
-	/* Given neutrino idnex, systematic index and the LOCAL universe index (for given systematic), return corresponding weight */
+        /* Given neutrino idnex, systematic index and the LOCAL universe index (for given systematic), return corresponding weight */
         float GetUniverseWeight(int nu_index, int syst_index , int uni_index){
-	    size_t index = v_wgt_univ_idx[v_wgt_idx[nu_index] + syst_index] + uni_index;
-	    if(index > 100000)
-		log<LOG_ERROR>(L"%1% || array size is too small to contain all universe weights. Try to access index: %2% ")%__func__% index;	
+            size_t index = v_wgt_univ_idx[v_wgt_idx[nu_index] + syst_index] + uni_index;
+            if(index > 100000)
+                log<LOG_ERROR>(L"%1% || array size is too small to contain all universe weights. Try to access index: %2% ")%__func__% index;	
             return v_wgt_univ[index];
         }
 
@@ -155,20 +169,26 @@ namespace PROfit{
     };
 
 
-    /* Function: given config, read files in the xml, and grab all systematic variations 
-     * TODO: not finished yet
-     */
+    /*----------Function to load from files------------------*/
+    /*----------One per FILE-tyle being loaded---------------*/
+
+    /* Function: Process covariance matrices from uboone style eventweight systematics in files
+    */
     int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
+
+    /* Function: Process spline weights AND covariance matrices from flat CAF's 
+    */
     int PROcess_CAFs(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop);
 
 
-    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, PROpeller& inprop, CAFweightHelper &caf_helper, double add_weight, long int global_bin, long int global_true_bin);
+    /* Function: Event by event processing for PROcess_CAFs
+    */
+    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin, long int global_true_bin);
 
     /* Function: given configuration, generate spectrum at central value. 
      * Note: assume the input config has SBNfit-style files, TODO: check if compatible with CAF-style
      */
     PROspec CreatePROspecCV(const PROconfig& configin);
-
 
 
     /* Function: assume currently reading one entry of a file, update systematic variation spectrum 
@@ -184,6 +204,6 @@ namespace PROfit{
     void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight);
 
 
-    
+
 };
 #endif

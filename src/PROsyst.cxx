@@ -100,7 +100,7 @@ namespace PROfit {
             full_covar_matrix += (spec_diff.Spec() * spec_diff.Spec().transpose() ) / static_cast<double>(n_universe);
         }
 
-	return full_covar_matrix;
+        return full_covar_matrix;
     }
 
     Eigen::MatrixXd PROsyst::GenerateFracCovarMatrix(const SystStruct& sys_obj){
@@ -140,11 +140,11 @@ namespace PROfit {
         Eigen::MatrixXd error_reciprocal_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
         for(int i = 0; i != nbins; ++i){
             if(frac_matrix(i,i) != 0){
-		double temp = sqrt(frac_matrix(i,i));
+                double temp = sqrt(frac_matrix(i,i));
                 error_reciprocal_matrix(i,i) = 1.0/temp;
- 	    }
-	    else
-		error_reciprocal_matrix(i,i) = 1.0;
+            }
+            else
+                error_reciprocal_matrix(i,i) = 1.0;
         }
 
 
@@ -248,8 +248,8 @@ namespace PROfit {
             const float y3 = ratios[2].GetBinContent(i);
             const Eigen::Vector3f v{y1, y2, (y3-y1)/2};
             const Eigen::Matrix3f m{{ 1, -1,  1},
-                                    {-2,  2, -1},
-                                    { 1,  0,  0}};
+                {-2,  2, -1},
+                { 1,  0,  0}};
             const Eigen::Vector3f res = m * v;
             spline.push_back({syst.knobval[0], {res(2), res(1), res(0), 0}});
 
@@ -260,9 +260,9 @@ namespace PROfit {
                 const float y3 = ratios[shiftIdx+2].GetBinContent(i);
                 const Eigen::Vector4f v{y1, y2, (y2-y0)/2, (y3-y1)/2};
                 const Eigen::Matrix4f m{{ 2, -2,  1,  1},
-                                        {-3,  3, -2, -1},
-                                        { 0,  0,  1,  0},
-                                        { 1,  0,  0,  0}};
+                    {-3,  3, -2, -1},
+                    { 0,  0,  1,  0},
+                    { 1,  0,  0,  0}};
                 const Eigen::Vector4f res = m * v;
                 float knobval = syst.knobval[shiftIdx] <  0 ? syst.knobval[shiftIdx] :
                     syst.knobval[shiftIdx] == 1 ? 0 :
@@ -275,8 +275,8 @@ namespace PROfit {
             const float y6 = ratios[ratios.size() - 1].GetBinContent(i);
             const Eigen::Vector3f vp{y5, y6, (y6-y4)/2};
             const Eigen::Matrix3f mp{{-1,  1, -1},
-                                     { 0,  0,  1},
-                                     { 1,  0,  0}};
+                { 0,  0,  1},
+                { 1,  0,  0}};
             const Eigen::Vector3f resp = mp * vp;
             spline.push_back({syst.knobval[syst.knobval.size() - 2], {resp(2), resp(1), resp(0), 0}});
 
@@ -287,10 +287,10 @@ namespace PROfit {
     }
 
     float PROsyst::GetSplineShift(int spline_num, float shift , int bin) const {
-        if(bin < 0 || bin >= splines[spline_num].size()) return -1;
+        if(bin < 0 || bin >= (int)splines[spline_num].size()) return -1;
         const float lowest_knobval = splines[spline_num][0][0].first;
         int shiftBin = (shift < lowest_knobval) ? 0 : (int)(shift - lowest_knobval);
-        if(shiftBin > splines[spline_num][0].size() - 1) shiftBin = splines[spline_num][0].size() - 1;
+        if(shiftBin > (int)splines[spline_num][0].size() - 1) shiftBin = splines[spline_num][0].size() - 1;
         // We should use the line below if we switch to c++17
         // const long shiftBin = std::clamp((int)(shift - lowest_knobval), 0, splines[spline_num][0].size() - 1);
         std::array<float, 4> coeffs = splines[spline_num][bin][shiftBin].second;
