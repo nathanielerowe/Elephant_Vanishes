@@ -7,7 +7,7 @@ namespace PROfit {
 
         PROspec myspectrum(inconfig.m_num_bins_total);
 
-        for(int i = 0; i<inprop.truth.size(); ++i){
+        for(size_t i = 0; i<inprop.truth.size(); ++i){
 
             float oscw  = GetOscWeight(i, inprop, inosc, physparams);
             float add_w = inprop.added_weights[i]; 
