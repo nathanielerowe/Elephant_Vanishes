@@ -1,6 +1,6 @@
 ![Alt text](/other/profit.png "Minimizing PROfit")
-PROtest
 
+PROtest
 PROfessional
 PROspect
 PROton
@@ -31,5 +31,6 @@ PROlapse
 
 
 TODO:
-Jenkins hash the co
+Check const for all functions that should have const!
+Jenkins hash the co?
 
