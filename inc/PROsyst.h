@@ -13,6 +13,8 @@
 
 namespace PROfit {
 
+    /*Struct: Class that groups all systematics (each with a SystStruct) and manages their formation and effect on PROspecs
+    */
     class PROsyst {
         public:
             using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
@@ -21,8 +23,10 @@ namespace PROfit {
                 Spline, Covariance, MFA
             };
 
-            //constructor
+            //Empty constructor
             PROsyst(){}
+
+            /*Function: Primary constructor from a vector of SystStructs  */
             PROsyst(const std::vector<SystStruct>& systs);
 
 
@@ -42,8 +46,8 @@ namespace PROfit {
             Eigen::MatrixXd SumMatrices(const std::vector<std::string>& sysnames) const;
 
             /* Function: given a SystStruct with cv and variation spectra, build full covariance matrix for the systematics, and return it
-            * Note: it assumes the SystStruct is filled 
-            */
+             * Note: it assumes the SystStruct is filled 
+             */
             static Eigen::MatrixXd GenerateFullCovarMatrix(const SystStruct& sys_obj);
 
             /* Function: Given a SystStruct, generate fractinal covariance matrix, and correlation matrix, and add matrices to covmat_map and corrtmat_map

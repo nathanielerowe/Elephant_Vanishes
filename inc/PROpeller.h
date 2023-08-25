@@ -9,6 +9,9 @@
 
 namespace PROfit{
 
+
+    /*Class: The PROpeller, which moves the analysis forward. A class to keep all MC events for oscllation event-by-event.
+    */
     class PROpeller {
 
         private:
@@ -16,7 +19,7 @@ namespace PROfit{
 
         public:
 
-            //Constructors
+            //Emmpty Constructor
             PROpeller(){
                 nevents = -1;
                 truth.clear();
@@ -27,14 +30,16 @@ namespace PROfit{
                 bin_indices.clear();
             }
 
-            PROpeller(std::vector<float> intruth, std::vector<float> inreco, std::vector<float> inbaseline, std::vector<int> inpdg, std::vector<float> inadded_weights, std::vector<int> inbin_indices) : nevents(truth.size()), truth(intruth), reco(inreco), baseline(inbaseline), pdg(inpdg), added_weights(inadded_weights), bin_indices(inbin_indices){}
+            /*Function: Primary Constructor from raw std::vectors of MC values */ 
+            PROpeller(std::vector<float> &intruth, std::vector<float> &inreco, std::vector<float> &inbaseline, std::vector<int> &inpdg, std::vector<float> &inadded_weights, std::vector<int> &inbin_indices) : nevents(truth.size()), truth(intruth), reco(inreco), baseline(inbaseline), pdg(inpdg), added_weights(inadded_weights), bin_indices(inbin_indices){}
 
+            /* the Core MC is saved in these six vectors.*/
             std::vector<float> truth;
             std::vector<float> reco;
             std::vector<float> baseline;
             std::vector<int>   pdg;
             std::vector<float> added_weights;
-            std::vector<int>   bin_indices;
+            std::vector<int>   bin_indices; /*Precaulcated Bin index*/
 
     };
 

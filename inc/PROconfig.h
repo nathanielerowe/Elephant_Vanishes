@@ -31,6 +31,8 @@
 //ROOT
 #include "TTreeFormula.h"
 
+
+/*eweight_type here to switch between uboone style "double" and SBNcode style "float"  */
 #define TYPE_FLOAT
 #ifdef TYPE_FLOAT  
 typedef float eweight_type;
@@ -40,12 +42,14 @@ typedef double eweight_type;
 
 namespace PROfit{
 
+    /*typedef the base "eventweight_class" branch that reweightable systematics are stored in in uboonestyle systematics 
+    */
     typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
 
     /* Struct: Branch variable is a SBNfit era class to load using TTReeFormula a givem variable (or function of variables) 
      * Note: was originally split between float/int, but moved to TTreeFormula
+     * Todo: The usage of BranchVariables and static casting is not ideal and can be removed now that we use TTreeFormula for reading on
      */
-
     struct BranchVariable{
         std::string name;
         std::string type;
@@ -78,7 +82,7 @@ namespace PROfit{
         virtual void* GetTrueValue(){return nullptr;};  //Function: evaluate formula 'true_param_name' and return the value. Usually it's true energy  
         virtual void* GetTrueL(){return nullptr;};      //Function: evaluate formula 'true_L_name' and return the value. Usually it's true baseline.
         int GetTruePDG(){
-             if(branch_true_pdg_formula == NULL) return true_pdg;
+            if(branch_true_pdg_formula == NULL) return true_pdg;
             else{
                 branch_true_pdg_formula->GetNdata();
                 true_pdg = (int)branch_true_pdg_formula->EvalInstance();
@@ -88,7 +92,7 @@ namespace PROfit{
         }
 
 
-	/* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
+        /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
         std::shared_ptr<TTreeFormula> GetFormula(){
             return branch_formula;
         }
@@ -97,7 +101,7 @@ namespace PROfit{
         bool GetOscillate(){ return oscillate;}
 
 
-	/* Function: evaluate additional weight setup in the branch and return in floating precision */
+        /* Function: evaluate additional weight setup in the branch and return in floating precision */
         double GetMonteCarloWeight(){
             if(branch_monte_carlo_weight_formula){ 
                 branch_monte_carlo_weight_formula->GetNdata();
@@ -167,8 +171,16 @@ namespace PROfit{
                 return &true_L_f;
             }
         }
-        
+
     };
+
+
+    /* 
+     * Class: Primary booking class for loading in info from XML and saving all information on mode_detector_channel_subchannel information.
+     * Note:
+     *  PROconfig to be created once and only once per PROfit executable and then passed by reference to various more complex functions, and ignored when not needed. 
+     *  Contains information and collapsing matricies for collapsing subchannels->channels also. Filled once, on construction and then used by later classes when needed.
+     */
 
 
     class PROconfig {
@@ -190,8 +202,8 @@ namespace PROfit{
 
             //---- PRIVATE FUNCTION ------
 
-	    /* Function: construct a matrix T, which will be used to collapse matrix and vectors */
-	    void construct_collapsing_matrix();
+            /* Function: construct a matrix T, which will be used to collapse matrix and vectors */
+            void construct_collapsing_matrix();
 
             /* Function: remove any mode/detector/channel/subchannels in the configuration xml that are not used from consideration
             */
@@ -206,15 +218,21 @@ namespace PROfit{
             /* Function: fill in mapping between subchannel name/index to global indices */
             void generate_index_map();
 
-	    /* Function: given global bin index, return associated global subchannel index */
-	    int find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const;
+            /* Function: given global bin index, return associated global subchannel index */
+            int find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const;
+
+
         public:
 
+            PROconfig() {}; //always have an empty constructor?
 
-            PROconfig() {}; //always have an empty?
-            PROconfig(const std::string &xml);
+            /* Constructor Function: Need a string passed which is the filename (with path) of the configuration xml */
+            PROconfig(const std::string &xmlname);
 
+            /*
+             * Function: Use TinyXML2 to load XML */
             int LoadFromXML(const std::string & filename);
+
 
             std::string m_xmlname;	
             double m_plot_pot;
@@ -223,15 +241,14 @@ namespace PROfit{
             int m_num_detectors;
             int m_num_channels;
             int m_num_modes;
-            //vectors of length num_channels
-            std::vector<int> m_num_subchannels; 
 
+            /*Vectors of length num_channels. Unless specificed all refer to fittable (reco) variables*/
+            std::vector<int> m_num_subchannels; 
             std::vector<int> m_channel_num_bins;
             std::vector<std::vector<double> > m_channel_bin_edges;
             std::vector<std::vector<double> > m_channel_bin_widths;
 
-            /* New true bins to save the truth level variables in addition 
-             */
+            /* New true bins to save the truth level variables in addition.*/
             std::vector<int> m_channel_num_truebins;
             std::vector<std::vector<double> > m_channel_truebin_edges;
             std::vector<std::vector<double> > m_channel_truebin_widths;
@@ -269,7 +286,8 @@ namespace PROfit{
             int m_num_bins_mode_block_collapsed;
             int m_num_bins_total_collapsed;
 
-	    Eigen::MatrixXd collapsing_matrix;
+            /* Eigen Matrix for collapsing subchannels->channels*/
+            Eigen::MatrixXd collapsing_matrix;
 
             //This section entirely for montecarlo generation of a covariance matrix or PROspec 
             //For generating a covariance matrix from scratch, this contains the number of montecarlos (weights in weight vector) and their names.
@@ -302,9 +320,6 @@ namespace PROfit{
             std::unordered_set<std::string> m_mcgen_variation_denylist;
             std::map<std::string, std::vector<std::string>> m_mcgen_shapeonly_listmap; //a map of shape-only systematic and corresponding subchannels
 
-
-
-
             //FIX skepic
             std::vector<std::string> systematic_name;
 
@@ -312,13 +327,13 @@ namespace PROfit{
             //----- PUBLIC FUNCTIONS ------
             //
 
-	    
-	    /* Function: return matrix T, of size (m_num_bins_total, m_num_bins_total_collapsed), which will be used to collapse matrix and vectors 
- 	     * Note: To collapse a full matrix M, please do T.transpose() * M * T
- 	     * 	     To collapse a full vector V, please do T.transpose() * V
- 	     */
-	    inline 
-	    Eigen::MatrixXd GetCollapsingMatrix() const {return collapsing_matrix; }
+
+            /* Function: return matrix T, of size (m_num_bins_total, m_num_bins_total_collapsed), which will be used to collapse matrix and vectors 
+             * Note: To collapse a full matrix M, please do T.transpose() * M * T
+             * 	     To collapse a full vector V, please do T.transpose() * V
+             */
+            inline 
+                Eigen::MatrixXd GetCollapsingMatrix() const {return collapsing_matrix; }
 
             /* Function: Calculate how big each mode block and decector block are, for any given number of channels/subchannels, before and after the collapse
              * Note: only consider mode/detector/channel/subchannels that are actually used 
@@ -331,14 +346,14 @@ namespace PROfit{
              */
             int GetSubchannelIndex(const std::string& fullname) const;
 
-	    /* Function: given global index (in the full vector), return global subchannel index of associated subchannel
- 	     * Note: returns a 0-based index 
- 	     */
+            /* Function: given global index (in the full vector), return global subchannel index of associated subchannel
+             * Note: returns a 0-based index 
+             */
             int GetSubchannelIndexFromGlobalBin(int global_index) const;
 
-	    /* Function: given global true index , return global subchannel index of associated subchannel
- 	     * Note: returns a 0-based index 
- 	     */
+            /* Function: given global true index , return global subchannel index of associated subchannel
+             * Note: returns a 0-based index 
+             */
             int GetSubchannelIndexFromGlobalTrueBin(int global_trueindex) const;
 
             /* Function: given subchannel global index, return corresponding channel index 
@@ -357,7 +372,7 @@ namespace PROfit{
             const std::vector<double>& GetChannelBinEdges(int channel_index) const;
 
             /* Function: given channel index, return number of true bins for this channel */
-	    int GetChannelNTrueBins(int channel_index) const;
+            int GetChannelNTrueBins(int channel_index) const;
 
             /* Function: given subchannel global index, return corresponding global bin start
              * Note: global bin index start from 0, not 1
