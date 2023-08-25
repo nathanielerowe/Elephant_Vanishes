@@ -61,23 +61,33 @@ int main(int argc, char* argv[])
 
 
 
+    //Initilize configuration from the XML;
     PROconfig myConf(xmlname);
+
+    //Inititilize PROpeller to keep MC
     PROpeller myprop;
+    
+    //Initilize objects for systematics storage
     std::vector<SystStruct> systsstructs;
+
+    //Process the CAF files to grab and fill all SystStructs and PROpeller
     PROcess_CAFs(myConf, systsstructs, myprop);
+
+    //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
+
+    //Define the model (currently 3+1 SBL)
     PROsc osc;
 
-
-
+    //Setup minimization parameetrs
     LBFGSpp::LBFGSBParam<double> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
     LBFGSpp::LBFGSBSolver<double> solver(param); 
 
     Eigen::VectorXd data = systsstructs.back().CV().Spec();
-    std::cout<<"Data: "<<data<<std::endl;
 
+    //Build chi^2 object
     PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.back().CV());
 
     // Bounds
