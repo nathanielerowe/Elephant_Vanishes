@@ -549,7 +549,7 @@ namespace PROfit {
                     if(global_bin < 0 )  //out or range
                         continue;
 
-                    PROcess_CAF_Event(sys_weight_formula, syst_vector, inprop, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
+                    PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
 
                 }//end of branch 
 
@@ -571,7 +571,7 @@ namespace PROfit {
     }
 
 
-    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, PROpeller& inprop, CAFweightHelper &caf_helper, double add_weight, long int global_bin, long int global_true_bin){
+    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin, long int global_true_bin){
 
 
         int is = 0;
