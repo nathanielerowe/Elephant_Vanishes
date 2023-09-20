@@ -468,7 +468,7 @@ namespace PROfit {
                 }
 
 
-                log<LOG_DEBUG>(L"%1% || %2% has %3% montecarlos in fie %4% ") % __func__ % varname.c_str() % map_systematic_num_universe[varname] % fid  ;
+                log<LOG_DEBUG>(L"%1% || %2% has %3% montecarlos in file %4% ") % __func__ % varname.c_str() % map_systematic_num_universe[varname] % fid  ;
 
                 //map_systematic_num_universe[varname] = std::max((int)map_systematic_num_universe[varname], (int)knobvals[v].size());
 
@@ -536,7 +536,9 @@ namespace PROfit {
                     double baseline = *(static_cast<double*>(branches[ib]->GetTrueL()));
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
 
-                    if(additional_weight == 0)
+                    log<LOG_DEBUG>(L"%1% || Reco and True E values: %2% and  %3%") % __func__ % reco_value % true_param;
+
+                    if(additional_weight == 0 || global_bin < 0)
                         continue;
 
                     inprop.reco.push_back((float)reco_value);
@@ -545,9 +547,6 @@ namespace PROfit {
                     inprop.pdg.push_back(pdg_id);
                     inprop.truth.push_back((float)true_param);
                     inprop.baseline.push_back((float)baseline);
-
-                    if(global_bin < 0 )  //out or range
-                        continue;
 
                     PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
 
