@@ -119,6 +119,8 @@ namespace PROfit {
         //second, get fractioal covar
         Eigen::MatrixXd frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
 
+        //zero out nans 
+        PROsyst::toFiniteMatrix(frac_covar_matrix);
 
         //check if it's good
         if(!PROsyst::isPositiveSemiDefinite_WithTolerance(frac_covar_matrix)){
@@ -126,9 +128,6 @@ namespace PROfit {
             log<LOG_ERROR>(L"Terminating.");
             exit(EXIT_FAILURE);
         }
-
-        //zero out nans 
-        PROsyst::toFiniteMatrix(frac_covar_matrix);
 
         return frac_covar_matrix;
     }

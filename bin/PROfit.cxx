@@ -59,8 +59,6 @@ int main(int argc, char* argv[])
 
     CLI11_PARSE(app, argc, argv);
 
-
-
     //Initilize configuration from the XML;
     PROconfig myConf(xmlname);
 
@@ -87,8 +85,10 @@ int main(int argc, char* argv[])
 
     Eigen::VectorXd data = systsstructs.back().CV().Spec();
 
+    int nparams = 3;
+
     //Build chi^2 object
-    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.back().CV());
+    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.back().CV(), nparams);
 
     // Bounds
     Eigen::VectorXd lb(3);
@@ -103,6 +103,8 @@ int main(int argc, char* argv[])
     // x will be overwritten to be the best point found
     double fx;
     int niter = solver.minimize(chi, x, fx, lb, ub);
+    
+    log<LOG_DEBUG>(L"%1% || FINISHED MINIMIZING: NITERATIONS %2%  and MINIMUM PARAMS  %3% %4% %5%" ) % __func__ % niter % x[0] % x[1] % x[2];
 
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n" << x.transpose() << std::endl;
