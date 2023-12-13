@@ -46,10 +46,11 @@ namespace PROfit{
     */
     typedef std::map<std::string, std::vector<eweight_type>> eweight_map;
 
+
     /* Struct: Branch variable is a SBNfit era class to load using TTReeFormula a givem variable (or function of variables) 
      * Note: was originally split between float/int, but moved to TTreeFormula
-     * Todo: The usage of BranchVariables and static casting is not ideal and can be removed now that we use TTreeFormula for reading on
      */
+
     struct BranchVariable{
         std::string name;
         std::string type;
@@ -67,112 +68,58 @@ namespace PROfit{
         std::string true_param_name;
         std::string true_L_name;
         std::string pdg_name;
-        float value_f;
-        float true_value_f;
-        float true_L_f;
-        int true_pdg;
 
-        double value_d;
-        double true_value_d;
-        double true_L_d;
+	//constructor
+        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false){}
+        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false){}
 
-        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a) {oscillate=false; associated_systematic=""; central_value =false;}
-        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst) { oscillate=false; central_value=cv;}
-        virtual void* GetValue(){return nullptr;};  //Function: evaluate branch 'name' and return the value. Usually its reconstructed quantity
-        virtual void* GetTrueValue(){return nullptr;};  //Function: evaluate formula 'true_param_name' and return the value. Usually it's true energy  
-        virtual void* GetTrueL(){return nullptr;};      //Function: evaluate formula 'true_L_name' and return the value. Usually it's true baseline.
-        int GetTruePDG(){
-            if(branch_true_pdg_formula == NULL) return true_pdg;
-            else{
-                branch_true_pdg_formula->GetNdata();
-                true_pdg = (int)branch_true_pdg_formula->EvalInstance();
-                return true_pdg;
-            }
-
-        }
-
-
-        /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
+	/* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
         std::shared_ptr<TTreeFormula> GetFormula(){
             return branch_formula;
         }
 
         void SetOscillate(bool inbool){ oscillate = inbool; return;}
-        bool GetOscillate(){ return oscillate;}
+        bool GetOscillate() const { return oscillate;}
+	void SetTrueParam(const std::string& true_parameter_def){ true_param_name = true_parameter_def; return;}
+   	void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
+	void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
+
+	//Function: evaluate branch "pdg", and return the value. Usually it's the pdg value of the particle
+	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+	template <typename T = int>
+	T GetTruePDG() const;
 
 
-        /* Function: evaluate additional weight setup in the branch and return in floating precision */
-        double GetMonteCarloWeight(){
-            if(branch_monte_carlo_weight_formula){ 
-                branch_monte_carlo_weight_formula->GetNdata();
-                return (double)branch_monte_carlo_weight_formula->EvalInstance();
-            }
-            return 1.0;
-        }
+	// Function: evaluate additional weight setup in the branch and return in floating precision 
+	// Note: if no additional weight is set, value of 1.0 will be returned.
+	inline
+	double GetMonteCarloWeight() const{
+	    if(branch_monte_carlo_weight_formula){ 
+		branch_monte_carlo_weight_formula->GetNdata();
+		return (double)branch_monte_carlo_weight_formula->EvalInstance();
+	    }
+	    return 1.0;
+	}
+
+
+        //Function: evaluate branch 'name' and return the value. Usually its reconstructed quantity
+	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+	template <typename T=double>
+        T GetValue() const;
+
+
+        //Function: evaluate formula 'true_L_name' and return the value. Usually it's true baseline.
+	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+        template <typename T=double>
+	T GetTrueL() const;
+
+
+        //Function: evaluate formula 'true_param_name' and return the value. Usually it's true energy  
+	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+        template <typename T=double>
+	T GetTrueValue() const;
     };
 
-
-    struct BranchVariable_d: public BranchVariable{
-        BranchVariable_d(std::string n, std::string t, std::string a) : BranchVariable(n,t,a) {value_d=0;true_value_d=0; true_L_d = 0;};
-        BranchVariable_d(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : BranchVariable(n,t,a_hist, a_syst, cv) {value_d=0;true_value_d=0; true_L_d = 0;};
-        void* GetValue(){ 
-            if(branch_formula == NULL) return &value_d;
-            else{   
-                branch_formula->GetNdata();
-                value_d = (double)branch_formula->EvalInstance();
-                return &value_d;
-            }
-        }
-
-        void* GetTrueL(){
-            if(branch_true_L_formula == NULL) return &true_L_d;
-            else{
-                branch_true_L_formula->GetNdata();
-                true_L_d = (double)branch_true_L_formula->EvalInstance();
-                return &true_L_d;
-            }
-        }
-
-        void* GetTrueValue(){ 
-            if(branch_true_value_formula == NULL) return &true_value_d;
-            else{
-                branch_true_value_formula->GetNdata();
-                true_value_d = (double)branch_true_value_formula->EvalInstance();
-                return &true_value_d;
-            }
-        }
-    };
-
-    struct BranchVariable_f: public BranchVariable{
-        BranchVariable_f(std::string n, std::string t, std::string a) : BranchVariable(n,t,a) {value_f=0;true_value_f=0; true_L_f = 0; true_pdg = 0;};
-        void* GetValue(){ 
-            if(branch_formula == NULL) return &value_f;
-            else{
-                branch_formula->GetNdata();
-                value_f = (float)branch_formula->EvalInstance();
-                return &value_f;
-            }
-        }
-
-        void* GetTrueValue(){ 
-            if(branch_true_value_formula == NULL) return &true_value_f;
-            else{
-                branch_true_value_formula->GetNdata();
-                true_value_f = (float)branch_true_value_formula->EvalInstance();
-                return &true_value_f;
-            }
-        }
-
-        void* GetTrueL(){
-            if(branch_true_L_formula == NULL) return &true_L_f;
-            else{
-                branch_true_L_formula->GetNdata();
-                true_L_f = (float)branch_true_L_formula->EvalInstance();
-                return &true_L_f;
-            }
-        }
-
-    };
 
 
     /* 
@@ -385,7 +332,47 @@ namespace PROfit{
     };
 
 
+//----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
+//----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
+//----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
 
+template <typename T>
+T BranchVariable::GetTruePDG() const{
+     if(branch_true_pdg_formula == NULL) return static_cast<T>(0);
+    else{
+        branch_true_pdg_formula->GetNdata();
+        return static_cast<T>(branch_true_pdg_formula->EvalInstance());
+    }
+}
+
+
+template <typename T>
+T BranchVariable::GetValue() const{
+    if(branch_formula == NULL) return static_cast<T>(0);
+    else{
+        branch_formula->GetNdata();
+        return static_cast<T>(branch_formula->EvalInstance());
+    }
+}
+
+template <typename T>
+T BranchVariable::GetTrueL() const{
+    if(branch_true_L_formula == NULL) return static_cast<T>(0);
+    else{
+        branch_true_L_formula->GetNdata();
+        return static_cast<T>(branch_true_L_formula->EvalInstance());
+    }
+}
+
+template <typename T>
+T BranchVariable::GetTrueValue() const{
+    if(branch_true_value_formula == NULL) return static_cast<T>(0);
+    else{
+        branch_true_value_formula->GetNdata();
+        return static_cast<T>(branch_true_value_formula->EvalInstance());
+    }
+}
+//----------- ABOVE: Definition of BranchVariable templated member function. END ---------------
 
 }
 #endif

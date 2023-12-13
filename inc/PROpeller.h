@@ -31,7 +31,9 @@ namespace PROfit{
             }
 
             /*Function: Primary Constructor from raw std::vectors of MC values */ 
-            PROpeller(std::vector<float> &intruth, std::vector<float> &inreco, std::vector<float> &inbaseline, std::vector<int> &inpdg, std::vector<float> &inadded_weights, std::vector<int> &inbin_indices) : nevents(truth.size()), truth(intruth), reco(inreco), baseline(inbaseline), pdg(inpdg), added_weights(inadded_weights), bin_indices(inbin_indices){}
+            PROpeller(std::vector<float> &intruth, std::vector<float> &inreco, std::vector<float> &inbaseline, std::vector<int> &inpdg, std::vector<float> &inadded_weights, std::vector<int> &inbin_indices) : truth(intruth), reco(inreco), baseline(inbaseline), pdg(inpdg), added_weights(inadded_weights), bin_indices(inbin_indices){
+	 	nevents = truth.size();
+	    }
 
             /* the Core MC is saved in these six vectors.*/
             std::vector<float> truth;
