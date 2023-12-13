@@ -575,7 +575,7 @@ namespace PROfit {
 
         int is = 0;
         for(SystStruct & syst : syst_vector){
-            long bin = syst.mode == "multisigma" ? global_true_bin : global_bin;
+            long bin = ((syst.mode == "multisigma") ? global_true_bin : global_bin);
             syst.FillCV(bin, add_weight);
             formulas[is]->GetNdata();
             double sys_weight_value =formulas[is]->EvalInstance();

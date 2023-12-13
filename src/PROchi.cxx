@@ -2,8 +2,8 @@
 using namespace PROfit;
 
 
-PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain) : model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain) {
-    last_value = 0.0; last_param = Eigen::VectorXd::Zero(config->m_num_bins_total); 
+PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams) : model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams) {
+    last_value = 0.0; last_param = Eigen::VectorXd::Zero(nparams); 
 }
 
 float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient){
@@ -19,7 +19,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
 
     PROspec result = FillRecoSpectra(*config, *peller, *syst, *osc, shifts, fitparams);
 
-    std::cout<<"Spec "<<result.Spec()<<" .. "<<std::endl;
+    std::cout<<"Spec "<< result.Spec()<<" .. "<<std::endl;
     result.Print();
 
     // Calcuate Full Covariance matrix
@@ -38,6 +38,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     std::cout<<"cStat: "<<collapsed_stat_covariance.size()<<std::endl;
     std::cout<<collapsed_stat_covariance<<std::endl;
 
+    log<LOG_DEBUG>(L"%1% || HERE") % __func__ ;
 
     // Invert Collaped Matrix Matrix 
     Eigen::MatrixXd inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
@@ -56,7 +57,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
 
     std::cout<<"Grad: "<<gradient<<std::endl;
 
-    log<LOG_DEBUG>(L"%1% || value %2%, last_value %3%, pull") % __func__ % value  % last_value % pull;
+    //log<LOG_DEBUG>(L"%1% || value %2%, last_value %3%, pull") % __func__ % value  % last_value % pull;
+    log<LOG_DEBUG>(L"%1% || FINISHED ITERATION got vals: %2% %3%") % __func__ % value % last_value ;
 
     //Update last param
     last_param = param;

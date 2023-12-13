@@ -33,6 +33,7 @@ namespace PROfit{
             const PROsyst *syst; 
             const PROsc *osc;
             const PROspec data;
+            int nparams;
 
             //Save last values for gradient calculation
             Eigen::VectorXd last_param;
@@ -40,7 +41,7 @@ namespace PROfit{
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain);
+            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams);
 
             /*Function: operator() is what is passed to minimizer.*/
             float operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient);
