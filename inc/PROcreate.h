@@ -176,6 +176,10 @@ namespace PROfit{
     */
     int PROcess_SBNfit(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector);
 
+    /* Function: Process spline weights and covariance matrices from uboone CAFAna output trees
+    */
+    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop);
+
     /* Function: Process spline weights AND covariance matrices from flat CAF's 
     */
     int PROcess_CAFs(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop);
@@ -202,6 +206,8 @@ namespace PROfit{
      *		syst_additional_weight: additional weight applied to systematic variation
      */
     void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight);
+
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight);
 
 
 

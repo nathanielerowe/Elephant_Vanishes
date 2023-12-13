@@ -1,5 +1,6 @@
 #include "PROcreate.h"
 #include "Eigen/src/Core/Matrix.h"
+#include "PROpeller.h"
 #include "TTree.h"
 #include "TFile.h"
 #include <algorithm>
@@ -295,6 +296,246 @@ namespace PROfit {
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
                     process_sbnfit_event(inconfig, branches[ib], *f_event_weights[fid][ib], subchannel_index[ib], syst_vector, sys_weight_value);
+                } 
+
+            } //end of entry loop
+
+        } //end of file loop
+
+        time_t time_took = time(nullptr) - start_time;
+        log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
+        log<LOG_INFO>(L"%1% || DONE") %__func__ ;
+
+        return 0;
+    }
+
+    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller& inprop){
+
+        log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
+
+        int num_files = inconfig.m_num_mcgen_files;
+
+        log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
+
+        std::vector<long int> nentries(num_files,0);
+        std::vector<std::unique_ptr<TFile>> files(num_files);
+        std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
+        std::vector<std::vector<std::map<std::string, std::vector<eweight_type>*>>> f_event_weights(num_files);
+        std::map<std::string, int> map_systematic_num_universe;
+
+
+        //open files, and link trees and branches
+        int good_event = 0;
+        for(int fid=0; fid < num_files; ++fid) {
+            const auto& fn = inconfig.m_mcgen_file_name.at(fid);
+
+            files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
+            trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
+            nentries[fid]= (long int)trees.at(fid)->GetEntries();
+
+            if(files[fid]->IsOpen()){
+                log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
+            }else{
+                log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % fn.c_str();
+                exit(EXIT_FAILURE);
+            }
+            log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
+
+
+            //first, grab friend trees
+            auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
+            if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
+
+                auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
+                if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
+                    log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
+                    log<LOG_ERROR>(L"Terminating.");
+                    exit(EXIT_FAILURE);
+                }
+
+                for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+
+                    std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
+                    std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
+                    trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                }
+            }
+
+            // grab branches 
+            int num_branch = inconfig.m_branch_variables[fid].size();
+            f_event_weights[fid].resize(num_branch);
+            for(int ib = 0; ib != num_branch; ++ib) {
+
+                std::shared_ptr<BranchVariable> branch_variable = inconfig.m_branch_variables[fid][ib];
+
+                //quick check that this branch associated subchannel is in the known chanels;
+                int is_valid_subchannel = 0;
+                for(const auto &name: inconfig.m_fullnames){
+                    if(branch_variable->associated_hist==name){
+                        log<LOG_DEBUG>(L"%1% || Found a valid subchannel for this branch %2%") % __func__  % name.c_str();
+                        ++is_valid_subchannel;
+                    }
+                }
+                if(is_valid_subchannel==0){
+                    log<LOG_ERROR>(L"%1% || This branch did not match one defined in the .xml : %2%") % __func__ % inconfig.m_xmlname.c_str();
+                    log<LOG_ERROR>(L"%1% || There is probably a typo somehwhere in xml!") % __func__;
+                    log<LOG_ERROR>(L"Terminating.");
+                    exit(EXIT_FAILURE);
+
+                }else if(is_valid_subchannel>1){
+                    log<LOG_ERROR>(L"%1% || This branch matched more than 1 subchannel!: %2%") % __func__ %  branch_variable->associated_hist.c_str();
+                    log<LOG_ERROR>(L"Terminating.");
+                    exit(EXIT_FAILURE);
+                }
+
+                branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), trees[fid]);
+                log<LOG_INFO>(L"%1% || Setting up reco variable for this branch: %2%") % __func__ %  branch_variable->name.c_str();
+
+
+                //grab monte carlo weight
+                if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
+                    branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][ib].c_str(),trees[fid]);
+                    log<LOG_INFO>(L"%1% || Setting up additional monte carlo weight for this branch: %2%") % __func__ %  inconfig.m_mcgen_additional_weight_name[fid][ib].c_str();
+                }
+
+
+                //grab eventweight branch
+                for(const TObject* branch: *trees[fid]->GetListOfBranches()) {
+                    if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
+                        log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
+                        trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                    }
+                }
+            } //end of branch loop
+
+
+            //calculate how many "universes" each systematoc has.
+            log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
+            trees.at(fid)->GetEntry(good_event);
+            for(int ib = 0; ib != num_branch; ++ib) {
+                const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
+                auto& f_weight = f_event_weights[fid][ib];
+
+                for(const auto& it : f_weight){
+                    log<LOG_DEBUG>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
+
+                    if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
+                        log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
+                        continue;
+                    }
+
+                    if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
+                        log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
+                        continue;
+                    }
+
+                    log<LOG_INFO>(L"%1% || %2% has %3% montecarlo variations in branch %4%") % __func__ % it.first.c_str() % it.second->size() % branch_variable->associated_hist.c_str();
+
+                    map_systematic_num_universe[it.first] = std::max((int)map_systematic_num_universe[it.first], (int)it.second->size());
+                }
+            }
+        } // end fid
+
+        size_t total_num_systematics = map_systematic_num_universe.size();
+        log<LOG_INFO>(L"%1% || Found %2% unique variations") % __func__ % total_num_systematics;
+        for(auto& sys_pair : map_systematic_num_universe){
+            log<LOG_DEBUG>(L"%1% || Variation: %2% --> %3% universes") % __func__ % sys_pair.first.c_str() % sys_pair.second;
+        }
+
+        //constuct object for each systematic variation, and grab weight maps
+        log<LOG_INFO>(L"%1% || Now start to grab related weightmaps") % __func__;
+        for(auto& sys_pair : map_systematic_num_universe){
+
+            const std::string& sys_name = sys_pair.first;
+            syst_vector.emplace_back(sys_name, sys_pair.second);
+
+
+            // Check to see if pattern is in this variation
+            std::string sys_weight_formula = "1", sys_mode ="";
+
+            for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
+                if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
+                    sys_weight_formula = sys_weight_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
+                    sys_mode=inconfig.m_mcgen_weightmaps_mode[i];
+
+                    log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for patten %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
+                    log<LOG_INFO>(L"%1% || Corresponding weight is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_formulas[i].c_str();
+                    log<LOG_INFO>(L"%1% || Corresponding mode is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_mode[i].c_str();
+                }
+            }
+
+            if(sys_weight_formula != "1" || sys_mode !=""){
+                syst_vector.back().SetWeightFormula(sys_weight_formula);
+                syst_vector.back().SetMode(sys_mode);
+            }
+        }
+
+
+        //sanity check 
+        for(const auto& s : syst_vector)
+            s.SanityCheck();
+
+
+        //create 2D multi-universe spec.
+        for(auto& s : syst_vector){
+            s.CreateSpecs(inconfig.m_num_bins_total);	
+        }
+
+
+        time_t start_time = time(nullptr), time_stamp = time(nullptr);
+        log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
+        for(int fid=0; fid < num_files; ++fid) {
+            const auto& fn = inconfig.m_mcgen_file_name.at(fid);
+            long int nevents = std::min(inconfig.m_mcgen_maxevents[fid], nentries[fid]);
+            log<LOG_DEBUG>(L"%1% || Start @files: %2% which has %3% events") % __func__ % fn.c_str() % nevents;
+
+
+            // set up systematic weight formula
+            std::vector<double> sys_weight_value(total_num_systematics, 1.0);
+            std::vector<std::unique_ptr<TTreeFormula>> sys_weight_formula;
+            for(const auto& s : syst_vector){
+                if(s.HasWeightFormula())
+                    sys_weight_formula.push_back(std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+ s.GetSysName()).c_str(), s.GetWeightFormula().c_str(),trees[fid]));
+                else
+                    sys_weight_formula.push_back(nullptr);
+            }
+            log<LOG_DEBUG>(L"%1% || Finished setting up systematic weight formula") % __func__;
+
+
+            // grab the subchannel index
+            int num_branch = inconfig.m_branch_variables[fid].size();
+            auto& branches = inconfig.m_branch_variables[fid];
+            std::vector<int> subchannel_index(num_branch, 0); 
+            log<LOG_DEBUG>(L"%1% || This file includes %2% branch/subchannels") % __func__ % num_branch;
+            for(int ib = 0; ib != num_branch; ++ib) {
+
+                const std::string& subchannel_name = inconfig.m_branch_variables[fid][ib]->associated_hist;
+                subchannel_index[ib] = inconfig.GetSubchannelIndex(subchannel_name);
+                log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % subchannel_index[ib];
+            }
+
+
+            // loop over all entries
+            for(long int i=0; i < nevents; ++i) {
+                if(i%1000==0){
+                    time_t time_passed = time(nullptr) - time_stamp;
+                    log<LOG_INFO>(L"%1% || File %2% -- uni : %3% / %4%  took %5% seconds") % __func__ % fid % i % nevents % time_passed;
+                    time_stamp = time(nullptr);
+                }
+                trees[fid]->GetEntry(i);
+
+
+                //grab additional weight for systematics
+                for(size_t is = 0; is != total_num_systematics; ++is){
+                    if(syst_vector[is].HasWeightFormula()){
+                        sys_weight_formula[is]->GetNdata();	
+                        sys_weight_value[is] = sys_weight_formula[is]->EvalInstance();
+                    }
+                }
+
+                //branch loop
+                for(int ib = 0; ib != num_branch; ++ib) {
+                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], subchannel_index[ib], syst_vector, sys_weight_value);
                 } 
 
             } //end of entry loop
@@ -767,6 +1008,38 @@ namespace PROfit {
         log<LOG_INFO>(L"%1% || DONE") %__func__ ;
 
         return spec;
+    }
+
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight){
+
+        int total_num_sys = syst_vector.size(); 
+	    double reco_value = branch->GetValue<double>();
+    	double mc_weight = branch->GetMonteCarloWeight();
+        int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
+        if(global_bin < 0 )  //out of range
+            return;
+
+        for(int i = 0; i != total_num_sys; ++i){
+            SystStruct& syst_obj = syst_vector[i];
+            double additional_weight = syst_additional_weight.at(i);
+
+            syst_obj.FillCV(global_bin, mc_weight);
+
+            auto map_iter = eventweight_map.find(syst_obj.GetSysName());
+            int map_variation_size = (map_iter == eventweight_map.end()) ? 0 : map_iter->second->size();
+            int iuni = 0;
+            for(; iuni != std::min(map_variation_size, syst_obj.GetNUniverse()); ++iuni){
+                syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(iuni)));
+            }
+
+            while(iuni != syst_obj.GetNUniverse()){
+                //syst_obj.FillUniverse(iuni, global_bin, mc_weight);
+                syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight);
+                ++iuni;
+            }
+        }
+
+        return;
     }
 
     void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight){
