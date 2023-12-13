@@ -527,13 +527,13 @@ namespace PROfit {
                 if(i%1000==0)log<LOG_DEBUG>(L"%1% || ---- universe %2%/%3% ") % __func__  % files[fid]->GetName() % nevents ;
 
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
+		    double reco_value = branches[ib]->GetValue<double>();
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
-                    //additional_weight *= pot_scale[fid]; POT NOT YET FIX
-                    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
-                    int pdg_id = branches[ib]->GetTruePDG();
-                    double true_param = *(static_cast<double*>(branches[ib]->GetTrueValue()));
-                    double baseline = *(static_cast<double*>(branches[ib]->GetTrueL()));
+		    //additional_weight *= pot_scale[fid]; POT NOT YET FIX
+		    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+                    int pdg_id = branches[ib]->GetTruePDG<int>();
+                    double true_param = branches[ib]->GetTrueValue<double>();
+                    double baseline = branches[ib]->GetTrueL<double>();
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
 
                     log<LOG_DEBUG>(L"%1% || Reco and True E values: %2% and  %3%") % __func__ % reco_value % true_param;
@@ -739,10 +739,10 @@ namespace PROfit {
                 for(int ib = 0; ib != num_branch; ++ib) {
 
                     //guanqun: why have different types for branch_variables 
-                    double reco_value = *(static_cast<double*>(branches[ib]->GetValue()));
-
-                    double additional_weight = branches[ib]->GetMonteCarloWeight();
+                    double reco_value = branches[ib]->GetValue<double>();
+		    double additional_weight = branches[ib]->GetMonteCarloWeight();
                     additional_weight *= pot_scale[fid];
+
                     if(additional_weight == 0) //skip on event failing cuts
                         continue;
 
@@ -772,8 +772,8 @@ namespace PROfit {
     void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight){
 
         int total_num_sys = syst_vector.size(); 
-        double reco_value = *(static_cast<double*>(branch->GetValue()));
-        double mc_weight = branch->GetMonteCarloWeight(); 
+	double reco_value = branch->GetValue<double>();
+    	double mc_weight = branch->GetMonteCarloWeight();
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         if(global_bin < 0 )  //out of range
             return;
