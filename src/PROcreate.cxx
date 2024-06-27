@@ -3,6 +3,7 @@
 #include "PROpeller.h"
 #include "TTree.h"
 #include "TFile.h"
+#include "TFriendElement.h"
 #include <algorithm>
 
 namespace PROfit {
@@ -354,9 +355,9 @@ namespace PROfit {
                 }
 
                 for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
-
                     std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
                     std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
+                    log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from file %3%") % __func__ %  treefriendname.c_str() % treefriendfile.c_str();
                     trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
                 }
             }
@@ -401,9 +402,19 @@ namespace PROfit {
 
                 //grab eventweight branch
                 for(const TObject* branch: *trees[fid]->GetListOfBranches()) {
+                    log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
                     if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
                         log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                         trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                    }
+                }
+                for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
+                    for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
+                        log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
+                        if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
+                            log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
+                            trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                        }
                     }
                 }
             } //end of branch loop
