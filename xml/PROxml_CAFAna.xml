@@ -1,0 +1,39 @@
+<?xml version="1.0" ?>
+
+<!--specifies neutrino mode or antineutrino mode-->
+<mode name="nu" />
+
+<detector name="SBND" />
+
+<channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
+        <bins
+        edges=" 0 1 2" 
+            />
+        <truebins min="0" max="2" nbins="4"/>
+    <subchannel name="cc" plotname="#nu_{#mu} CC" osc = "22" />
+</channel>
+
+<plotpot value="1"/>
+
+<variation_list>
+    <!--<allowlist>GENIEReWeight_ICARUS_v1_multisigma_MaCCRES</allowlist>-->
+    <allowlist>horncurrent_Flux</allowlist>  
+      <!--<allowlist>piplus_Flux</allowlist>-->
+      <denylist>piminus_Flux</denylist>
+</variation_list>
+
+<MCFile treename="events/evtTree" filename="selected_evvents.root" scale = "1.0" maxevents="50000" pot="1"> 
+    <friend treename="nuniverse/fluxSysts" filename="selected_events.root"/>
+     <branch
+         name                  = "recoE" 
+         type                  = "double"
+         associated_subchannel = "nu_SBND_numu_cc"
+         oscillate             = "true"
+         true_param_name       = "trueE" 
+         true_L_name           = "trueL"
+         pdg_name              = "truePDG"
+         additional_weight     = "" 
+         />
+</MCFile>
+
+
