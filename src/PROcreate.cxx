@@ -462,7 +462,10 @@ namespace PROfit {
 
 
             // Check to see if pattern is in this variation
-            std::string sys_weight_formula = "1", sys_mode ="";
+            std::string sys_weight_formula = "1";
+            std::string sys_mode = sys_name.find("multisigma") != std::string::npos ?
+                                   "multisigma" :
+                                   "multisim";
 
             for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
                 if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
@@ -478,6 +481,11 @@ namespace PROfit {
             if(sys_weight_formula != "1" || sys_mode !=""){
                 syst_vector.back().SetWeightFormula(sys_weight_formula);
                 syst_vector.back().SetMode(sys_mode);
+            }
+            if(sys_mode == "multisigma") {
+                // Hard code -3, 3 sigma for now
+                syst_vector.back().knobval = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
+                syst_vector.back().knob_index = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
             }
         }
 
@@ -559,7 +567,6 @@ namespace PROfit {
 
         return 0;
     }
-
 
     int PROcess_CAFs(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop){
 
