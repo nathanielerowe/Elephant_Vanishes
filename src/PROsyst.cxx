@@ -157,7 +157,7 @@ namespace PROfit {
 
     void PROsyst::toFiniteMatrix(Eigen::MatrixXd& in_matrix){
         if(!PROsyst::isFiniteMatrix(in_matrix)){
-            log<LOG_DEBUG>(L"%1% || Changing Nan/inf values to 0.0");
+            log<LOG_DEBUG>(L"%1% || Changing Nan/inf values to 0.0") % __func__;
             in_matrix = in_matrix.unaryExpr([](double v) { return std::isfinite(v)? v : 0.0; });
         }
         return;
