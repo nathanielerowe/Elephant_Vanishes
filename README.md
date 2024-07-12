@@ -4,35 +4,38 @@
 
 
 
-
-
 ### Basic Description of main classes and use cases
 
 - **PROlog** : Fairly simple logging/verbosity wrapper class. This is the only way PROfit should print. Usage as:
     -       log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
-    - LOG_CRITICAL = 0
-    - LOG_ERROR = 1
-    - LOG_WARNING = 2
-    - LOG_INFO = 3 :  This should be level of standard physics output that someone would plausibly use, but not create giant log files!
-    - LOG_DEBUG = 4 
-- **PROconfig** : Primary bookkeeping and XML loading class. Stores ALL information of mode_detector_channel_subchannel information. Must be created once and only once per PROfit executable and passed by reference to more complex functions when it is needed.
+    - LOG CRITICAL = 0
+    - LOG ERROR = 1
+    - LOG WARNING = 2
+    - LOG INFO = 3 :  This should be level of standard physics output that someone would plausibly use, but not create giant log files!
+    - LOG DEBUG = 4 
+- **PROconfig** : Primary bookkeeping and XML loading class. Stores ALL information of mode-detector-channel-subchannel information. Must be created once and only once per PROfit executable and passed by reference to more complex functions when it is needed.
     - Contains helper functions channel<-> subchannel mapping..etc..
-    - As well as functions for how to collapse subchannels->channels
+    - As well as functions for how to collapse subchannels to channels
 - **PROspec**  : Class for storing final spectra and errors. Barebones class as all binning,collapsing handeld by PRoconfig/
     - Essentially two Eigen::VectorXD ! Simple with helper functions
 - **PROpeller** : The PROpeller, which moves the analysis forward. A class to keep all MC events for oscllation event-by-event.
     - Saved as a set of six std::vector floats or ints. 
-    - Currently only truth (energy), reco (energy) baseline, pdg, added_weight and precalculated bin incicies indicating where the reco variable fits in a given PROconfig defined binning. 
+    - Currently only truth (energy), reco (energy) baseline, pdg, addedweight and precalculated bin incicies indicating where the reco variable fits in a given PROconfig defined binning. 
 - **PROtocall** : Currently a bit of a rogue set of functions that, given a PROconfig, dictate how to get binning and collapse Covariance matricies
-- **SystStruct** : A 
+- **PROcess** : The master weighting function that combines everything to give one final output spectra (PROspec) event-by-event. 
+    - FillRecoSpectra (PROconfig,PROpeller,PROsyst,PROosc, shifts, phys param)
+- **PROcreate** : Workhorse classes for loading the set of root ntuples and systematics into PROspec CV class and a vector of SystStructs for systematics.  
+    - Needs a PROconfig to tell it exactly what to load and where (channel and subchannel info) to assign the variables. Also which systeatics to load.
+    - The class **SystStruct** is also defined in here (for some reason), which stores the weights and spline information for systematics
 - **PROsyst** : Class that groups all systematics (each with a SystStruct) and manages their formation and effect on PROspecs
     - i.e generates covariance matricies, fills splines, gets spline shifted spectrum.. etc..
-    - Currently 
+    - Currently has Spline (CAFana style), Covariance (SBNfit style) and MFA (2D spline to-be-implemented) options
+- **PROsc** : The model class (not the lack of second 'o'). Currently is a very simple hardcoded 3+1 SBL approximation.
+    -- End goal to implement custom classes, NuSquids..etc..
 - **PROchi** : Class that gathers the MC (PROpeller), Systematics (PROsyst) and model (PROsc) and forms a function calculating a chi^2 that can be minimized over
 
 
-
-
+### Some Possible PRO class names abailable 
 PROtest
 PROfessional
 PROspect
@@ -47,8 +50,10 @@ PROgress
 PROfane
 PROfanity
 PROlapse
-#PROtocoll
+PROtocoll
 
+
+### Junk notes below here. Put somewhere better 
   rec.slc.truth.wgt..length = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 130, 0, 0                                                         
   rec.slc.truth.wgt..totarraysize = 130                                                                
   rec.slc.truth.wgt.univ..length = 6,  6, 6, 6, 6, 6, 6, 6, 6, 6, 6,  6, 6, 6, 6, 6, 6, 6, 6, 6, rec.slc.truth.wgt.univ..length[rec.slc.truth.wgt..totarraysize
@@ -60,10 +65,4 @@ PROlapse
   (rec.slc[si].truth.wgt[wi].univ[take next N])    [NUM]
   rec.slc.truth.wgh.univ[rec.slc.truth.wgt..idx[SLC]+I]+6
    
-
-
-
-TODO:
-Check const for all functions that should have const!
-Jenkins hash the co?
 
