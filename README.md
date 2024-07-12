@@ -1,5 +1,38 @@
 ![Alt text](/other/profit.png "Minimizing PROfit")
 
+
+
+
+
+
+
+### Basic Description of main classes and use cases
+
+- **PROlog** : Fairly simple logging/verbosity wrapper class. This is the only way PROfit should print. Usage as:
+    -       log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
+    - LOG_CRITICAL = 0
+    - LOG_ERROR = 1
+    - LOG_WARNING = 2
+    - LOG_INFO = 3 :  This should be level of standard physics output that someone would plausibly use, but not create giant log files!
+    - LOG_DEBUG = 4 
+- **PROconfig** : Primary bookkeeping and XML loading class. Stores ALL information of mode_detector_channel_subchannel information. Must be created once and only once per PROfit executable and passed by reference to more complex functions when it is needed.
+    - Contains helper functions channel<-> subchannel mapping..etc..
+    - As well as functions for how to collapse subchannels->channels
+- **PROspec**  : Class for storing final spectra and errors. Barebones class as all binning,collapsing handeld by PRoconfig/
+    - Essentially two Eigen::VectorXD ! Simple with helper functions
+- **PROpeller** : The PROpeller, which moves the analysis forward. A class to keep all MC events for oscllation event-by-event.
+    - Saved as a set of six std::vector floats or ints. 
+    - Currently only truth (energy), reco (energy) baseline, pdg, added_weight and precalculated bin incicies indicating where the reco variable fits in a given PROconfig defined binning. 
+- **PROtocall** : Currently a bit of a rogue set of functions that, given a PROconfig, dictate how to get binning and collapse Covariance matricies
+- **SystStruct** : A 
+- **PROsyst** : Class that groups all systematics (each with a SystStruct) and manages their formation and effect on PROspecs
+    - i.e generates covariance matricies, fills splines, gets spline shifted spectrum.. etc..
+    - Currently 
+- **PROchi** : Class that gathers the MC (PROpeller), Systematics (PROsyst) and model (PROsc) and forms a function calculating a chi^2 that can be minimized over
+
+
+
+
 PROtest
 PROfessional
 PROspect
