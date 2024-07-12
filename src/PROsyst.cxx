@@ -220,9 +220,11 @@ namespace PROfit {
     void PROsyst::FillSpline(const SystStruct& syst) {
         std::vector<PROspec> ratios;
         ratios.reserve(syst.p_multi_spec.size());
+        bool found0 = false;
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
+            if(syst.knobval[i] > 0 && !found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
+            if(syst.knobval[i] == 0) found0 = true;
             ratios.push_back(*syst.p_multi_spec[i] / *syst.p_cv);
-            if(syst.knobval[i] == -1) ratios.push_back(*syst.p_cv / *syst.p_cv);
         }
         Spline spline_coeffs;
         spline_coeffs.reserve(syst.p_cv->GetNbins());
