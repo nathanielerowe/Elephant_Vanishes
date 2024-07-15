@@ -1,6 +1,7 @@
 #include "PROsyst.h"
 #include "PROconfig.h"
 #include "PROcreate.h"
+#include "PROlog.h"
 #include "PROtocall.h"
 
 namespace PROfit {
@@ -300,6 +301,10 @@ namespace PROfit {
     }
 
     float PROsyst::GetSplineShift(std::string name, float shift, int bin) const {
+        if(syst_map.count(name) == 0) {
+            log<LOG_ERROR>(L"%1% || Unrecognized systematic %2%") % __func__ % name.c_str();
+            return 1;
+        }
         return GetSplineShift(syst_map.at(name).first, shift, bin);
     }
 
