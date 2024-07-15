@@ -513,9 +513,9 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 }
 
 
-                if(badditional_weight == NULL){
+                if(badditional_weight == NULL || badditional_weight == ""){
                     TEMP_additional_weight_bool.push_back(0);
-                    TEMP_additional_weight_name.push_back("");
+                    TEMP_additional_weight_name.push_back("1");
                 }else{
                     TEMP_additional_weight_name.push_back(badditional_weight);
                     TEMP_additional_weight_bool.push_back(1);
