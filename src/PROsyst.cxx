@@ -311,6 +311,7 @@ namespace PROfit {
     PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift) {
         PROspec ret(config.m_num_bins_total);
         for(size_t i = 0; i < prop.baseline.size(); ++i) {
+            if(prop.bin_indices[i] == -1) continue;
             const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
             const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
             ret.Fill(prop.bin_indices[i], GetSplineShift(name, shift, true_bin) * prop.added_weights[i]);
@@ -322,6 +323,7 @@ namespace PROfit {
         assert(names.size() == shifts.size());
         PROspec ret(config.m_num_bins_total);
         for(size_t i = 0; i < prop.baseline.size(); ++i) {
+            if(prop.bin_indices[i] == -1) continue;
             const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
             const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
             float weight = 1;
