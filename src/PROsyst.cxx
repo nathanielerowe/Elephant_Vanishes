@@ -266,9 +266,9 @@ namespace PROfit {
                     { 0,  0,  1,  0},
                     { 1,  0,  0,  0}};
                 const Eigen::Vector4f res = m * v;
-                float knobval = syst.knobval[shiftIdx] <  0 ? syst.knobval[shiftIdx] :
-                    syst.knobval[shiftIdx] == 1 ? 0 :
-                    syst.knobval[shiftIdx - 1];
+                float knobval = syst.knobval[shiftIdx];
+                if(!found0 && knobval >= 0)
+                    knobval = syst.knobval[shiftIdx] == 1 ? 0 : syst.knobval[shiftIdx - 1];
                 spline.push_back({knobval, {res(3), res(2), res(1), res(0)}});
             }
 
@@ -311,7 +311,6 @@ namespace PROfit {
     PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift) {
         PROspec ret(config.m_num_bins_total);
         for(size_t i = 0; i < prop.baseline.size(); ++i) {
-            if(prop.bin_indices[i] == -1) continue;
             const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
             const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
             ret.Fill(prop.bin_indices[i], GetSplineShift(name, shift, true_bin) * prop.added_weights[i]);
@@ -323,7 +322,6 @@ namespace PROfit {
         assert(names.size() == shifts.size());
         PROspec ret(config.m_num_bins_total);
         for(size_t i = 0; i < prop.baseline.size(); ++i) {
-            if(prop.bin_indices[i] == -1) continue;
             const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
             const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
             float weight = 1;

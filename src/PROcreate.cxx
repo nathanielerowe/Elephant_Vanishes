@@ -1047,17 +1047,17 @@ namespace PROfit {
     	double mc_weight = branch->GetMonteCarloWeight();
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = FindGlobalTrueBin(inconfig, true_value, subchannel_index);
+        if(global_bin < 0 )  //out of range
+            return;
+        if(global_true_bin < 0)
+            return;
+
         inprop.reco.push_back((float)reco_value);
         inprop.added_weights.push_back(mc_weight);
         inprop.bin_indices.push_back(global_bin);
         inprop.pdg.push_back(pdg_id);
         inprop.truth.push_back((float)true_param);
         inprop.baseline.push_back((float)baseline);
-
-        if(global_bin < 0 )  //out of range
-            return;
-        if(global_true_bin < 0)
-            return;
 
         for(int i = 0; i != total_num_sys; ++i){
             SystStruct& syst_obj = syst_vector[i];
