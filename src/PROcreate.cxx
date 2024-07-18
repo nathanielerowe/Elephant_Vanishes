@@ -1,6 +1,8 @@
 #include "PROcreate.h"
 #include "Eigen/src/Core/Matrix.h"
+#include "PROlog.h"
 #include "PROpeller.h"
+#include "PROtocall.h"
 #include "TTree.h"
 #include "TFile.h"
 #include "TFriendElement.h"
@@ -391,6 +393,12 @@ namespace PROfit {
 
                 branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), trees[fid]);
                 log<LOG_INFO>(L"%1% || Setting up reco variable for this branch: %2%") % __func__ %  branch_variable->name.c_str();
+                branch_variable->branch_true_L_formula = std::make_shared<TTreeFormula>(("branch_L_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_L_name.c_str(), trees[fid]);
+                log<LOG_INFO>(L"%1% || Setting up L variable for this branch: %2%") % __func__ %  branch_variable->true_L_name.c_str();
+                branch_variable->branch_true_value_formula = std::make_shared<TTreeFormula>(("branch_true_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_param_name.c_str(), trees[fid]);
+                log<LOG_INFO>(L"%1% || Setting up true E variable for this branch: %2%") % __func__ %  branch_variable->true_param_name.c_str();
+                branch_variable->branch_true_pdg_formula = std::make_shared<TTreeFormula>(("branch_pdg_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->pdg_name.c_str(), trees[fid]);
+                log<LOG_INFO>(L"%1% || Setting up PDG variable for this branch: %2%") % __func__ %  branch_variable->pdg_name.c_str();
 
 
                 //grab monte carlo weight
@@ -462,7 +470,10 @@ namespace PROfit {
 
 
             // Check to see if pattern is in this variation
-            std::string sys_weight_formula = "1", sys_mode ="";
+            std::string sys_weight_formula = "1";
+            std::string sys_mode = sys_name.find("multisigma") != std::string::npos ?
+                                   "multisigma" :
+                                   "multisim";
 
             for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
                 if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
@@ -479,6 +490,11 @@ namespace PROfit {
                 syst_vector.back().SetWeightFormula(sys_weight_formula);
                 syst_vector.back().SetMode(sys_mode);
             }
+            if(sys_mode == "multisigma") {
+                // Hard code -3, 3 sigma for now
+                syst_vector.back().knobval = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
+                syst_vector.back().knob_index = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
+            }
         }
 
 
@@ -489,7 +505,7 @@ namespace PROfit {
 
         //create 2D multi-universe spec.
         for(auto& s : syst_vector){
-            s.CreateSpecs(inconfig.m_num_bins_total);	
+            s.CreateSpecs(s.mode == "multisigma" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
 
@@ -546,7 +562,7 @@ namespace PROfit {
 
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], subchannel_index[ib], syst_vector, sys_weight_value);
+                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
                 } 
 
             } //end of entry loop
@@ -559,7 +575,6 @@ namespace PROfit {
 
         return 0;
     }
-
 
     int PROcess_CAFs(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop){
 
@@ -1021,22 +1036,41 @@ namespace PROfit {
         return spec;
     }
 
-    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight){
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop){
 
         int total_num_sys = syst_vector.size(); 
 	    double reco_value = branch->GetValue<double>();
+        double true_param = branch->GetTrueValue<double>();
+        double baseline = branch->GetTrueL<double>();
+        double true_value = baseline / true_param;
+        double pdg_id = branch->GetTruePDG();
     	double mc_weight = branch->GetMonteCarloWeight();
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
+        int global_true_bin = FindGlobalTrueBin(inconfig, true_value, subchannel_index);
         if(global_bin < 0 )  //out of range
             return;
+        if(global_true_bin < 0)
+            return;
+
+        inprop.reco.push_back((float)reco_value);
+        inprop.added_weights.push_back(mc_weight);
+        inprop.bin_indices.push_back(global_bin);
+        inprop.pdg.push_back(pdg_id);
+        inprop.truth.push_back((float)true_param);
+        inprop.baseline.push_back((float)baseline);
 
         for(int i = 0; i != total_num_sys; ++i){
             SystStruct& syst_obj = syst_vector[i];
             double additional_weight = syst_additional_weight.at(i);
 
-            syst_obj.FillCV(global_bin, mc_weight);
-
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
+            if(syst_obj.mode == "multisigma") {
+                syst_obj.FillCV(global_true_bin, mc_weight);
+                for(int i = 0; i < syst_obj.GetNUniverse(); ++i)
+                    syst_obj.FillUniverse(i, global_true_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(i)));
+                continue;
+            }
+            syst_obj.FillCV(global_bin, mc_weight);
             int map_variation_size = (map_iter == eventweight_map.end()) ? 0 : map_iter->second->size();
             int iuni = 0;
             for(; iuni != std::min(map_variation_size, syst_obj.GetNUniverse()); ++iuni){

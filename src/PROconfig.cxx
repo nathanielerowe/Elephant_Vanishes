@@ -1,4 +1,5 @@
 #include "PROconfig.h"
+#include "PROlog.h"
 using namespace PROfit;
 
 
@@ -1102,10 +1103,10 @@ size_t PROconfig::find_equal_index(const std::vector<int>& input_vec, int val) c
 size_t PROconfig::find_less_or_equal_index(const std::vector<int>& input_vec, int val) const{
     auto pos_iter = std::lower_bound(input_vec.begin(), input_vec.end(), val);
     if(pos_iter == input_vec.end() || (*pos_iter) != val){
-        return pos_iter - input_vec.begin() -1;
+        return pos_iter - input_vec.begin() - 1;
+    } else {
+	    return pos_iter - input_vec.begin();
     }
-    else
-	return pos_iter - input_vec.begin();
     return -1;
 }
 

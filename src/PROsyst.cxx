@@ -1,6 +1,7 @@
 #include "PROsyst.h"
 #include "PROconfig.h"
 #include "PROcreate.h"
+#include "PROlog.h"
 #include "PROtocall.h"
 
 namespace PROfit {
@@ -157,7 +158,7 @@ namespace PROfit {
 
     void PROsyst::toFiniteMatrix(Eigen::MatrixXd& in_matrix){
         if(!PROsyst::isFiniteMatrix(in_matrix)){
-            log<LOG_DEBUG>(L"%1% || Changing Nan/inf values to 0.0");
+            log<LOG_DEBUG>(L"%1% || Changing Nan/inf values to 0.0") % __func__;
             in_matrix = in_matrix.unaryExpr([](double v) { return std::isfinite(v)? v : 0.0; });
         }
         return;
@@ -220,9 +221,11 @@ namespace PROfit {
     void PROsyst::FillSpline(const SystStruct& syst) {
         std::vector<PROspec> ratios;
         ratios.reserve(syst.p_multi_spec.size());
+        bool found0 = false;
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
+            if(syst.knobval[i] > 0 && !found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
+            if(syst.knobval[i] == 0) found0 = true;
             ratios.push_back(*syst.p_multi_spec[i] / *syst.p_cv);
-            if(syst.knobval[i] == -1) ratios.push_back(*syst.p_cv / *syst.p_cv);
         }
         Spline spline_coeffs;
         spline_coeffs.reserve(syst.p_cv->GetNbins());
@@ -263,9 +266,9 @@ namespace PROfit {
                     { 0,  0,  1,  0},
                     { 1,  0,  0,  0}};
                 const Eigen::Vector4f res = m * v;
-                float knobval = syst.knobval[shiftIdx] <  0 ? syst.knobval[shiftIdx] :
-                    syst.knobval[shiftIdx] == 1 ? 0 :
-                    syst.knobval[shiftIdx - 1];
+                float knobval = syst.knobval[shiftIdx];
+                if(!found0 && knobval >= 0)
+                    knobval = syst.knobval[shiftIdx] == 1 ? 0 : syst.knobval[shiftIdx - 1];
                 spline.push_back({knobval, {res(3), res(2), res(1), res(0)}});
             }
 
@@ -298,6 +301,10 @@ namespace PROfit {
     }
 
     float PROsyst::GetSplineShift(std::string name, float shift, int bin) const {
+        if(syst_map.count(name) == 0) {
+            log<LOG_ERROR>(L"%1% || Unrecognized systematic %2%") % __func__ % name.c_str();
+            return 1;
+        }
         return GetSplineShift(syst_map.at(name).first, shift, bin);
     }
 
