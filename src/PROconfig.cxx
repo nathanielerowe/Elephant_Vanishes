@@ -512,10 +512,11 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 }
 
-
-                if(badditional_weight == NULL || badditional_weight == ""){
+                std::string chk_wei = badditional_weight;
+                if(badditional_weight == NULL || badditional_weight == "" || (chk_wei.find_first_not_of(' ') != std::string::npos) ){
                     TEMP_additional_weight_bool.push_back(0);
                     TEMP_additional_weight_name.push_back("1");
+                    log<LOG_DEBUG>(L"%1% || Setting NO additional weight for branch %2% (1)") % __func__ % bnam ;
                 }else{
                     TEMP_additional_weight_name.push_back(badditional_weight);
                     TEMP_additional_weight_bool.push_back(1);
