@@ -15,10 +15,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
 
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXd subvector1 = param.segment(0, 2);
-    //std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-    std::vector<float> fitparams{};
-    //Eigen::VectorXd subvector2 = param.segment(2,nparams - 2);
-    Eigen::VectorXd subvector2 = param;
+    std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
+    Eigen::VectorXd subvector2 = param.segment(2,nparams - 2);
     std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
 
     log<LOG_DEBUG>(L"%1% || Shifts size is %2%") % __func__ % shifts.size();
