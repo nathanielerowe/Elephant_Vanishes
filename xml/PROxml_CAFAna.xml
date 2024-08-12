@@ -6,17 +6,20 @@
 <detector name="SBND" />
 
 <channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
-        <bins
-        edges=" 0 1 2" 
-            />
-        <truebins min="0" max="2" nbins="4"/>
+        <!--edges="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 2"-->
+<!--<bins edges="0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0 5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 5.9 6.0 6.1 6.2 6.3 6.4 6.5 6.6 6.7 6.8 6.9 7.0" />-->
+<!--<bins
+          edges="0 1 2"
+/>-->
+<bins edges="0.3 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.25 1.5 2.0 2.5 3.0"/>
+        <truebins min="0" max="2" nbins="200"/>
     <subchannel name="cc" plotname="#nu_{#mu} CC" osc = "22" />
 </channel>
 
 <plotpot value="1"/>
 
 <variation_list>
-    <allowlist>expskin_Flux</allowlist>  
+    <!--<allowlist>expskin_Flux</allowlist>-->  
     <!--<allowlist>horncurrent_Flux</allowlist>-->  
     <!--<allowlist>nucleoninexsec_Flux</allowlist>-->  
     <!--<allowlist>nucleonqexsec_Flux</allowlist>-->  
@@ -24,32 +27,32 @@
     <!--<allowlist>pioninexsec_Flux</allowlist>-->  
     <!--<allowlist>pionqexsec_Flux</allowlist>-->  
     <!--<allowlist>piontotxsec_Flux</allowlist>-->  
-    <!--<allowlist>piplus_Flux</allowlist>-->  
-    <!--<allowlist>piminus_Flux</allowlist>-->  
-    <!--<allowlist>kplus_Flux</allowlist>-->  
-    <!--<allowlist>kminus_Flux</allowlist>-->  
-    <!--<allowlist>kzero_Flux</allowlist>-->  
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_AhtBY</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_BhtBY</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_CoulombCCQE</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_CV1uBY</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_CV2uBY</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_EtaNCEL</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrAbs_N</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrAbs_pi</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrCEx_N</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrCEx_pi</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrInel_N</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrInel_pi</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrPiProd_N</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_MFP_N</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_MFP_pi</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_MaCCRES</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_MaNCEL</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_MaNCRES</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_MvCCRES</allowlist>-->
-    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_MvNCRES</allowlist>-->
+    <allowlist>piplus_Flux</allowlist>  
+    <allowlist>piminus_Flux</allowlist>  
+    <allowlist>kplus_Flux</allowlist>  
+    <allowlist>kminus_Flux</allowlist>  
+    <allowlist>kzero_Flux</allowlist> 
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_AhtBY</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_BhtBY</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_CoulombCCQE</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_CV1uBY</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_CV2uBY</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_EtaNCEL</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrAbs_N</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrAbs_pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrCEx_N</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrCEx_pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrInel_N</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrInel_pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrPiProd_N</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_MFP_N</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_MFP_pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_MaCCRES</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_MaNCEL</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_MaNCRES</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_MvCCRES</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_MvNCRES</allowlist>
     <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnCC1pi</allowlist>-->
     <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnCC2pi</allowlist>-->
     <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnNC1pi</allowlist>-->
@@ -79,7 +82,7 @@
     <friend treename="events/multisimTree" filename="selected_events.root"/>
     <friend treename="events/multisigmaTree" filename="selected_events.root"/>
      <branch
-         name                  = "recoE" 
+         name                  = "recoE"
          type                  = "double"
          associated_subchannel = "nu_SBND_numu_cc"
          oscillate             = "true"
