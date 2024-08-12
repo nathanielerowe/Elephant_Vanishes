@@ -1,4 +1,7 @@
 #include "PROspec.h"
+
+#include <random>
+
 using namespace PROfit;
 
 PROspec::PROspec(int num_bins):
@@ -6,6 +9,20 @@ PROspec::PROspec(int num_bins):
     spec(Eigen::VectorXd::Zero(num_bins)),
     error(Eigen::VectorXd::Zero(num_bins)){
     }
+
+PROspec PROspec::PoissonVariation(const PROspec &s) {
+    static std::random_device rd;
+    std::mt19937 gen(rd());
+
+    PROspec newSpec(s.nbins);
+
+    for(int i = 0; i < s.nbins; i++) {
+        std::poisson_distribution<> d(s.GetBinContent(i));
+        newSpec.Fill(i, d(gen));
+    }
+
+    return newSpec;
+}
 
 int PROspec::GetNbins() const{
     return nbins;
