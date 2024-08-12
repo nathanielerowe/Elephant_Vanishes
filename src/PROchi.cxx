@@ -53,7 +53,10 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     for (int i = 0; i < nparams; i++) {
         Eigen::VectorXd tmpParams = last_param;
         tmpParams(i) = param(i);
-        Eigen::VectorXd subvector2 = tmpParams;
+        //Eigen::VectorXd subvector2 = tmpParams;
+        Eigen::VectorXd subvector1 = tmpParams.segment(0, 2);
+        std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
+        Eigen::VectorXd subvector2 = tmpParams.segment(2,nparams - 2);
         std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
         PROspec result = FillRecoSpectra(*config, *peller, *syst, *osc, shifts, fitparams);
         // Calcuate Full Covariance matrix
