@@ -318,6 +318,16 @@ namespace PROfit {
         return ret;
     }
 
+    PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, int syst_num, float shift) {
+        PROspec ret(config.m_num_bins_total);
+        for(size_t i = 0; i < prop.baseline.size(); ++i) {
+            const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
+            const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
+            ret.Fill(prop.bin_indices[i], GetSplineShift(syst_num, shift, true_bin) * prop.added_weights[i]);
+        }
+        return ret;
+    }
+
     PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts) {
         assert(names.size() == shifts.size());
         PROspec ret(config.m_num_bins_total);
@@ -327,6 +337,36 @@ namespace PROfit {
             float weight = 1;
             for(size_t j = 0; j < names.size(); ++j) {
                 weight *= GetSplineShift(names[j], shifts[j], true_bin);
+            }
+            ret.Fill(prop.bin_indices[i], weight * prop.added_weights[i]);
+        }
+        return ret;
+    }
+
+    PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<int> syst_nums, std::vector<float> shifts) {
+        assert(syst_nums.size() == shifts.size());
+        PROspec ret(config.m_num_bins_total);
+        for(size_t i = 0; i < prop.baseline.size(); ++i) {
+            const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
+            const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
+            float weight = 1;
+            for(size_t j = 0; j < syst_nums.size(); ++j) {
+                weight *= GetSplineShift(syst_nums[j], shifts[j], true_bin);
+            }
+            ret.Fill(prop.bin_indices[i], weight * prop.added_weights[i]);
+        }
+        return ret;
+    }
+
+    PROspec PROsyst::GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<float> shifts) {
+        assert(shifts.size() == splines.size());
+        PROspec ret(config.m_num_bins_total);
+        for(size_t i = 0; i < prop.baseline.size(); ++i) {
+            const int subchannel = FindSubchannelIndexFromGlobalBin(config, prop.bin_indices[i]);
+            const int true_bin = FindGlobalTrueBin(config, prop.baseline[i] / prop.truth[i], subchannel);
+            float weight = 1;
+            for(size_t j = 0; j < shifts.size(); ++j) {
+                weight *= GetSplineShift(j, shifts[j], true_bin);
             }
             ret.Fill(prop.bin_indices[i], weight * prop.added_weights[i]);
         }
