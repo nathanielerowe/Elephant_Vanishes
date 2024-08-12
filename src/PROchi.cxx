@@ -51,6 +51,10 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     std::cout<<inverted_collapsed_full_covariance<<std::endl;
 
     for (int i = 0; i < nparams; i++) {
+        if(param(i) == last_param(i)) {
+            gradient(i) = 1;
+            continue;
+        }
         Eigen::VectorXd tmpParams = last_param;
         tmpParams(i) = param(i);
         //Eigen::VectorXd subvector2 = tmpParams;
