@@ -39,6 +39,8 @@ namespace PROfit {
             /* Function: given systematic name, return type of systematic */
             SystType GetSystType(const std::string& syst);
 
+            size_t GetNSplines() { return splines.size(); }
+
             //----- Spline and Covariance matrix related ---
             //----- Spline and Covariance matrix related ---
 
@@ -92,7 +94,10 @@ namespace PROfit {
 
             /* Function: Get cv spectrum shifted using spline */
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift);
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, int syst_num, float shift);
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts);
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<int> syst_nums, std::vector<float> shifts);
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<float> shifts);
 
             /* the fractional covariance that is the sum of all during constructor*/
             Eigen::MatrixXd fractional_covariance;

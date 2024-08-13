@@ -1,3 +1,4 @@
+#include "LBFGSpp/LineSearchMoreThuente.h"
 #include "PROconfig.h"
 #include "PROspec.h"
 #include "PROsyst.h"
@@ -16,6 +17,12 @@
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <unsupported/Eigen/NumericalDiff>
+#include <random>
+
+#include "TCanvas.h"
+#include "TH2D.h"
+#include "TStyle.h"
+
 
 using namespace PROfit;
 
@@ -45,6 +52,7 @@ class ChiTest
 
 int main(int argc, char* argv[])
 {
+    gStyle->SetOptStat(0);
 
     CLI::App app{"Test for PROfit"}; 
 
@@ -71,8 +79,6 @@ int main(int argc, char* argv[])
     //Process the CAF files to grab and fill all SystStructs and PROpeller
     PROcess_CAFAna(myConf, systsstructs, myprop);
 
-    std::cout << systsstructs.size();
-
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
 
@@ -82,35 +88,54 @@ int main(int argc, char* argv[])
     //Setup minimization parameetrs
     LBFGSpp::LBFGSBParam<double> param;  
     param.epsilon = 1e-6;
-    param.max_iterations = 100;
+    param.max_iterations = 10000;
     LBFGSpp::LBFGSBSolver<double> solver(param); 
 
     Eigen::VectorXd data = systsstructs.back().CV().Spec();
 
-    int nparams = 3;
+    int nparams = 2 + systs.GetNSplines();
+
+    std::random_device rd{};
+    std::mt19937 gen{rd()};
+    std::normal_distribution<float> d;
+    std::vector<float> throws;
+    for(size_t i = 0; i < systs.GetNSplines(); i++)
+        throws.push_back(d(gen));
+    PROspec newSpec = PROspec::PoissonVariation(systs.GetSplineShiftedSpectrum(myConf, myprop, throws));
+
+    std::cout << "CV: " << std::endl;
+    systsstructs.back().CV().Print();
+    std::cout << "Throw: " << std::endl;
+    newSpec.Print();
 
     //Build chi^2 object
-    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.back().CV(), nparams);
+    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, newSpec, nparams);
 
     // Bounds
-    Eigen::VectorXd lb(3);
-    lb << 0.01 , 0  , -3;
-    Eigen::VectorXd ub(3);
-    ub <<  100, 1, 3 ;
+    Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+    lb(0) = 0; lb(1) = 0.01;
+    Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+    ub(0) = 1; ub(1) = 100;
 
     // Initial guess
-    Eigen::VectorXd x(3);
-    x << 3, 0.5, 0.0;
+    Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 1.0);
 
     // x will be overwritten to be the best point found
     double fx;
-    int niter = solver.minimize(chi, x, fx, lb, ub);
-    
-    log<LOG_DEBUG>(L"%1% || FINISHED MINIMIZING: NITERATIONS %2%  and MINIMUM PARAMS  %3% %4% %5%" ) % __func__ % niter % x[0] % x[1] % x[2];
+    int niter;
+    try {
+        niter = solver.minimize(chi, x, fx, lb, ub);
+    } catch(std::runtime_error &except) {
+        log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+    }
+
+    log<LOG_DEBUG>(L"%1% || FINISHED MINIMIZING: NITERATIONS %2%  and MINIMUM PARAMS  %3% %4% %5% %6% %7% %8%" ) % __func__ % niter % x[0] % x[1] % x[2] % x[3] % x[4] % x[5];
 
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n" << x.transpose() << std::endl;
     std::cout << "f(x) = " << fx << std::endl;
+
+    std::cout << "Throw: \n" << Eigen::VectorXf::Map(throws.data(), throws.size()).transpose() << std::endl;
 
     return 0;
 }

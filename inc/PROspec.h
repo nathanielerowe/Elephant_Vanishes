@@ -60,6 +60,9 @@ namespace PROfit{
             //PROspec(PROconfig const & configin); //Load in config file EMPTY hists
             //PROspec(std::string &xmlname); //Load directly from XML 
 
+            /* Function: Create a new PROspec with Poisson fluctuations applied. */
+            static PROspec PoissonVariation(const PROspec &s);
+
 
             /* Function: given subchannel name/index, generate TH1D histogram of corresponding spectrum */
             TH1D toTH1D(const PROconfig& inconfig, int subchannel_index);
