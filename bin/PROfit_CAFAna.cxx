@@ -113,9 +113,9 @@ int main(int argc, char* argv[])
 
     // Bounds
     Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-    lb(0) = 0; lb(1) = 0.01;
+    lb(0) = 0.01; lb(1) = 0;
     Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-    ub(0) = 1; ub(1) = 100;
+    ub(0) = 100; ub(1) = 1;
 
     // Initial guess
     Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 1.0);
