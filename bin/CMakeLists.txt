@@ -9,6 +9,11 @@ target_include_directories(PROfit_CAFAna PRIVATE ${HIGHFIVE_INCLUDE_DIR})
 target_compile_features(PROfit_CAFAna PRIVATE cxx_std_14)
 target_link_libraries(PROfit_CAFAna PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
+add_executable(PROfc PROfc.cxx )
+target_include_directories(PROfc PRIVATE ${HIGHFIVE_INCLUDE_DIR})
+target_compile_features(PROfc PRIVATE cxx_std_14)
+target_link_libraries(PROfc PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
+
 if(MPI_ENABLE)
     add_executable(PROmfa4u PROmfa4u.cxx)
     target_compile_features(PROmfa4u PRIVATE cxx_std_14)

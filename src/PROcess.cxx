@@ -1,15 +1,16 @@
 #include "PROcess.h"
+#include "PROlog.h"
 #include "PROsyst.h"
 
 namespace PROfit {
 
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc &inosc, std::vector<float> &inshifts, std::vector<float> &physparams){
+    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, std::vector<float> &inshifts, std::vector<float> &physparams){
 
         PROspec myspectrum(inconfig.m_num_bins_total);
 
         for(size_t i = 0; i<inprop.truth.size(); ++i){
 
-            float oscw  = GetOscWeight(i, inprop, inosc, physparams);
+            float oscw  = inosc ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
             float add_w = inprop.added_weights[i]; 
 
             const int subchannel = FindSubchannelIndexFromGlobalBin(inconfig, inprop.bin_indices[i]);

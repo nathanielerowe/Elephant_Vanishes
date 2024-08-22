@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
     int nparams = 3;
 
     //Build chi^2 object
-    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.back().CV(), nparams);
+    PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.back().CV(), nparams, 1);
 
     // Bounds
     Eigen::VectorXd lb(3);
