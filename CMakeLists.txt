@@ -39,7 +39,7 @@ FetchContent_MakeAvailable(eigen)
 FetchContent_Declare(
     lbfgspp
     GIT_REPOSITORY https://github.com/yixuan/LBFGSpp.git 
-    GIT_TAG        v0.2.0
+    GIT_TAG        v0.3.0
     )
 FetchContent_MakeAvailable(lbfgspp)
 

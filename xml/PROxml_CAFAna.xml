@@ -111,7 +111,7 @@
          true_param_name       = "trueE" 
      true_L_name           = "trueL / 1000"
          pdg_name              = "truePDG"
-         additional_weight     = "1"
+         additional_weight     = "trueCC"
          />
 </MCFile>
 

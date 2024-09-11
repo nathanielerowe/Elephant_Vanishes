@@ -33,10 +33,10 @@ namespace PROfit {
 
         //get subchannel here from pdg. this will be added when we agree on convention.
         //for now everything is numu disappearance 3+1. 
-        // inphysparams[0] is delta-msq
+        // inphysparams[0] is log(delta-msq)
         // inphysparams[1] is sinsq2thmumu
 
-        float prob = inosc.Pmumu(inphysparams[0], inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx]);
+        float prob = inosc.Pmumu(std::pow(10, inphysparams[0]), inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx]);
         return prob;
     }
 

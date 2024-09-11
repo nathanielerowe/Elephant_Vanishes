@@ -16,6 +16,7 @@
 #include <Eigen/Dense>
 #include <Eigen/SVD>
 #include <Eigen/Core>
+#include <algorithm>
 #include <numeric>
 #include <random>
 #include <thread>
@@ -97,6 +98,7 @@ void fc_worker(fc_args args) {
         param.epsilon = 1e-6;
         param.max_iterations = 100;
         param.max_linesearch = 50;
+        param.delta = 1e-6;
         LBFGSpp::LBFGSBSolver<double> solver(param); 
         int nparams = systs.GetNSplines();
         PROchi chi("3plus1",&config,&prop,&systs,NULL, newSpec, nparams, systs.GetNSplines());
@@ -104,29 +106,42 @@ void fc_worker(fc_args args) {
         Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
         Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
 
-        // x will be overwritten to be the best point found
-        log<LOG_INFO>(L"%1% || Fit without oscillations") % __func__;
         double fx;
         int niter;
-        try {
-            niter = solver.minimize(chi, x, fx, lb, ub);
-        } catch(std::runtime_error &except) {
-            log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
-            continue;
-        }
+        std::vector<double> chi2s;
+        int nfit = 0;
+        do {
+            nfit++;
+            for(size_t i = 0; i < nparams; ++i)
+                x(i) = 0.3*d(rng);
+            // x will be overwritten to be the best point found
+            log<LOG_INFO>(L"%1% || Fit without oscillations") % __func__;
+            try {
+                niter = solver.minimize(chi, x, fx, lb, ub);
+            } catch(std::runtime_error &except) {
+                log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                continue;
+            }
+            chi2s.push_back(fx);
+        } while(chi2s.size() < 10 && nfit < 100);
+        if(chi2s.size() < 10) continue;
+        fx = *std::min_element(chi2s.begin(), chi2s.end());
 
         // With oscillations
         LBFGSpp::LBFGSBParam<double> param_osc;  
         param_osc.epsilon = 1e-6;
         param_osc.max_iterations = 100;
         param_osc.max_linesearch = 50;
+        param_osc.delta = 1e-6;
         LBFGSpp::LBFGSBSolver<double> solver_osc(param_osc); 
         nparams = 2 + systs.GetNSplines();
         PROchi chi_osc("3plus1",&config,&prop,&systs,&osc, newSpec, nparams, systs.GetNSplines());
         Eigen::VectorXd lb_osc = Eigen::VectorXd::Constant(nparams, -3.0);
-        lb_osc(0) = 0.01; lb_osc(1) = 0;
+        //lb_osc(0) = 0.01; lb_osc(1) = 0;
+        lb_osc(0) = -2; lb_osc(1) = 0;
         Eigen::VectorXd ub_osc = Eigen::VectorXd::Constant(nparams, 3.0);
-        ub_osc(0) = 100; ub_osc(1) = 1;
+        //ub_osc(0) = 100; ub_osc(1) = 1;
+        ub_osc(0) = 2; ub_osc(1) = 1;
         Eigen::VectorXd x_osc = Eigen::VectorXd::Constant(nparams, 0.0);
         x_osc(0) = 1.0;
 
@@ -134,12 +149,29 @@ void fc_worker(fc_args args) {
         log<LOG_INFO>(L"%1% || Fit with oscillations") % __func__;
         double fx_osc;
         int niter_osc;
-        try {
-            niter_osc = solver_osc.minimize(chi_osc, x_osc, fx_osc, lb_osc, ub_osc);
-        } catch(std::runtime_error &except) {
-            log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
-            continue;
-        }
+        chi2s.clear();
+        nfit = 0;
+        do {
+            nfit++;
+            for(size_t i = 0; i < nparams; ++i)
+                x_osc(i) = 0.3*d(rng);
+            //x_osc(0) = exp(x_osc(1));
+            //x_osc(0) = x_osc(0) < 0.01 ? 0.01 : x_osc(1) > 100 ? 100 : x_osc(0);
+            x_osc(0) = x_osc(0) < -2 ? -2 : x_osc(1) > 2 ? 2 : x_osc(0);
+            x_osc(1) += 0.5;
+            x_osc(1) /= 6;
+            x_osc(1) = x_osc(1) < 0 ? 0.0 : x_osc(1) > 1 ? 1.0 : x_osc(1);
+            try {
+                niter_osc = solver_osc.minimize(chi_osc, x_osc, fx_osc, lb_osc, ub_osc);
+            } catch(std::runtime_error &except) {
+                log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                continue;
+            }
+            chi2s.push_back(fx_osc);
+        } while(chi2s.size() < 10 && nfit < 100);
+        if(chi2s.size() < 10) continue;
+        fx_osc = *std::min_element(chi2s.begin(), chi2s.end());
+
         Eigen::VectorXd t = Eigen::VectorXd::Constant(throws.size(), 0);
         for(size_t i = 0; i < throws.size(); i++) t(i) = throws[i];
 
