@@ -100,6 +100,13 @@
     <allowlist>GENIEReWeight_SBN_v1_multisigma_ZExpA4CCQE</allowlist>
 </variation_list>
 
+<model tag="numudis">
+    <rule index="0" name="No Osc"/>
+    <rule index="1" name="Numu Dis"/>
+    <rule index="2" name="Nue App"/>
+</model>
+
+
 <MCFile treename="events/selectedNu" filename="selected_events.root" scale = "1.0" maxevents="50000" pot="1"> 
     <friend treename="events/multisimTree" filename="selected_events.root"/>
     <friend treename="events/multisigmaTree" filename="selected_events.root"/>
@@ -109,7 +116,8 @@
          associated_subchannel = "nu_SBND_numu_cc"
          oscillate             = "true"
          true_param_name       = "trueE" 
-     true_L_name           = "trueL / 1000"
+         model_rule            = "0"
+         true_L_name           = "trueL / 1000"
          pdg_name              = "truePDG"
          additional_weight     = "trueCC"
          />
