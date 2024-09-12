@@ -124,6 +124,7 @@ void fc_worker(fc_args args) {
             }
             chi2s.push_back(fx);
         } while(chi2s.size() < 10 && nfit < 100);
+
         if(chi2s.size() < 10) continue;
         fx = *std::min_element(chi2s.begin(), chi2s.end());
 
@@ -131,7 +132,7 @@ void fc_worker(fc_args args) {
         LBFGSpp::LBFGSBParam<double> param_osc;  
         param_osc.epsilon = 1e-6;
         param_osc.max_iterations = 100;
-        param_osc.max_linesearch = 50;
+        param_osc.max_linesearch = 250;
         param_osc.delta = 1e-6;
         LBFGSpp::LBFGSBSolver<double> solver_osc(param_osc); 
         nparams = 2 + systs.GetNSplines();
@@ -165,12 +166,17 @@ void fc_worker(fc_args args) {
                 niter_osc = solver_osc.minimize(chi_osc, x_osc, fx_osc, lb_osc, ub_osc);
             } catch(std::runtime_error &except) {
                 log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                //for(auto &t: throws) log<LOG_ERROR>(L"%1% || Throws, %2%") % __func__ % t;
                 continue;
             }
             chi2s.push_back(fx_osc);
         } while(chi2s.size() < 10 && nfit < 100);
         if(chi2s.size() < 10) continue;
         fx_osc = *std::min_element(chi2s.begin(), chi2s.end());
+        std::cout<<"Chis min: "<<fx_osc<<" || ";
+        for(auto &c: chi2s)std::cout<<c<<" ";
+        std::cout<<std::endl;
+        
 
         Eigen::VectorXd t = Eigen::VectorXd::Constant(throws.size(), 0);
         for(size_t i = 0; i < throws.size(); i++) t(i) = throws[i];

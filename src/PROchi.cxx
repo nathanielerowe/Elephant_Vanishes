@@ -60,15 +60,15 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     }
     float value = (delta.transpose())*inverted_collapsed_full_covariance*(delta) + dmsq_penalty + pull;
 
-
+    float dval = 1e-4;
     for (int i = 0; i < nparams; i++) {
         //Eigen::VectorXd tmpParams = last_param;
         Eigen::VectorXd tmpParams = param;
         int sgn = ((param(i) - last_param(i)) > 0) - ((param(i) - last_param(i)) < 0);
         if(!sgn) sgn = 1;
-        if(osc && i == 1 && param(i) < 1e-5) sgn = 1;
-        else if(osc && i == 1 && param(i) > 1 - 1e-5) sgn = -1;
-        tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * 1e-5;
+        if(osc && i == 1 && param(i) < dval) sgn = 1;
+        else if(osc && i == 1 && param(i) > 1 - dval) sgn = -1;
+        tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * dval;
         //Eigen::VectorXd subvector2 = tmpParams;
         Eigen::VectorXd subvector1 = tmpParams.segment(0, nparams - nsyst);
         std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
