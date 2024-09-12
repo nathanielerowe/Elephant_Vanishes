@@ -37,6 +37,8 @@ namespace PROfit {
         // inphysparams[1] is sinsq2thmumu
 
         float prob = inosc.Pmumu(std::pow(10, inphysparams[0]), inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx]);
+        //float prob = inosc.functions[inprop.model_rule[ev_idx]](std::pow(10, inphysparams[0]), inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx] );
+
         return prob;
     }
 
