@@ -802,6 +802,7 @@ namespace PROfit {
                     double true_param = branches[ib]->GetTrueValue<double>();
                     double baseline = branches[ib]->GetTrueL<double>();
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
+                    int model_rule = branches[ib]->GetModelRule();
 
                     log<LOG_DEBUG>(L"%1% || Reco and True E values: %2% and  %3%") % __func__ % reco_value % true_param;
 
@@ -814,7 +815,7 @@ namespace PROfit {
                     inprop.pdg.push_back(pdg_id);
                     inprop.truth.push_back((float)true_param);
                     inprop.baseline.push_back((float)baseline);
-
+                    inprop.model_rule.push_back((int)model_rule);
                     PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
 
                 }//end of branch 
@@ -1047,6 +1048,7 @@ namespace PROfit {
     	double mc_weight = branch->GetMonteCarloWeight();
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = FindGlobalTrueBin(inconfig, true_value, subchannel_index);
+        int model_rule = branch->GetModelRule();
         if(global_bin < 0 )  //out of range
             return;
         if(global_true_bin < 0)
@@ -1058,6 +1060,9 @@ namespace PROfit {
         inprop.pdg.push_back(pdg_id);
         inprop.truth.push_back((float)true_param);
         inprop.baseline.push_back((float)baseline);
+        inprop.model_rule.push_back((int)model_rule);
+
+
 
         for(int i = 0; i != total_num_sys; ++i){
             SystStruct& syst_obj = syst_vector[i];

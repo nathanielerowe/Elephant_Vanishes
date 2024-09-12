@@ -84,7 +84,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
     m_subchannel_plotnames.resize(100);
     m_subchannel_datas.resize(100);
     m_subchannel_names.resize(100);
-    m_subchannel_osc_patterns.resize(100);
     char *end;
 
     //Grab the first element. Note very little error checking here! make sure they exist.
@@ -344,20 +343,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     m_subchannel_datas[nchan].push_back(1);
                 }
 
-                //0 means dont oscillate, 11 means electron disapearance, -11 means antielectron dis..etc..
-                if(pSubChan->Attribute("osc"))
-                {
-                    m_has_oscillation_patterns = true;
-                    m_subchannel_osc_patterns.at(nchan).push_back(strtod(pSubChan->Attribute("osc"), &end));
-                }else{
-                    m_has_oscillation_patterns = false;
-                    m_subchannel_osc_patterns.at(nchan).push_back(0);
-                }
-
-                log<LOG_DEBUG>(L"%1% || Subchannel %2% with and osc pattern %3% and isdata %4%") % __func__ % m_subchannel_names.at(nchan).back().c_str() % m_subchannel_osc_patterns.at(nchan).back() % m_subchannel_datas.at(nchan).back();
-
-
-                pSubChan = pSubChan->NextSiblingElement("subchannel");
+                                pSubChan = pSubChan->NextSiblingElement("subchannel");
             }
 
             nchan++;
@@ -556,6 +542,9 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     TEMP_branch_variables.back()->SetOscillate(true);
                     TEMP_branch_variables.back()->SetTrueParam(pBranch->Attribute("true_param_name"));
                     TEMP_branch_variables.back()->SetPDG(pBranch->Attribute("pdg_name"));
+                    TEMP_branch_variables.back()->SetModelRule(pBranch->Attribute("model_rule"));
+                    log<LOG_DEBUG>(L"%1% || Branch has Model Rule  %2% ") % __func__ % pBranch->Attribute("model_rule") ;
+
                     if(pBranch->Attribute("true_L_name") != NULL){
                         //for oscillation that needs both E and L
                         TEMP_branch_variables.back()->SetTrueL(pBranch->Attribute("true_L_name"));
@@ -736,6 +725,54 @@ int PROconfig::LoadFromXML(const std::string &filename){
     }
 
 
+    //**** Model Loading ****
+
+    tinyxml2::XMLElement *pModel;
+    pModel   = doc.FirstChildElement("model");
+
+    if(pModel){
+        // Read in how many bins this channel uses
+
+        const char* model_tag= pModel->Attribute("tag");
+        if(model_tag==NULL){
+            m_model_tag = "null";
+        }else{
+            m_model_tag  = model_tag;
+        }
+
+        // Now loop over all this models rules
+
+        tinyxml2::XMLElement *pModelRule;
+        pModelRule = pModel->FirstChildElement("rule");
+        while(pModelRule){
+            const char* model_rule_name= pModelRule->Attribute("name");
+            if(model_rule_name==NULL){
+                log<LOG_ERROR>(L"%1% || ERROR: Model Rules need a name in xml.@ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+            }else{
+                m_model_rule_names.push_back(model_rule_name);
+            }
+
+
+            const char* model_rule_index= pModelRule->Attribute("index");
+            if(model_rule_index==NULL){
+                log<LOG_ERROR>(L"%1% || ERROR: Model Rules need an index in xml.@ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+            }else{
+                m_model_rule_index.push_back(strtod(model_rule_index, &end));
+            }
+
+            log<LOG_DEBUG>(L"%1% || Model Rule Name :  %2% and index %3% ") % __func__ % m_model_rule_names.back().c_str() % m_model_rule_index.back()  ;
+            pModelRule = pModelRule->NextSiblingElement("rule");
+        }
+    }//end model
+
+
+
+
+
     this->CalcTotalBins();
 
 
@@ -855,6 +892,9 @@ const std::vector<double>& PROconfig::GetChannelTrueBinEdges(int channel_index) 
 
     return m_channel_truebin_edges[channel_index];
 }
+
+
+
 //------------ Start of private function ------------------
 //------------ Start of private function ------------------
 //------------ Start of private function ------------------
@@ -948,7 +988,7 @@ void PROconfig::remove_unused_channel(){
         //update subchannel-related info
         m_num_subchannels.resize(m_num_channels);
         std::vector<std::vector<std::string >> temp_subchannel_names(m_num_channels), temp_subchannel_plotnames(m_num_channels);
-        std::vector<std::vector<int >> temp_subchannel_datas(m_num_channels), temp_subchannel_osc_patterns(m_num_channels);
+        std::vector<std::vector<int >> temp_subchannel_datas(m_num_channels), temp_subchannel_model_rules(m_num_channels);
         for(size_t i=0, chan_index = 0; i< m_channel_bool.size(); ++i){
             if(m_channel_bool.at(i)){
                 m_num_subchannels[chan_index]= 0;
@@ -958,7 +998,6 @@ void PROconfig::remove_unused_channel(){
                         temp_subchannel_names[chan_index].push_back(m_subchannel_names[i][j]);
                         temp_subchannel_plotnames[chan_index].push_back(m_subchannel_plotnames[i][j]);	
                         temp_subchannel_datas[chan_index].push_back(m_subchannel_datas[i][j]);
-                        temp_subchannel_osc_patterns[chan_index].push_back(m_subchannel_osc_patterns[i][j]);
 
                     }
                 }
@@ -971,7 +1010,6 @@ void PROconfig::remove_unused_channel(){
         m_subchannel_names = temp_subchannel_names;
         m_subchannel_plotnames = temp_subchannel_plotnames;
         m_subchannel_datas = temp_subchannel_datas;
-        m_subchannel_osc_patterns = temp_subchannel_osc_patterns;
 
     }
 
@@ -1092,7 +1130,7 @@ void PROconfig::remove_unused_files(){
 size_t PROconfig::find_equal_index(const std::vector<int>& input_vec, int val) const{
     auto pos_iter = std::lower_bound(input_vec.begin(), input_vec.end(), val);
     if(pos_iter == input_vec.end() || (*pos_iter) != val){
-	log<LOG_ERROR>(L"%1% || Input value: %2% does not exist in the vector! Max element available: %3%") % __func__ % val % input_vec.back();
+        log<LOG_ERROR>(L"%1% || Input value: %2% does not exist in the vector! Max element available: %3%") % __func__ % val % input_vec.back();
         log<LOG_ERROR>(L"Terminating.");
         exit(EXIT_FAILURE);
     }
@@ -1106,7 +1144,7 @@ size_t PROconfig::find_less_or_equal_index(const std::vector<int>& input_vec, in
     if(pos_iter == input_vec.end() || (*pos_iter) != val){
         return pos_iter - input_vec.begin() - 1;
     } else {
-	    return pos_iter - input_vec.begin();
+        return pos_iter - input_vec.begin();
     }
     return -1;
 }
@@ -1144,10 +1182,10 @@ void PROconfig::generate_index_map(){
                     int global_truebin_index = mode_truebin_start + detector_truebin_start + channel_truebin_start + sc*m_channel_num_truebins[ic];
 
                     m_map_fullname_subchannel_index[temp_name] = global_subchannel_index;
-		    m_vec_subchannel_index.push_back(global_subchannel_index);
-		    m_vec_channel_index.push_back(ic);
-		    m_vec_global_reco_index_start.push_back(global_bin_index);
-		    m_vec_global_true_index_start.push_back(global_truebin_index);
+                    m_vec_subchannel_index.push_back(global_subchannel_index);
+                    m_vec_channel_index.push_back(ic);
+                    m_vec_global_reco_index_start.push_back(global_bin_index);
+                    m_vec_global_true_index_start.push_back(global_truebin_index);
 
                     ++global_subchannel_index;
                 }

@@ -68,10 +68,11 @@ namespace PROfit{
         std::string true_param_name;
         std::string true_L_name;
         std::string pdg_name;
+        int model_rule;
 
 	//constructor
-        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false){}
-        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false){}
+        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9){}
+        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9){}
 
 	/* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
         std::shared_ptr<TTreeFormula> GetFormula(){
@@ -83,12 +84,16 @@ namespace PROfit{
 	void SetTrueParam(const std::string& true_parameter_def){ true_param_name = true_parameter_def; return;}
    	void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
 	void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
+    void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;} 
 
 	//Function: evaluate branch "pdg", and return the value. Usually it's the pdg value of the particle
 	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
 	template <typename T = int>
 	T GetTruePDG() const;
 
+	int GetModelRule() const{
+        return model_rule;
+    };
 
 	// Function: evaluate additional weight setup in the branch and return in floating precision 
 	// Note: if no additional weight is set, value of 1.0 will be returned.
@@ -119,7 +124,7 @@ namespace PROfit{
         template <typename T=double>
 	T GetTrueValue() const;
     };
-
+   
 
 
     /* 
@@ -142,10 +147,10 @@ namespace PROfit{
 
             //map from subchannel name/index to global index and channel index
             std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
-	    std::vector<int> m_vec_subchannel_index; //vector of global subchannel index, in increasing order
-	    std::vector<int> m_vec_channel_index;    //vector of corresponding channel index
-	    std::vector<int> m_vec_global_reco_index_start;  //vector of global reco bin index, in increasing order
-	    std::vector<int> m_vec_global_true_index_start;  //vector of global true bin index, in increasing order
+     	    std::vector<int> m_vec_subchannel_index; //vector of global subchannel index, in increasing order
+	        std::vector<int> m_vec_channel_index;    //vector of corresponding channel index
+	        std::vector<int> m_vec_global_reco_index_start;  //vector of global reco bin index, in increasing order
+	        std::vector<int> m_vec_global_true_index_start;  //vector of global true bin index, in increasing order
 
 
             //---- PRIVATE FUNCTION ------
@@ -227,11 +232,9 @@ namespace PROfit{
             std::vector<std::string> m_channel_plotnames; 		
             std::vector<std::string> m_channel_units; 		
 
-
             std::vector<std::vector<std::string >> m_subchannel_names; 
             std::vector<std::vector<std::string >> m_subchannel_plotnames; 
             std::vector<std::vector<int >> m_subchannel_datas; 
-            std::vector<std::vector<int> > m_subchannel_osc_patterns; 
 
             int m_num_bins_detector_block;
             int m_num_bins_mode_block;
@@ -249,7 +252,6 @@ namespace PROfit{
             Eigen::MatrixXd collapsing_matrix;
 
             //This section entirely for montecarlo generation of a covariance matrix or PROspec 
-            //For generating a covariance matrix from scratch, this contains the number of montecarlos (weights in weight vector) and their names.
             bool m_write_out_variation;
             bool m_form_covariance;
             std::string m_write_out_tag;
@@ -281,6 +283,11 @@ namespace PROfit{
 
             //FIX skepic
             std::vector<std::string> systematic_name;
+
+            //Some model infomation
+            std::string m_model_tag;
+            std::vector<int> m_model_rule_index;
+            std::vector<std::string> m_model_rule_names;
 
 
             //----- PUBLIC FUNCTIONS ------
@@ -340,6 +347,8 @@ namespace PROfit{
 
             /* Function: given channel index, return list of bin edges for this channel */
             const std::vector<double>& GetChannelTrueBinEdges(int channel_index) const;
+
+
 
     };
 
