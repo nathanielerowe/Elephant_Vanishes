@@ -37,9 +37,9 @@ namespace PROfit {
             Spline GrabSpline(const std::string& sys) const;
 
             /* Function: given systematic name, return type of systematic */
-            SystType GetSystType(const std::string& syst);
+            SystType GetSystType(const std::string& syst) const;
 
-            size_t GetNSplines() { return splines.size(); }
+            size_t GetNSplines() const { return splines.size(); }
 
             //----- Spline and Covariance matrix related ---
             //----- Spline and Covariance matrix related ---
@@ -93,11 +93,11 @@ namespace PROfit {
             float GetSplineShift(std::string name, float shift, int bin) const;
 
             /* Function: Get cv spectrum shifted using spline */
-            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift);
-            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, int syst_num, float shift);
-            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts);
-            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<int> syst_nums, std::vector<float> shifts);
-            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<float> shifts);
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::string name, float shift) const;
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, int syst_num, float shift) const;
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts) const;
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<int> syst_nums, std::vector<float> shifts) const;
+            PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<float> shifts) const;
 
             /* the fractional covariance that is the sum of all during constructor*/
             Eigen::MatrixXd fractional_covariance;
