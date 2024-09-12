@@ -41,6 +41,8 @@ namespace PROfit {
 
             size_t GetNSplines() const { return splines.size(); }
 
+            size_t GetNSplines() { return splines.size(); }
+
             //----- Spline and Covariance matrix related ---
             //----- Spline and Covariance matrix related ---
 
@@ -98,6 +100,7 @@ namespace PROfit {
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<std::string> names, std::vector<float> shifts) const;
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<int> syst_nums, std::vector<float> shifts) const;
             PROspec GetSplineShiftedSpectrum(const PROconfig& config, const PROpeller& prop, std::vector<float> shifts) const;
+
 
             /* the fractional covariance that is the sum of all during constructor*/
             Eigen::MatrixXd fractional_covariance;

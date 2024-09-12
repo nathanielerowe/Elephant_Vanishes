@@ -109,15 +109,6 @@ int main(int argc, char* argv[])
     for(size_t i = 0; i < systs.GetNSplines(); i++)
         throws.push_back(d(gen));
     PROspec newSpec = PROspec::PoissonVariation(systs.GetSplineShiftedSpectrum(myConf, myprop, throws));
-    //std::normal_distribution<double> d;
-    //std::vector<double> throws;
-    //for(size_t i = 0; i < data.size(); i++)
-    //    throws.push_back(d(gen));
-    //Eigen::VectorXd toMult = Eigen::VectorXd::Map(throws.data(), throws.size());
-    //Eigen::LLT<Eigen::MatrixXd> llt(systs.fractional_covariance);
-    //auto err = systsstructs.back().CV().Error();
-    //auto con = systsstructs.back().CV().Spec();
-    //PROspec newSpec = PROspec(con + Eigen::VectorXd(llt.matrixL() * toMult), err);
 
     std::cout << "CV: " << std::endl;
     systsstructs.back().CV().Print();
@@ -143,12 +134,10 @@ int main(int argc, char* argv[])
     int niter;
     try {
         niter = solver.minimize(chi, x, fx, lb, ub);
-        //niter = solver.minimize(chi, x, fx);
     } catch(std::runtime_error &except) {
         log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
     }
 
-    //log<LOG_DEBUG>(L"%1% || FINISHED MINIMIZING: NITERATIONS %2%  and MINIMUM PARAMS  %3% %4% %5% %6% %7% %8%" ) % __func__ % niter % x[0] % x[1] % x[2] % x[3] % x[4] % x[5];
 
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n" << x.transpose() << std::endl;
