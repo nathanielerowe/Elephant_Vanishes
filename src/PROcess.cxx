@@ -10,7 +10,7 @@ namespace PROfit {
 
         for(size_t i = 0; i<inprop.truth.size(); ++i){
 
-            float oscw  = inosc ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
+            float oscw  = physparams.size() != 0 ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
             float add_w = inprop.added_weights[i]; 
 
             const int subchannel = FindSubchannelIndexFromGlobalBin(inconfig, inprop.bin_indices[i]);
