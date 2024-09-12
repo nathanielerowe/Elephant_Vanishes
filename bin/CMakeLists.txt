@@ -14,6 +14,11 @@ target_include_directories(PROfc PRIVATE ${HIGHFIVE_INCLUDE_DIR})
 target_compile_features(PROfc PRIVATE cxx_std_14)
 target_link_libraries(PROfc PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
+add_executable(PROsurf PROsurf.cxx )
+target_include_directories(PROsurf PRIVATE ${HIGHFIVE_INCLUDE_DIR})
+target_compile_features(PROsurf PRIVATE cxx_std_14)
+target_link_libraries(PROsurf PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
+
 if(MPI_ENABLE)
     add_executable(PROmfa4u PROmfa4u.cxx)
     target_compile_features(PROmfa4u PRIVATE cxx_std_14)
