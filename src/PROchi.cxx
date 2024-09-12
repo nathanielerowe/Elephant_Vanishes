@@ -68,7 +68,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
         if(!sgn) sgn = 1;
         if(osc && i == 1 && param(i) < 1e-5) sgn = 1;
         else if(osc && i == 1 && param(i) > 1 - 1e-5) sgn = -1;
-        tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * 1e-5;
+        tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * 1e-4;
         //Eigen::VectorXd subvector2 = tmpParams;
         Eigen::VectorXd subvector1 = tmpParams.segment(0, nparams - nsyst);
         std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
