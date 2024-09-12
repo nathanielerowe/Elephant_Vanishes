@@ -27,6 +27,33 @@
     <allowlist>kplus_Flux</allowlist>  
     <allowlist>kminus_Flux</allowlist>  
     <allowlist>kzero_Flux</allowlist> 
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_CoulombCCQE</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_FSI_N_VariationResponse</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_FSI_pi_VariationResponse</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_NCELVariationResponse</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_CCRESVariationResponse</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_NCRESVariationResponse</allowlist>-->
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC2pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC2pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC2pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC2pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC2pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC2pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC2pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC1pi</allowlist>
+    <allowlist>GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC2pi</allowlist>
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_NormCCMEC</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_NormNCMEC</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_RPA_CCQE</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisim_ZExpAVariationResponse</allowlist>-->
     <allowlist>GENIEReWeight_SBN_v1_multisigma_AhtBY</allowlist>
     <allowlist>GENIEReWeight_SBN_v1_multisigma_BhtBY</allowlist>
     <allowlist>GENIEReWeight_SBN_v1_multisigma_CoulombCCQE</allowlist>
@@ -48,22 +75,22 @@
     <allowlist>GENIEReWeight_SBN_v1_multisigma_MaNCRES</allowlist>
     <allowlist>GENIEReWeight_SBN_v1_multisigma_MvCCRES</allowlist>
     <allowlist>GENIEReWeight_SBN_v1_multisigma_MvNCRES</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnCC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnCC2pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnNC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnNC2pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpCC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpCC2pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpNC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpNC2pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnCC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnCC2pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnNC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnNC2pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpCC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpCC2pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpNC1pi</allowlist>
-    <allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpNC2pi</allowlist>
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnCC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnCC2pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnNC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarnNC2pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpCC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpCC2pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpNC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvbarpNC2pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnCC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnCC2pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnNC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvnNC2pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpCC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpCC2pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpNC1pi</allowlist>-->
+    <!--<allowlist>GENIEReWeight_SBN_v1_multisigma_NonRESBGvpNC2pi</allowlist>-->
     <allowlist>GENIEReWeight_SBN_v1_multisigma_NormCCMEC</allowlist>
     <allowlist>GENIEReWeight_SBN_v1_multisigma_NormNCMEC</allowlist>
     <allowlist>GENIEReWeight_SBN_v1_multisigma_RPA_CCQE</allowlist>
@@ -84,7 +111,7 @@
          true_param_name       = "trueE" 
      true_L_name           = "trueL / 1000"
          pdg_name              = "truePDG"
-         additional_weight     = "1"
+         additional_weight     = "trueCC"
          />
 </MCFile>
 
