@@ -116,7 +116,7 @@
          associated_subchannel = "nu_SBND_numu_cc"
          oscillate             = "true"
          true_param_name       = "trueE" 
-         model_rule            = "0"
+         model_rule            = "1"
          true_L_name           = "trueL / 1000"
          pdg_name              = "truePDG"
          additional_weight     = "trueCC"

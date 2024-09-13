@@ -11,6 +11,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cmath>
+#include <functional>
 
 // TINYXML2
 #include "tinyxml2.h"
@@ -34,7 +35,13 @@ namespace PROfit{
         private:
         public:
 
-            PROsc(){};
+            PROsc(){
+
+            model_functions.push_back([this](float a, float b, float c, float d) {return 1.0; });
+            model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmumu(a, b, c, d); });
+            model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmue(a, b, c, d); });
+
+            };
 
             /* Function: 3+1 numu->nue apperance prob in SBL approx */
             float Pmue(float dmsq, float sinsq2thmue, float enu, float baseline) const{
@@ -69,6 +76,10 @@ namespace PROfit{
 
                 return prob;
             }
+
+        std::vector<std::function<float(float,float,float,float)>> model_functions;
+
+
     };
 
 }
