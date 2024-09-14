@@ -11,6 +11,7 @@
 #include "TFile.h"
 #include "TCanvas.h"
 #include "TH1D.h"
+#include "THStack.h"
 
 // EIGEN
 #include <Eigen/Dense>
@@ -72,6 +73,8 @@ namespace PROfit{
             /* Function: save TH1Ds of all subchannels into a root file */
             void toROOT(const PROconfig& inconfig, const std::string& output_name);
 
+            /*Function: Create a pdf of all channels, with stacked subchannels*/
+            void plotSpectrum(const PROconfig& inconfig, const std::string& output_name);
 
             /* Function: fill given bin with provided weight 
              * Note: 

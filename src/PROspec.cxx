@@ -253,3 +253,44 @@ Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, co
     return ratio_spec;
 }
 
+void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_name){
+
+    int n_subplots = inconfig.m_num_channels*inconfig.m_num_modes*inconfig.m_num_detectors;
+    TCanvas *c =  new TCanvas(output_name.c_str(), output_name.c_str(), 800*n_subplots, 600);
+    c->Divide(n_subplots,1);
+
+    std::vector<TH1D> hists;
+    std::vector<THStack*> stacks;
+
+    size_t global_subchannel_index = 0;
+    size_t global_channel_index = 0;
+    for(size_t im = 0; im < inconfig.m_num_modes; im++){
+        for(size_t id =0; id < inconfig.m_num_detectors; id++){
+            for(size_t ic = 0; ic < inconfig.m_num_channels; ic++){
+                c->cd(global_channel_index);
+               
+                stacks.emplace_back(new THStack((output_name+std::to_string(global_channel_index)).c_str(),(output_name+std::to_string(global_channel_index)).c_str()));
+
+                for(size_t sc = 0; sc < inconfig.m_num_subchannels[ic]; sc++){
+                    const std::string& subchannel_name  = inconfig.m_fullnames[global_subchannel_index];
+                        
+                    hists.emplace_back(toTH1D(inconfig,global_subchannel_index));
+            
+                    stacks.back()->Add(&(hists.back()));
+
+                    ++global_subchannel_index;
+                }//end subchan
+
+                stacks.back()->Draw("hist");
+
+                ++global_channel_index;
+            }//end chan
+        }//end det
+    }//end mode
+
+    c->SaveAs(("PROplot_"+output_name+".pdf").c_str(),"pdf");
+
+    for(auto&s:stacks) delete s;
+    delete c;
+    return;
+}
