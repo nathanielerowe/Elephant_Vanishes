@@ -260,7 +260,7 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
     log<LOG_DEBUG>(L"%1% || Creatign canvas with  %2% subplots") % __func__ % n_subplots;
 
     TCanvas *c =  new TCanvas(output_name.c_str(), output_name.c_str(), 800*n_subplots, 600);
-    c->Divide(1,n_subplots);
+    c->Divide(n_subplots,1);
 
     std::vector<std::unique_ptr<TH1D>> hists;  
     std::vector<std::unique_ptr<THStack>> stacks;
@@ -298,12 +298,6 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
                     htmp->SetLineColor(kBlack);
                     htmp->SetFillColor(rcolor);
 
-                    if(sc==0){
-                        htmp->SetTitle(inconfig.m_channel_names[ic].c_str());
-                        htmp->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
-                        htmp->GetYaxis()->SetTitle("Events");
-                    }
-
 
                     hists.push_back(std::move(htmp));  // Move the unique_ptr into the vector
 
@@ -329,6 +323,10 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
                 stacks.back()->Draw("hist");
                 log<LOG_DEBUG>(L"%1% || Legend Draw ") % __func__ ;
                 legs.back()->Draw();
+
+                stacks.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
+                stacks.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
+                stacks.back()->GetYaxis()->SetTitle("Events");
 
                 ++global_channel_index;
             }//end chan
