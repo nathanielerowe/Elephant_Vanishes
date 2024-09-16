@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 
     // Define options
     std::string xmlname = "NULL.xml"; 
-    int maxevents = 100;
+    int maxevents = 50000;
     size_t nfit = 1, nthread = 1;
     //Define a filename to save chisq values in
     std::string filename;
