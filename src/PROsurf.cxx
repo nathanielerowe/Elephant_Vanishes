@@ -44,9 +44,8 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             param.delta = 1e-6;
             LBFGSpp::LBFGSBSolver<double> solver(param); 
             int nparams = systs.GetNSplines();
-            double logsinsq2tmm = edges_x(i);
-            double logdmsq = edges_y(j);
-            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), logdmsq, logsinsq2tmm);
+            std::vector<float> physics_params = {edges_y(i),edges_x(i)};//deltam^2, sin^22thetamumu
+            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);

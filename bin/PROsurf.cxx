@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     //Define the model (currently 3+1 SBL)
     PROsc osc;
 
-    size_t nbinsx = 10, nbinsy = 10;
+    size_t nbinsx = 40, nbinsy = 40;
 
     PROspec data = systsstructs.back().CV();
 

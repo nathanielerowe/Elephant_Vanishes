@@ -33,8 +33,7 @@ namespace PROfit{
             const PROsyst *syst; 
             const PROsc *osc;
             const PROspec data;
-            double logdmsq;
-            double logsinsq2tmm;
+            std::vector<float> physics_param_fixed;
             int nparams;
             int nsyst;
 
@@ -44,7 +43,7 @@ namespace PROfit{
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, double logdmsq = 0, double logsinsq2tmm = 0);
+            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
             float operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient);
