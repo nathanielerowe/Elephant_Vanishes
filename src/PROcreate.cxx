@@ -1062,7 +1062,7 @@ namespace PROfit {
         inprop.truth.push_back((float)true_param);
         inprop.baseline.push_back((float)baseline);
         inprop.model_rule.push_back((int)model_rule);
-
+        inprop.true_bin_indices.push_back((int)global_true_bin);
 
 
         for(int i = 0; i != total_num_sys; ++i){
