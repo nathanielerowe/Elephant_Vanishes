@@ -1,0 +1,116 @@
+<?xml version="1.0" ?>
+
+<!--specifies neutrino mode or antineutrino mode-->
+<mode name="nu" />
+<detector name="SBND" />
+
+<channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
+    <bins edges="0.3 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.25 1.5 2.0 2.5 3.0"/>
+    <truebins min="0" max="2" nbins="200"/>
+    <subchannel name="cc" plotname="#nu_{#mu} CC" color="#FF6961"/>
+    <subchannel name="nc" plotname="#nu_{#mu} NC" color = "#77DD77" />
+    <subchannel name="other" plotname="Other" color = "#AEC6CF" />
+</channel>
+
+<channel name="nue" unit="Reconstructed Neutrino Energy [GeV]">
+    <bins edges="0.3 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.25 1.5 2.0 2.5 3.0"/>
+    <truebins min="0" max="2" nbins="200"/>
+    <subchannel name="cc" plotname="#nu_e CC" color = "#FFB347" />
+    <subchannel name="nc" plotname="#nu_e NC" color = "#66CDAA" />
+</channel>
+
+
+<plotpot value="1"/>
+
+<variation_list>
+    <allowlist>expskin_Flux</allowlist>  
+    <allowlist>GENIEReWeight_SBN_v1_multisigma_ZExpA4CCQE</allowlist>
+</variation_list>
+
+<model tag="numudis">
+    <rule index="0" name="No Osc"/>
+    <rule index="1" name="Numu Dis"/>
+    <rule index="2" name="Nue App"/>
+</model>
+
+<MCFile treename="events/selectedNu" filename="selected_events_dependentdetsysts.root" scale = "1.0" maxevents="5000" pot="1"> 
+    <friend treename="events/multisimTree" filename="selected_events_dependentdetsysts.root"/>
+    <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
+     <branch
+         name                  = "recoE"
+         type                  = "double"
+         associated_subchannel = "nu_SBND_numu_cc"
+         oscillate             = "true"
+         model_rule            = "1"
+         true_param_name       = "trueE" 
+         true_L_name           = "trueL / 1000"
+         pdg_name              = "truePDG"
+         additional_weight     = "1"
+         />
+</MCFile>
+
+<MCFile treename="events/selectedNu" filename="selected_events_dependentdetsysts.root" scale = "1.0" maxevents="5000" pot="1"> 
+    <friend treename="events/multisimTree" filename="selected_events_dependentdetsysts.root"/>
+    <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
+     <branch
+         name                  = "recoE"
+         type                  = "double"
+         associated_subchannel = "nu_SBND_numu_nc"
+         oscillate             = "true"
+         model_rule            = "1"
+         true_param_name       = "trueE" 
+         true_L_name           = "trueL / 1000"
+         pdg_name              = "truePDG"
+         additional_weight     = "0.3"
+         />
+</MCFile>
+
+<MCFile treename="events/selectedNu" filename="selected_events_dependentdetsysts.root" scale = "1.0" maxevents="5000" pot="1"> 
+    <friend treename="events/multisimTree" filename="selected_events_dependentdetsysts.root"/>
+    <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
+     <branch
+         name                  = "recoE"
+         type                  = "double"
+         associated_subchannel = "nu_SBND_numu_other"
+         oscillate             = "true"
+         model_rule            = "1"
+         true_param_name       = "trueE" 
+         true_L_name           = "trueL / 1000"
+         pdg_name              = "truePDG"
+         additional_weight     = "0.05"
+         />
+</MCFile>
+
+<MCFile treename="events/selectedNu" filename="selected_events_dependentdetsysts.root" scale = "1.0" maxevents="500" pot="1"> 
+    <friend treename="events/multisimTree" filename="selected_events_dependentdetsysts.root"/>
+    <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
+     <branch
+         name                  = "recoE"
+         type                  = "double"
+         associated_subchannel = "nu_SBND_nue_nc"
+         oscillate             = "true"
+         model_rule            = "1"
+         true_param_name       = "trueE" 
+         true_L_name           = "trueL / 1000"
+         pdg_name              = "truePDG"
+         additional_weight     = "0.5"
+         />
+</MCFile>
+
+<MCFile treename="events/selectedNu" filename="selected_events_dependentdetsysts.root" scale = "1.0" maxevents="500" pot="1"> 
+    <friend treename="events/multisimTree" filename="selected_events_dependentdetsysts.root"/>
+    <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
+     <branch
+         name                  = "recoE"
+         type                  = "double"
+         associated_subchannel = "nu_SBND_nue_cc"
+         oscillate             = "true"
+         model_rule            = "1"
+         true_param_name       = "trueE" 
+         true_L_name           = "trueL / 1000"
+         pdg_name              = "truePDG"
+         additional_weight     = "0.55"
+         />
+</MCFile>
+
+
