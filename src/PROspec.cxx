@@ -253,3 +253,88 @@ Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, co
     return ratio_spec;
 }
 
+void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_name){
+
+    bool div_bin = true;
+    int n_subplots = inconfig.m_num_channels*inconfig.m_num_modes*inconfig.m_num_detectors;
+    log<LOG_DEBUG>(L"%1% || Creatign canvas with  %2% subplots") % __func__ % n_subplots;
+
+    TCanvas *c =  new TCanvas(output_name.c_str(), output_name.c_str(), 800*n_subplots, 600);
+    c->Divide(n_subplots,1);
+
+    std::vector<std::unique_ptr<TH1D>> hists;  
+    std::vector<std::unique_ptr<THStack>> stacks;
+    std::vector<std::unique_ptr<TLegend>> legs;
+
+    size_t global_subchannel_index = 0;
+    size_t global_channel_index = 0;
+    for(size_t im = 0; im < inconfig.m_num_modes; im++){
+        for(size_t id =0; id < inconfig.m_num_detectors; id++){
+            for(size_t ic = 0; ic < inconfig.m_num_channels; ic++){
+                TPad *p = (TPad*)c->cd(global_channel_index+1);
+               
+                std::unique_ptr<THStack> s = std::make_unique<THStack>((output_name+std::to_string(global_channel_index)).c_str(),(output_name+std::to_string(global_channel_index)).c_str());
+                stacks.push_back(std::move(s));
+
+                std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
+                leg->SetFillStyle(0);
+                leg->SetLineWidth(0);
+                legs.push_back(std::move(leg));
+            
+
+                for(size_t sc = 0; sc < inconfig.m_num_subchannels[ic]; sc++){
+                    const std::string& subchannel_name  = inconfig.m_fullnames[global_subchannel_index];
+                    const std::string& color = inconfig.m_subchannel_colors[ic][sc];
+                    int rcolor = 0;
+                    if(color=="NONE"){
+                        rcolor = kRed-7; 
+                    }else{
+                        rcolor = inconfig.HexToROOTColor(color);
+                    }
+
+
+                    std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(toTH1D(inconfig, global_subchannel_index));
+                    htmp->SetLineWidth(1);
+                    htmp->SetLineColor(kBlack);
+                    htmp->SetFillColor(rcolor);
+
+
+                    hists.push_back(std::move(htmp));  // Move the unique_ptr into the vector
+
+                    log<LOG_DEBUG>(L"%1% || Printot %2% %3% %4% %5% %6% : Integral %7% ") % __func__ % global_channel_index % global_subchannel_index % subchannel_name.c_str() % sc % ic % hists.back()->Integral();
+            
+                    stacks.back()->Add(hists.back().get());
+                    legs.back()->AddEntry(hists.back().get(), inconfig.m_subchannel_plotnames[ic][sc].c_str() ,"f");
+
+
+                    ++global_subchannel_index;
+                }//end subchan
+
+
+                if(div_bin){
+                    TList *stlists = (TList*)stacks.back()->GetHists();
+                    for(const auto&& obj: *stlists){
+                        //((TH1*)obj)->Scale(1.0,"width");
+                        log<LOG_DEBUG>(L"%1% || Stack contains  %2% ") % __func__ % obj->GetName();
+                    }
+                }
+
+                log<LOG_DEBUG>(L"%1% || Stack Draw ") % __func__ ;
+                stacks.back()->Draw("hist");
+                log<LOG_DEBUG>(L"%1% || Legend Draw ") % __func__ ;
+                legs.back()->Draw();
+
+                stacks.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
+                stacks.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
+                stacks.back()->GetYaxis()->SetTitle("Events");
+
+                ++global_channel_index;
+            }//end chan
+        }//end det
+    }//end mode
+
+    c->SaveAs(("PROplot_"+output_name+".pdf").c_str(),"pdf");
+
+    delete c;
+    return;
+}

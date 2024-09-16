@@ -16,6 +16,7 @@
 #include <climits>
 #include <cstdlib>
 #include <numeric>
+#include <stdexcept>
 
 // TINYXML2
 #include "tinyxml2.h"
@@ -30,7 +31,7 @@
 
 //ROOT
 #include "TTreeFormula.h"
-
+#include "TColor.h"
 
 /*eweight_type here to switch between uboone style "double" and SBNcode style "float"  */
 #define TYPE_FLOAT
@@ -70,62 +71,62 @@ namespace PROfit{
         std::string pdg_name;
         int model_rule;
 
-	//constructor
+        //constructor
         BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9){}
         BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9){}
 
-	/* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
+        /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
         std::shared_ptr<TTreeFormula> GetFormula(){
             return branch_formula;
         }
 
         void SetOscillate(bool inbool){ oscillate = inbool; return;}
         bool GetOscillate() const { return oscillate;}
-	void SetTrueParam(const std::string& true_parameter_def){ true_param_name = true_parameter_def; return;}
-   	void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
-	void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
-    void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;} 
+        void SetTrueParam(const std::string& true_parameter_def){ true_param_name = true_parameter_def; return;}
+        void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
+        void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
+        void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;} 
 
-	//Function: evaluate branch "pdg", and return the value. Usually it's the pdg value of the particle
-	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-	template <typename T = int>
-	T GetTruePDG() const;
+        //Function: evaluate branch "pdg", and return the value. Usually it's the pdg value of the particle
+        //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+        template <typename T = int>
+            T GetTruePDG() const;
 
-	int GetModelRule() const{
-        return model_rule;
-    };
+        int GetModelRule() const{
+            return model_rule;
+        };
 
-	// Function: evaluate additional weight setup in the branch and return in floating precision 
-	// Note: if no additional weight is set, value of 1.0 will be returned.
-	inline
-	double GetMonteCarloWeight() const{
-	    if(branch_monte_carlo_weight_formula){ 
-		branch_monte_carlo_weight_formula->GetNdata();
-		return (double)branch_monte_carlo_weight_formula->EvalInstance();
-	    }
-	    return 1.0;
-	}
+        // Function: evaluate additional weight setup in the branch and return in floating precision 
+        // Note: if no additional weight is set, value of 1.0 will be returned.
+        inline
+            double GetMonteCarloWeight() const{
+                if(branch_monte_carlo_weight_formula){ 
+                    branch_monte_carlo_weight_formula->GetNdata();
+                    return (double)branch_monte_carlo_weight_formula->EvalInstance();
+                }
+                return 1.0;
+            }
 
 
         //Function: evaluate branch 'name' and return the value. Usually its reconstructed quantity
-	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-	template <typename T=double>
-        T GetValue() const;
+        //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+        template <typename T=double>
+            T GetValue() const;
 
 
         //Function: evaluate formula 'true_L_name' and return the value. Usually it's true baseline.
-	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+        //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
         template <typename T=double>
-	T GetTrueL() const;
+            T GetTrueL() const;
 
 
         //Function: evaluate formula 'true_param_name' and return the value. Usually it's true energy  
-	//Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
+        //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
         template <typename T=double>
-	T GetTrueValue() const;
+            T GetTrueValue() const;
     };
-   
 
+ 
 
     /* 
      * Class: Primary booking class for loading in info from XML and saving all information on mode_detector_channel_subchannel information.
@@ -147,10 +148,10 @@ namespace PROfit{
 
             //map from subchannel name/index to global index and channel index
             std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
-     	    std::vector<int> m_vec_subchannel_index; //vector of global subchannel index, in increasing order
-	        std::vector<int> m_vec_channel_index;    //vector of corresponding channel index
-	        std::vector<int> m_vec_global_reco_index_start;  //vector of global reco bin index, in increasing order
-	        std::vector<int> m_vec_global_true_index_start;  //vector of global true bin index, in increasing order
+            std::vector<int> m_vec_subchannel_index; //vector of global subchannel index, in increasing order
+            std::vector<int> m_vec_channel_index;    //vector of corresponding channel index
+            std::vector<int> m_vec_global_reco_index_start;  //vector of global reco bin index, in increasing order
+            std::vector<int> m_vec_global_true_index_start;  //vector of global true bin index, in increasing order
 
 
             //---- PRIVATE FUNCTION ------
@@ -172,17 +173,17 @@ namespace PROfit{
             void generate_index_map();
 
 
-	    /* Function: given an input vector that's sorted in ascending order, and input val, return the index of elmeent which is equal to val
- 	     * Note: it gives exception when input value is not present in the vector 
-	     */
-	    size_t find_equal_index(const std::vector<int>& input_vec, int val) const;
+            /* Function: given an input vector that's sorted in ascending order, and input val, return the index of elmeent which is equal to val
+             * Note: it gives exception when input value is not present in the vector 
+             */
+            size_t find_equal_index(const std::vector<int>& input_vec, int val) const;
 
-	    /* Function: given an input vector that's sorted in ascending order, and input val, return the index of the closest element which is equal or smaller than val */
-	    size_t find_less_or_equal_index(const std::vector<int>& input_vec, int val) const;
+            /* Function: given an input vector that's sorted in ascending order, and input val, return the index of the closest element which is equal or smaller than val */
+            size_t find_less_or_equal_index(const std::vector<int>& input_vec, int val) const;
 
             /* Function: given global bin index, return associated global subchannel index 
- 	     * Note: not used anymore 
- 	     */
+             * Note: not used anymore 
+             */
             int find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const;
 
 
@@ -234,6 +235,7 @@ namespace PROfit{
 
             std::vector<std::vector<std::string >> m_subchannel_names; 
             std::vector<std::vector<std::string >> m_subchannel_plotnames; 
+            std::vector<std::vector<std::string >> m_subchannel_colors; 
             std::vector<std::vector<int >> m_subchannel_datas; 
 
             int m_num_bins_detector_block;
@@ -348,52 +350,53 @@ namespace PROfit{
             /* Function: given channel index, return list of bin edges for this channel */
             const std::vector<double>& GetChannelTrueBinEdges(int channel_index) const;
 
-
+            /* Function: Hex to int*/
+            int HexToROOTColor(const std::string& hexColor) const;
 
     };
 
 
-//----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
-//----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
-//----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
+    //----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
+    //----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
+    //----------- BELOW: Definition of BranchVariable templated member function. Please don't move it elsewhere !! ---------------
 
-template <typename T>
-T BranchVariable::GetTruePDG() const{
-     if(branch_true_pdg_formula == NULL) return static_cast<T>(0);
-    else{
-        branch_true_pdg_formula->GetNdata();
-        return static_cast<T>(branch_true_pdg_formula->EvalInstance());
-    }
-}
+    template <typename T>
+        T BranchVariable::GetTruePDG() const{
+            if(branch_true_pdg_formula == NULL) return static_cast<T>(0);
+            else{
+                branch_true_pdg_formula->GetNdata();
+                return static_cast<T>(branch_true_pdg_formula->EvalInstance());
+            }
+        }
 
 
-template <typename T>
-T BranchVariable::GetValue() const{
-    if(branch_formula == NULL) return static_cast<T>(0);
-    else{
-        branch_formula->GetNdata();
-        return static_cast<T>(branch_formula->EvalInstance());
-    }
-}
+    template <typename T>
+        T BranchVariable::GetValue() const{
+            if(branch_formula == NULL) return static_cast<T>(0);
+            else{
+                branch_formula->GetNdata();
+                return static_cast<T>(branch_formula->EvalInstance());
+            }
+        }
 
-template <typename T>
-T BranchVariable::GetTrueL() const{
-    if(branch_true_L_formula == NULL) return static_cast<T>(0);
-    else{
-        branch_true_L_formula->GetNdata();
-        return static_cast<T>(branch_true_L_formula->EvalInstance());
-    }
-}
+    template <typename T>
+        T BranchVariable::GetTrueL() const{
+            if(branch_true_L_formula == NULL) return static_cast<T>(0);
+            else{
+                branch_true_L_formula->GetNdata();
+                return static_cast<T>(branch_true_L_formula->EvalInstance());
+            }
+        }
 
-template <typename T>
-T BranchVariable::GetTrueValue() const{
-    if(branch_true_value_formula == NULL) return static_cast<T>(0);
-    else{
-        branch_true_value_formula->GetNdata();
-        return static_cast<T>(branch_true_value_formula->EvalInstance());
-    }
-}
-//----------- ABOVE: Definition of BranchVariable templated member function. END ---------------
+    template <typename T>
+        T BranchVariable::GetTrueValue() const{
+            if(branch_true_value_formula == NULL) return static_cast<T>(0);
+            else{
+                branch_true_value_formula->GetNdata();
+                return static_cast<T>(branch_true_value_formula->EvalInstance());
+            }
+        }
+    //----------- ABOVE: Definition of BranchVariable templated member function. END ---------------
 
 }
 #endif
