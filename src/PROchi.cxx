@@ -57,10 +57,6 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
     float pull = subvector2.array().square().sum(); 
     float dmsq_penalty = 0;
-    if(osc) {
-    //    dmsq_penalty = param(0) < 0.1 ? std::pow(param(0) - 0.1, 2)/0.01 :
-    //                         param(0) > 20  ? std::pow(param(0) - 20, 2)/100 : 0;
-    }
     float value = (delta.transpose())*inverted_collapsed_full_covariance*(delta) + dmsq_penalty + pull;
 
     float dval = 1e-4;

@@ -15,6 +15,7 @@ namespace PROfit {
 
             const int subchannel = FindSubchannelIndexFromGlobalBin(inconfig, inprop.bin_indices[i]);
             const int true_bin = FindGlobalTrueBin(inconfig, inprop.baseline[i] / inprop.truth[i], subchannel);
+            
             float systw = 1;
             for(size_t j = 0; j < inshifts.size(); ++j) {
                 systw *= insyst.GetSplineShift(j, inshifts[j], true_bin);
