@@ -816,6 +816,7 @@ namespace PROfit {
                     inprop.truth.push_back((float)true_param);
                     inprop.baseline.push_back((float)baseline);
                     inprop.model_rule.push_back((int)model_rule);
+                    inprop.true_bin_indices.push_back((int)global_true_bin);
                     PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
 
                 }//end of branch 
