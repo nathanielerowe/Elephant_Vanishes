@@ -29,22 +29,27 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, int nthreads) {
+void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, int nthreads) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
+    std::ofstream chi_file;
+
+    if(!filename.empty()){
+        chi_file.open(filename);
+    }
 
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
             std::cout << "Filling point " << i << " " << j << std::endl;
-            LBFGSpp::LBFGSBParam<double> param;  
+            LBFGSpp::LBFGSBParam<double> param;
             param.epsilon = 1e-6;
             param.max_iterations = 100;
             param.max_linesearch = 50;
             param.delta = 1e-6;
-            LBFGSpp::LBFGSBSolver<double> solver(param); 
+            LBFGSpp::LBFGSBSolver<double> solver(param);
             int nparams = systs.GetNSplines();
-            std::vector<float> physics_params = {edges_y(i),edges_x(i)};//deltam^2, sin^22thetamumu
+            std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
@@ -69,6 +74,9 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             } while(chi2s.size() < 10 && nfit < 100);
             fx = *std::min_element(chi2s.begin(), chi2s.end());
             surface(i, j) = fx;
+            if(!filename.empty()){
+                chi_file<<" "<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx;
+            }
         }
     }
 }
