@@ -33,13 +33,16 @@ log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 int main(int argc, char* argv[])
 {
+
     gStyle->SetOptStat(0);
     CLI::App app{"Test for PROfit"}; 
 
     // Define options
     std::string xmlname = "NULL.xml"; 
-    int maxevents = 100;
+    int maxevents = 50000;
     size_t nfit = 1, nthread = 1;
+    //Define a filename to save chisq values in
+    std::string filename;
 
     //doubles
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
@@ -47,6 +50,7 @@ int main(int argc, char* argv[])
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
     app.add_option("-n,--nfit",nfit, "Number of fits.");
     app.add_option("-t,--nthread",nthread, "Number of fits.");
+    app.add_option("-o, --outfile", filename, "text file name (preferably absolute path otherwise behavior undefined)");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -57,7 +61,7 @@ int main(int argc, char* argv[])
 
     //Inititilize PROpeller to keep MC
     PROpeller prop;
-    
+
     //Initilize objects for systematics storage
     std::vector<SystStruct> systsstructs;
 
@@ -75,7 +79,8 @@ int main(int argc, char* argv[])
     PROspec data = systsstructs.back().CV();
 
     PROsurf surface(nbinsx, PROsurf::LogAxis, 1e-4, 1.0, nbinsy, PROsurf::LogAxis, 1e-2, 1e2);
-    surface.FillSurface(config, prop, systs, osc, data);
+    surface.FillSurface(config, prop, systs, osc, data, filename);
+
 
     std::vector<double> binedges_x, binedges_y;
     for(size_t i = 0; i < surface.nbinsx+1; i++)
@@ -99,4 +104,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
