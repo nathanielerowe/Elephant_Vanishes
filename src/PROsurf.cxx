@@ -75,7 +75,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             fx = *std::min_element(chi2s.begin(), chi2s.end());
             surface(i, j) = fx;
             if(!filename.empty()){
-                chi_file<<" "<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx;
+                chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx;
             }
         }
     }
