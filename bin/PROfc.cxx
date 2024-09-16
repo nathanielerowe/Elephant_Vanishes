@@ -89,7 +89,6 @@ void fc_worker(fc_args args) {
             throws.push_back(d(rng));
         for(size_t i = 0; i < cv.size(); i++)
             throwC(i) = d(rng);
-        //PROspec newSpec = PROspec::PoissonVariation(systs.GetSplineShiftedSpectrum(config, prop, throws));
         PROspec shifted = systs.GetSplineShiftedSpectrum(config, prop, throws);
         PROspec newSpec = PROspec::PoissonVariation(PROspec(shifted.Spec() + L * throwC, shifted.Error()));
 
