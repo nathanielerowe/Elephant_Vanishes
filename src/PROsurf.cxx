@@ -64,8 +64,12 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
     std::normal_distribution<float> d;
     std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
 
+    int nparams = systs.GetNSplines();
+    Eigen::VectorXd lastx = Eigen::VectorXd::Constant(nparams, 0.0);
+
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
+
             std::cout << "Filling point " << i << " " << j << std::endl;
             LBFGSpp::LBFGSBParam<double> param;  
             param.epsilon = 1e-6;
@@ -73,33 +77,39 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             param.max_linesearch = 50;
             param.delta = 1e-6;
             LBFGSpp::LBFGSBSolver<double> solver(param); 
-            int nparams = systs.GetNSplines();
-            std::vector<float> physics_params = {edges_y(i),edges_x(i)};//deltam^2, sin^22thetamumu
+            std::vector<float> physics_params = {edges_y(j),edges_x(i)};//deltam^2, sin^22thetamumu
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
+            Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
 
-
-            //First do 100 simple function calls. 
+            //First do 100 simple function calls suing LATIN hypercube setup
             double fx;
             int niter;
-            int N_multistart = 100;
+            int N_multistart = 500;
             std::vector<double> chi2s_multistart;
             std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(N_multistart, nparams,d_uni,rng);
+    
+            log<LOG_INFO>(L"%1% || Starting MultiGlobal runs : %2%") % __func__ % N_multistart ;
             for(int s=0; s<N_multistart; s++){
                 x = Eigen::Map<Eigen::VectorXd>( latin_samples[s].data(), latin_samples[s].size());
-                fx =  chi(x,grad);
+                fx =  chi(x,grad,false);
                 chi2s_multistart.push_back(fx);
             }
+            //Sort so we can take the best N_localfits for further zoning
             std::vector<int> best_multistart = sorted_indices(chi2s_multistart);    
     
 
             int N_localfits = 5;
             std::vector<double> chi2s_localfits;
             int nfit = 0;
+            double chimin = 9999999;
+
+            log<LOG_INFO>(L"%1% || Starting Local Gradients runs : %2%") % __func__ % N_localfits ;
             for(int s=0; s<N_localfits; s++){
+              //Get the nth
               x = Eigen::Map<Eigen::VectorXd>( latin_samples[best_multistart[s]].data(), latin_samples[best_multistart[s]].size());   
               try {
                     niter = solver.minimize(chi, x, fx, lb, ub);
@@ -108,10 +118,41 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
                     continue;
                 }
                 chi2s_localfits.push_back(fx);
+                if(fx<chimin){
+                    bestx = x;
+                    chimin=fx;
+                }
+
+            }
+            // and do CV
+            try {
+                    x = Eigen::VectorXd::Constant(nparams, 0.0);
+                    niter = solver.minimize(chi, x, fx, lb, ub);
+                } catch(std::runtime_error &except) {
+                    log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                    continue;
+                }
+            chi2s_localfits.push_back(fx);
+            if(fx<chimin){
+                bestx = x;
+                chimin=fx;
             }
 
-            fx = *std::min_element(chi2s_localfits.begin(), chi2s_localfits.end());
-            surface(i, j) = fx;
+            //and last BF
+            try {
+                    x = lastx;
+                    niter = solver.minimize(chi, x, fx, lb, ub);
+                } catch(std::runtime_error &except) {
+                    log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                    continue;
+                }
+            chi2s_localfits.push_back(fx);
+            if(fx<chimin){
+                    bestx = x;
+                    chimin=fx;
+            }
+
+            surface(i, j) = chimin;
         }
     }
 }

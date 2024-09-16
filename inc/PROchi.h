@@ -47,6 +47,7 @@ namespace PROfit{
 
             /*Function: operator() is what is passed to minimizer.*/
             float operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient);
+            float operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient, bool nograd);
     };
 
 
