@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     PROsyst systs(systsstructs);
 
     //Define the model (currently 3+1 SBL)
-    PROsc osc;
+    PROsc osc(prop);
 
     size_t nbinsx = 40, nbinsy = 40;
 

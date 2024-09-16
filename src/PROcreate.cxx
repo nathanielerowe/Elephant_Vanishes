@@ -541,6 +541,7 @@ namespace PROfit {
                 log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % subchannel_index[ib];
             }
 
+            inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
 
             // loop over all entries
             for(long int i=0; i < nevents; ++i) {
@@ -788,6 +789,8 @@ namespace PROfit {
                 log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % subchannel_index[ib];
             }
 
+            inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
+
             for(long int i=0; i < nevents; ++i) {
 
                 trees[fid]->GetEntry(i);
@@ -817,6 +820,7 @@ namespace PROfit {
                     inprop.baseline.push_back((float)baseline);
                     inprop.model_rule.push_back((int)model_rule);
                     inprop.true_bin_indices.push_back((int)global_true_bin);
+                    inprop.hist(global_true_bin, global_bin) += additional_weight;
                     PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
 
                 }//end of branch 
@@ -1063,6 +1067,7 @@ namespace PROfit {
         inprop.baseline.push_back((float)baseline);
         inprop.model_rule.push_back((int)model_rule);
         inprop.true_bin_indices.push_back((int)global_true_bin);
+        inprop.hist(global_true_bin, global_bin) += mc_weight;
 
 
         for(int i = 0; i != total_num_sys; ++i){

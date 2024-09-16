@@ -36,6 +36,8 @@ namespace PROfit{
             std::vector<float> physics_param_fixed;
             int nparams;
             int nsyst;
+            double logdmsq;
+            double logsinsq2tmm;
 
             //Save last values for gradient calculation
             Eigen::VectorXd last_param;

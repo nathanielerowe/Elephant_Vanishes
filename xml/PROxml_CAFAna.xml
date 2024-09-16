@@ -119,7 +119,7 @@
          model_rule            = "1"
          true_L_name           = "trueL / 1000"
          pdg_name              = "truePDG"
-         additional_weight     = "trueCC"
+         additional_weight     = "CC"
          />
 </MCFile>
 
