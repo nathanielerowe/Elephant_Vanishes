@@ -5,6 +5,7 @@
 #include <boost/format.hpp>
 #include <iostream>
 #include <exception>
+#include <vector>
 
 using namespace std;
 
@@ -36,7 +37,20 @@ namespace log_impl {
                 formatted_log_t& operator %(T value) {
                     fmt % value;
                     return *this;
-                }    
+                }
+            template <typename T>
+            formatted_log_t& operator %(const std::vector<T>& vec) {
+                std::wstringstream ss;
+                ss << L"[";
+                for (size_t i = 0; i < vec.size(); ++i) {
+                    if (i != 0) ss << L", ";
+                    ss << vec[i];
+                }
+                ss << L"]";
+                fmt % ss.str();
+                return *this;
+            }
+
         protected:
             log_level_t     level;
             boost::wformat      fmt;

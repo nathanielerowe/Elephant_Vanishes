@@ -58,7 +58,7 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, int nthreads) {
+void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, int nthreads) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
@@ -66,18 +66,27 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
 
     int nparams = systs.GetNSplines();
     Eigen::VectorXd lastx = Eigen::VectorXd::Constant(nparams, 0.0);
+    
+    std::ofstream chi_file;
+
+    if(!filename.empty()){
+        chi_file.open(filename);
+    }
 
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
 
             std::cout << "Filling point " << i << " " << j << std::endl;
-            LBFGSpp::LBFGSBParam<double> param;  
+            LBFGSpp::LBFGSBParam<double> param;
             param.epsilon = 1e-6;
             param.max_iterations = 100;
             param.max_linesearch = 50;
             param.delta = 1e-6;
-            LBFGSpp::LBFGSBSolver<double> solver(param); 
-            std::vector<float> physics_params = {edges_y(j),edges_x(i)};//deltam^2, sin^22thetamumu
+            
+            LBFGSpp::LBFGSBSolver<double> solver(param);
+            int nparams = systs.GetNSplines();
+            std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
+            
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
@@ -88,7 +97,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             //First do 100 simple function calls suing LATIN hypercube setup
             double fx;
             int niter;
-            int N_multistart = 500;
+            int N_multistart = 200;
             std::vector<double> chi2s_multistart;
             std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(N_multistart, nparams,d_uni,rng);
     
@@ -152,7 +161,11 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
                     chimin=fx;
             }
 
+
+            log<LOG_INFO>(L"%1% || ChiMin, %2%") % __func__ % chimin;
             surface(i, j) = chimin;
+            chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx;
+
         }
     }
 }
