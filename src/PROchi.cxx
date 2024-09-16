@@ -4,22 +4,21 @@
 using namespace PROfit;
 
 
-PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, double logdmsq, double logsinsq2tmm) : model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), logdmsq(logdmsq), logsinsq2tmm(logsinsq2tmm) {
+PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, std::vector<float> physics_param_fixed) : model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), physics_param_fixed(physics_param_fixed) {
     last_value = 0.0; last_param = Eigen::VectorXd::Zero(nparams); 
 }
 
 float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient){
 
-    //std::vector<float> shifts = param(Eigen::SeqN(2,1)).array();
-    //std::vector<float> fitparams = param(Eigen::SeqN(0,2)).array();
-
+    
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXd subvector1 = param.segment(0, nparams - nsyst);
     std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-    if(fitparams.size() == 0 && logdmsq != 0) {
-        fitparams.push_back(logdmsq);
-        fitparams.push_back(std::pow(10, logsinsq2tmm));
+    if(fitparams.size() == 0 && physics_param_fixed.size()!=0 ) {
+        fitparams = physics_param_fixed;
     }
+    
+
     Eigen::VectorXd subvector2 = param.segment(nparams - nsyst, nsyst);
     std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
 
@@ -76,9 +75,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
         //Eigen::VectorXd subvector2 = tmpParams;
         Eigen::VectorXd subvector1 = tmpParams.segment(0, nparams - nsyst);
         std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-        if(fitparams.size() == 0 && logdmsq != 0) {
-            fitparams.push_back(logdmsq);
-            fitparams.push_back(std::pow(10, logsinsq2tmm));
+        if(fitparams.size() == 0 && physics_param_fixed.size() != 0) {
+            fitparams = physics_param_fixed;
         }
         Eigen::VectorXd subvector2 = tmpParams.segment(nparams - nsyst, nsyst);
         std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
