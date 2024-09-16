@@ -12,6 +12,7 @@
 #include "TCanvas.h"
 #include "TH1D.h"
 #include "THStack.h"
+#include "TLegend.h"
 
 // EIGEN
 #include <Eigen/Dense>

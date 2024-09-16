@@ -10,6 +10,7 @@
 #include "PROlog.h"
 #include "PROconfig.h"
 
+// Root includes
 namespace PROfit{
 
 
@@ -53,6 +54,9 @@ namespace PROfit{
 
     /* Function: given a full vector (that contains reco), collapse the vector */
     Eigen::VectorXd CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXd& full_vector);
+
+
+
 };
 
 #endif

@@ -94,4 +94,8 @@ namespace PROfit{
         Eigen::VectorXd result_vector = collapsing_matrix.transpose() * full_vector;
         return result_vector;
     }
+
+
+
+
 };
