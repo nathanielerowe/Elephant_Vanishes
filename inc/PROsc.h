@@ -49,7 +49,7 @@ namespace PROfit{
                     Eigen::MatrixXd &h = hists.back();
                     for(size_t i = 0; i < prop.bin_indices.size(); ++i) {
                         if(prop.model_rule[i] != (int)m) continue;
-                        int tbin = prop.truth_index[i], rbin = prop.bin_indices[i];
+                        int tbin = prop.true_bin_indices[i], rbin = prop.bin_indices[i];
                         h(tbin, rbin) = prop.added_weights[i];
                     }
                 }
