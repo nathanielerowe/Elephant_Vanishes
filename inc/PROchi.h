@@ -2,6 +2,10 @@
 #define PROCHI_H_
 
 // STANDARD
+#include <string>
+#include <vector>
+
+#include <Eigen/Eigen>
 
 // OUR INCLUDES
 #include "PROconfig.h"
@@ -24,6 +28,13 @@ namespace PROfit{
 
     class PROchi
     {
+        public:
+            enum EvalStrategy {
+                EventByEvent,
+                BinnedGrad,
+                BinnedChi2
+            };
+
         private:
 
             std::string model_tag;
@@ -36,8 +47,7 @@ namespace PROfit{
             std::vector<float> physics_param_fixed;
             int nparams;
             int nsyst;
-            double logdmsq;
-            double logsinsq2tmm;
+            EvalStrategy strat;
 
             //Save last values for gradient calculation
             Eigen::VectorXd last_param;
@@ -45,7 +55,7 @@ namespace PROfit{
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
             float operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient);

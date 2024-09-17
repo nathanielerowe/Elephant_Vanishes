@@ -91,7 +91,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             std::vector<float> physics_params = {1,0.5};//deltam^2, sin^22thetamumu
 
 
-            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), physics_params);
+            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), PROchi::EventByEvent, physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
