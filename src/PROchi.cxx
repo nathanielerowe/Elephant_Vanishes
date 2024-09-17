@@ -72,7 +72,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
             Eigen::VectorXd tmpParams = param;
             int sgn = ((param(i) - last_param(i)) > 0) - ((param(i) - last_param(i)) < 0);
             if(!sgn) sgn = 1;
-            if(fitparams.size() != 0 && i == 1 && param(i) < dval) sgn = 1;
+            if(fitparams.size() != 0 && i == 1 && param(i) < -4 + dval) sgn = 1;
             else if(fitparams.size() != 0 && i == 1 && param(i) > 1 - dval) sgn = -1;
             tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * dval;
             
