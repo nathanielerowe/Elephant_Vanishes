@@ -126,9 +126,10 @@ void fc_worker(fc_args args) {
 
         if(chi2s.size() < 10) continue;
         fx = *std::min_element(chi2s.begin(), chi2s.end());
-        std::cout<<"Chis min: "<<fx<<" || ";
-        for(auto &c: chi2s)std::cout<<c<<" ";
-        std::cout<<std::endl;
+        //std::cout<<"Chis min: "<<fx<<" || ";
+        //for(auto &c: chi2s)std::cout<<c<<" ";
+        //std::cout<<std::endl;
+        log<LOG_INFO>(L"%1% || Chi2 min %2% || %3%") % __func__ % fx % chi2s;
 
         // With oscillations
         LBFGSpp::LBFGSBParam<double> param_osc;  
@@ -175,9 +176,10 @@ void fc_worker(fc_args args) {
         } while(chi2s.size() < 10 && nfit < 100);
         if(chi2s.size() < 10) continue;
         fx_osc = *std::min_element(chi2s.begin(), chi2s.end());
-        std::cout<<"Chis min: "<<fx_osc<<" || ";
-        for(auto &c: chi2s)std::cout<<c<<" ";
-        std::cout<<std::endl;
+        //std::cout<<"Chis min: "<<fx_osc<<" || ";
+        //for(auto &c: chi2s)std::cout<<c<<" ";
+        //std::cout<<std::endl;
+        log<LOG_INFO>(L"%1% || Chi2 min %2% || %3%") % __func__ % fx_osc % chi2s;
         
 
         Eigen::VectorXd t = Eigen::VectorXd::Constant(throws.size(), 0);
