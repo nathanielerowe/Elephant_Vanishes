@@ -16,8 +16,11 @@
 // TINYXML2
 #include "tinyxml2.h"
 
+#include <Eigen/Eigen>
+
 //PROfit
 #include "PROlog.h"
+#include "PROpeller.h"
 
 namespace PROfit{
 
@@ -35,11 +38,21 @@ namespace PROfit{
         private:
         public:
 
-            PROsc(){
+            PROsc(const PROpeller &prop){
 
-            model_functions.push_back([this](float a, float b, float c, float d) {return 1.0; });
-            model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmumu(a, b, c, d); });
-            model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmue(a, b, c, d); });
+                model_functions.push_back([this](float a, float b, float c, float d) {return 1.0; });
+                model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmumu(a, b, c, d); });
+                model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmue(a, b, c, d); });
+
+                for(size_t m = 0; m < model_functions.size(); ++m) {
+                    hists.emplace_back(prop.hist.rows(), prop.hist.cols());
+                    Eigen::MatrixXd &h = hists.back();
+                    for(size_t i = 0; i < prop.bin_indices.size(); ++i) {
+                        if(prop.model_rule[i] != (int)m) continue;
+                        int tbin = prop.true_bin_indices[i], rbin = prop.bin_indices[i];
+                        h(tbin, rbin) = prop.added_weights[i];
+                    }
+                }
 
             };
 
@@ -79,6 +92,7 @@ namespace PROfit{
 
         std::vector<std::function<float(float,float,float,float)>> model_functions;
 
+        std::vector<Eigen::MatrixXd> hists;
 
     };
 

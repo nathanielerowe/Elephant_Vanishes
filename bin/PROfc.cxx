@@ -78,7 +78,7 @@ void fc_worker(fc_args args) {
     auto &L = args.L;
     std::random_device rd{};
     std::mt19937 rng{rd()};
-    PROsc osc;
+    PROsc osc(prop);
     while(dchi2s->size() < args.todo) {
         (*count)++;
         std::cout << "Thread #" << args.thread << " Size " << dchi2s->size() << " count " << *count << "\n";
@@ -126,6 +126,10 @@ void fc_worker(fc_args args) {
 
         if(chi2s.size() < 10) continue;
         fx = *std::min_element(chi2s.begin(), chi2s.end());
+        //std::cout<<"Chis min: "<<fx<<" || ";
+        //for(auto &c: chi2s)std::cout<<c<<" ";
+        //std::cout<<std::endl;
+        log<LOG_INFO>(L"%1% || Chi2 min %2% || %3%") % __func__ % fx % chi2s;
 
         // With oscillations
         LBFGSpp::LBFGSBParam<double> param_osc;  
@@ -172,9 +176,10 @@ void fc_worker(fc_args args) {
         } while(chi2s.size() < 10 && nfit < 100);
         if(chi2s.size() < 10) continue;
         fx_osc = *std::min_element(chi2s.begin(), chi2s.end());
-        std::cout<<"Chis min: "<<fx_osc<<" || ";
-        for(auto &c: chi2s)std::cout<<c<<" ";
-        std::cout<<std::endl;
+        //std::cout<<"Chis min: "<<fx_osc<<" || ";
+        //for(auto &c: chi2s)std::cout<<c<<" ";
+        //std::cout<<std::endl;
+        log<LOG_INFO>(L"%1% || Chi2 min %2% || %3%") % __func__ % fx_osc % chi2s;
         
 
         Eigen::VectorXd t = Eigen::VectorXd::Constant(throws.size(), 0);
@@ -222,7 +227,7 @@ int main(int argc, char* argv[])
     PROsyst systs(systsstructs);
 
     //Define the model (currently 3+1 SBL)
-    PROsc osc;
+    PROsc osc(myprop);
 
     std::random_device rd{};
     std::mt19937 gen{rd()};

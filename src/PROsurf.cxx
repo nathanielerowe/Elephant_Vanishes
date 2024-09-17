@@ -58,6 +58,52 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
+void PROsurf::FillSurfaceFast(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, int nthreads) {
+    std::random_device rd{};
+    std::mt19937 rng{rd()};
+    std::normal_distribution<float> d;
+
+    std::cout << "In FillSurfaceFast\n";
+
+    for(size_t i = 0; i < nbinsx; i++) {
+        for(size_t j = 0; j < nbinsy; j++) {
+            std::cout << "Filling point " << i << " " << j << std::endl;
+            LBFGSpp::LBFGSBParam<double> param;  
+            param.epsilon = 1e-6;
+            param.max_iterations = 100;
+            param.max_linesearch = 50;
+            param.delta = 1e-6;
+            LBFGSpp::LBFGSBSolver<double> solver(param); 
+            int nparams = systs.GetNSplines();
+            std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
+            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
+            Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+            Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+            Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
+
+            double fx;
+            int niter;
+            std::vector<double> chi2s;
+            int nfit = 0;
+            do {
+                nfit++;
+                for(size_t i = 0; i < nparams; ++i)
+                    x(i) = 0.3*d(rng);
+                // x will be overwritten to be the best point found
+                try {
+                    niter = solver.minimize(chi, x, fx, lb, ub);
+                } catch(std::runtime_error &except) {
+                    log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                    continue;
+                }
+                chi2s.push_back(fx);
+            } while(chi2s.size() < 10 && nfit < 100);
+            fx = *std::min_element(chi2s.begin(), chi2s.end());
+            surface(i, j) = fx;
+        }
+    }
+}
+
 void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, int nthreads) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
@@ -91,7 +137,8 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             //std::vector<float> physics_params = {1,0.5};//deltam^2, sin^22thetamumu
 
 
-            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), physics_params);
+            //PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), PROchi::EventByEvent, physics_params);
+            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
@@ -101,7 +148,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             //First do 100 simple function calls suing LATIN hypercube setup
             double fx;
             int niter;
-            int N_multistart = 250;
+            int N_multistart = 100;
             std::vector<double> chi2s_multistart;
             std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(N_multistart, nparams,d_uni,rng);
     

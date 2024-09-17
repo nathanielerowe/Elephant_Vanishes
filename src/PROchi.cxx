@@ -4,7 +4,7 @@
 using namespace PROfit;
 
 
-PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, std::vector<float> physics_param_fixed) : model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), physics_param_fixed(physics_param_fixed) {
+PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat, std::vector<float> physics_param_fixed) : model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), strat(strat), physics_param_fixed(physics_param_fixed) {
     last_value = 0.0; last_param = Eigen::VectorXd::Zero(nparams); 
 }
 
@@ -28,7 +28,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
 
     log<LOG_DEBUG>(L"%1% || Shifts size is %2%") % __func__ % shifts.size();
 
-    PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams);
+    PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams, strat == BinnedChi2);
 
     //std::cout<<"Spec "<< result.Spec()<<" .. "<<std::endl;
     //result.plotSpectrum(*config,"TTPT");
@@ -83,7 +83,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
             }
             Eigen::VectorXd subvector2 = tmpParams.segment(nparams - nsyst, nsyst);
             std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
-            PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams);
+            PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams, strat != EventByEvent);
             // Calcuate Full Covariance matrix
             Eigen::MatrixXd diag = result.Spec().array().matrix().asDiagonal(); 
             Eigen::MatrixXd full_covariance =  diag*(syst->fractional_covariance)*diag;
