@@ -75,7 +75,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
             if(fitparams.size() != 0 && i == 1 && param(i) < dval) sgn = 1;
             else if(fitparams.size() != 0 && i == 1 && param(i) > 1 - dval) sgn = -1;
             tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * dval;
-            //Eigen::VectorXd subvector2 = tmpParams;
+            
             Eigen::VectorXd subvector1 = tmpParams.segment(0, nparams - nsyst);
             std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
             if(fitparams.size() == 0 && physics_param_fixed.size() != 0) {
@@ -95,14 +95,11 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
             Eigen::MatrixXd inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
             // Calculate Chi^2  value
             Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
+            
             float pull = subvector2.array().square().sum(); 
             float dmsq_penalty = 0;
-            //if(osc) {
-            //    dmsq_penalty = tmpParams(0) < 0.1 ? std::pow(tmpParams(0) - 0.1, 2)/0.01 :
-            //                         tmpParams(0) > 20  ? std::pow(tmpParams(0) - 20, 2)/100 : 0;
-            //}
             float value_grad = (delta.transpose())*inverted_collapsed_full_covariance*(delta) + dmsq_penalty + pull;
-            //gradient(i) = (value-last_value)/(tmpParams(i) - last_param(i));
+            
             gradient(i) = (value_grad-value)/(tmpParams(i) - param(i));
         }
     }
