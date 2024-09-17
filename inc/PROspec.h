@@ -67,15 +67,15 @@ namespace PROfit{
 
 
             /* Function: given subchannel name/index, generate TH1D histogram of corresponding spectrum */
-            TH1D toTH1D(const PROconfig& inconfig, int subchannel_index);
-            TH1D toTH1D(const PROconfig& inconfig, const std::string& subchannel_fullname);
+            TH1D toTH1D(const PROconfig& inconfig, int subchannel_index) const;
+            TH1D toTH1D(const PROconfig& inconfig, const std::string& subchannel_fullname) const;
 
 
             /* Function: save TH1Ds of all subchannels into a root file */
             void toROOT(const PROconfig& inconfig, const std::string& output_name);
 
             /*Function: Create a pdf of all channels, with stacked subchannels*/
-            void plotSpectrum(const PROconfig& inconfig, const std::string& output_name);
+            void plotSpectrum(const PROconfig& inconfig, const std::string& output_name) const;
 
             /* Function: fill given bin with provided weight 
              * Note: 

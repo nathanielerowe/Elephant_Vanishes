@@ -58,7 +58,7 @@ void PROspec::QuickFill(int bin_index, double weight){
 }
 
 
-TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
+TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index) const{
 
     int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
     int channel_index = inconfig.GetChannelIndex(subchannel_index);
@@ -83,7 +83,7 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index){
 }
 
 
-TH1D PROspec::toTH1D(const PROconfig& inconfig, const std::string& subchannel_fullname){
+TH1D PROspec::toTH1D(const PROconfig& inconfig, const std::string& subchannel_fullname) const{
     int subchannel_index = inconfig.GetSubchannelIndex(subchannel_fullname);
     return this->toTH1D(inconfig, subchannel_index);
 }
@@ -253,7 +253,7 @@ Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, co
     return ratio_spec;
 }
 
-void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_name){
+void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_name) const{
 
     bool div_bin = true;
     int n_subplots = inconfig.m_num_channels*inconfig.m_num_modes*inconfig.m_num_detectors;
