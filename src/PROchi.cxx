@@ -31,8 +31,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams);
 
     //std::cout<<"Spec "<< result.Spec()<<" .. "<<std::endl;
-    //result.Print();
-
+    //result.plotSpectrum(*config,"TTPT");
+    
     // Calcuate Full Covariance matrix
     Eigen::MatrixXd diag = result.Spec().array().matrix().asDiagonal(); 
     Eigen::MatrixXd full_covariance =  diag*(syst->fractional_covariance)*diag;
@@ -49,7 +49,6 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     //std::cout<<"cStat: "<<collapsed_stat_covariance.size()<<std::endl;
     //std::cout<<collapsed_stat_covariance<<std::endl;
 
-    log<LOG_DEBUG>(L"%1% || HERE") % __func__ ;
 
     // Invert Collaped Matrix Matrix 
     Eigen::MatrixXd inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
@@ -61,7 +60,10 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
     float pull = subvector2.array().square().sum(); 
     float dmsq_penalty = 0;
-    float value = (delta.transpose())*inverted_collapsed_full_covariance*(delta) + dmsq_penalty + pull;
+    float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
+    float value = covar_portion + dmsq_penalty + pull;
+
+    log<LOG_DEBUG>(L"%1% || Chi^2 %2%, Covar %3% and Pull %4%") % __func__ % value % covar_portion % pull;
 
     if(rungradient){
         float dval = 1e-4;
