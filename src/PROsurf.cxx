@@ -87,8 +87,8 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             
             LBFGSpp::LBFGSBSolver<double> solver(param);
             int nparams = systs.GetNSplines();
-            //std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
-            std::vector<float> physics_params = {1,0.5};//deltam^2, sin^22thetamumu
+            std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
+            //std::vector<float> physics_params = {1,0.5};//deltam^2, sin^22thetamumu
 
 
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), physics_params);
@@ -101,7 +101,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             //First do 100 simple function calls suing LATIN hypercube setup
             double fx;
             int niter;
-            int N_multistart = 2000;
+            int N_multistart = 250;
             std::vector<double> chi2s_multistart;
             std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(N_multistart, nparams,d_uni,rng);
     
