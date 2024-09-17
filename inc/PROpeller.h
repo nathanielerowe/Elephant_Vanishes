@@ -53,6 +53,7 @@ namespace PROfit{
             std::vector<int>   model_rule;
             std::vector<int>   true_bin_indices;
             Eigen::MatrixXd    hist;
+            Eigen::VectorXd    histLE;
 
     };
 

@@ -508,6 +508,14 @@ namespace PROfit {
             s.CreateSpecs(s.mode == "multisigma" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
+        inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
+        inprop.histLE = Eigen::VectorXd::Constant(inconfig.m_num_truebins_total, 0);
+        size_t LE_bin = 0;
+        for(size_t i = 0; i < inconfig.m_num_channels; ++i) {
+            const std::vector<double> &edges = inconfig.m_channel_truebin_edges[i];
+            for(size_t j = 0; j < edges.size() - 1; ++j)
+                inprop.histLE(LE_bin++) = (edges[j+1] - edges[j])/2;
+        }
 
         time_t start_time = time(nullptr), time_stamp = time(nullptr);
         log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
@@ -541,7 +549,7 @@ namespace PROfit {
                 log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % subchannel_index[ib];
             }
 
-            inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
+
 
             // loop over all entries
             for(long int i=0; i < nevents; ++i) {
@@ -764,6 +772,14 @@ namespace PROfit {
             s.CreateSpecs(s.mode == "multisigma" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
+        inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
+        inprop.histLE = Eigen::VectorXd::Constant(inconfig.m_num_truebins_total, 0);
+        size_t LE_bin = 0;
+        for(size_t i = 0; i < inconfig.m_num_channels; ++i) {
+            const std::vector<double> &edges = inconfig.m_channel_truebin_edges[i];
+            for(size_t j = 0; j < edges.size() - 1; ++j)
+                inprop.histLE(LE_bin++) = (edges[j+1] - edges[j])/2;
+        }
 
         time_t start_time = time(nullptr);
         log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
@@ -789,7 +805,6 @@ namespace PROfit {
                 log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % subchannel_index[ib];
             }
 
-            inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
 
             for(long int i=0; i < nevents; ++i) {
 
