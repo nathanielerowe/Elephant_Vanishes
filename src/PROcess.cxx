@@ -54,7 +54,7 @@ namespace PROfit {
 
     float GetOscWeight(int rule, float le, const PROsc &inosc, std::vector<float> &inphysparams) {
         // The model functions take L and E separately, so give E as 1 and L as L/E
-        return inosc.model_functions[rule](std::pow(10, inphysparams[0]), inphysparams[1], 1, le);
+        return inosc.model_functions[rule](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), 1, le);
     }
 
     float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, std::vector<float> &inphysparams) {
@@ -65,7 +65,7 @@ namespace PROfit {
         // inphysparams[1] is sinsq2thmumu
 
 //        float prob2 = inosc.Pmumu(std::pow(10, inphysparams[0]), inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx]);
-        float prob = inosc.model_functions[inprop.model_rule[ev_idx]](std::pow(10, inphysparams[0]), inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx] );
+        float prob = inosc.model_functions[inprop.model_rule[ev_idx]](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), inprop.truth[ev_idx], inprop.baseline[ev_idx] );
         return prob;
     }
 

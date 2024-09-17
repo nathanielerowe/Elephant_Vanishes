@@ -79,6 +79,7 @@ int main(int argc, char* argv[])
     PROspec data = systsstructs.back().CV();
 
     PROsurf surface(nbinsx, PROsurf::LogAxis, 1e-4, 1.0, nbinsy, PROsurf::LogAxis, 1e-2, 1e2);
+    //surface.FillSurfaceFast(config, prop, systs, osc, data, filename);
     surface.FillSurface(config, prop, systs, osc, data, filename);
 
 
@@ -99,6 +100,7 @@ int main(int argc, char* argv[])
     TCanvas c;
     c.SetLogy();
     c.SetLogx();
+    c.SetLogz();
     surf.Draw("colz");
     c.Print("PROfit_surface.pdf");
 
