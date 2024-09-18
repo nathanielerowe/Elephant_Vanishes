@@ -63,6 +63,19 @@ int main(int argc, char* argv[])
         //
         PROspec data = systsstructs.back().CV();
 
+        std::vector<std::string> spline_names;
+        int cnt=0;
+        for(auto&s:systsstructs){
+            //index,systname,mode
+            log<LOG_INFO>(L"%1% || Starting Fixed fit %2% %3% %4% %5%") % __func__ % s.systname.c_str() % s.index % s.mode.c_str() % cnt ;
+            if(s.mode=="multisigma"){
+                spline_names.push_back(s.systname); 
+                cnt++;
+            }
+   
+        }
+
+
         LBFGSpp::LBFGSBParam<double> param;
         param.epsilon = 1e-6;
         param.max_iterations = 100;
@@ -143,7 +156,7 @@ int main(int argc, char* argv[])
 
             c->cd(w+1);
             std::unique_ptr<TGraph> g = std::make_unique<TGraph>(knob_vals.size(), knob_vals.data(), knob_chis.data());
-            std::string tit = std::to_string(which_spline)+ ";#sigma Shift; #Chi^{2}";
+            std::string tit = spline_names[which_spline]+ ";#sigma Shift; #Chi^{2}";
             g->SetTitle(tit.c_str());
             graphs.push_back(std::move(g));
             graphs.back()->Draw("AL");
