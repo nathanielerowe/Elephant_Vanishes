@@ -88,6 +88,7 @@ int main(int argc, char* argv[])
     //Define the model (currently 3+1 SBL)
     PROsc osc(prop);
 
+
     //Define grid and Surface
     size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
     PROsurf surface(nbinsx, PROsurf::LogAxis, 1e-4, 1.0, nbinsy, PROsurf::LogAxis, 1e-2, 1e2);

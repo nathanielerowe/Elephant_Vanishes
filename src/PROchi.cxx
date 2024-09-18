@@ -6,8 +6,14 @@ using namespace PROfit;
 
 PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat, std::vector<float> physics_param_fixed) : model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), strat(strat), physics_param_fixed(physics_param_fixed) {
     last_value = 0.0; last_param = Eigen::VectorXd::Zero(nparams); 
+    fixed_index = -999;
 }
 
+void PROchi::fixSpline(int fix, double valin){
+    fixed_index=fix;
+    fixed_val=valin;
+    return;
+}
 float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient){
     return PROchi::operator()(param, gradient, true);
 }
@@ -58,6 +64,15 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
 
     // Calculate Chi^2  value
     Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
+    
+
+    if(!(fixed_index<0)){
+        subvector2[fixed_index]=0;   
+    }
+
+
+
+
     float pull = subvector2.array().square().sum(); 
     float dmsq_penalty = 0;
     float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
@@ -96,6 +111,9 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
             // Calculate Chi^2  value
             Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
             
+            if(!(fixed_index<0)){
+                subvector2[fixed_index]=0;   
+            }
             float pull = subvector2.array().square().sum(); 
             float dmsq_penalty = 0;
             float value_grad = (delta.transpose())*inverted_collapsed_full_covariance*(delta) + dmsq_penalty + pull;

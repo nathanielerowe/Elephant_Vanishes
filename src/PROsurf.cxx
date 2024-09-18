@@ -82,8 +82,8 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
             LBFGSpp::LBFGSBSolver<double> solver(param); 
             int nparams = systs.GetNSplines();
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
-	    PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), strat, physics_params);
-	    Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), strat, physics_params);
+	          Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
 
@@ -146,7 +146,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};  //deltam^2, sin^22thetamumu
             //std::vector<float> physics_params = {1,0.5};//deltam^2, sin^22thetamumu
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), strat, physics_params);
-	    Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+       	    Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
@@ -158,10 +158,15 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             int N_multistart = 100;
             std::vector<double> chi2s_multistart;
             std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(N_multistart, nparams,d_uni,rng);
+            
     
             log<LOG_INFO>(L"%1% || Starting MultiGlobal runs : %2%") % __func__ % N_multistart ;
             for(int s=0; s<N_multistart; s++){
+
+    
+                log<LOG_INFO>(L"%1% || : %2%") % __func__ % s ;
                 x = Eigen::Map<Eigen::VectorXd>( latin_samples[s].data(), latin_samples[s].size());
+                log<LOG_INFO>(L"%1% || before chi %2%") % __func__ % s ;
                 fx =  chi(x,grad,false);
                 chi2s_multistart.push_back(fx);
             

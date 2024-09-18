@@ -49,6 +49,10 @@ namespace PROfit{
             int nsyst;
             EvalStrategy strat;
 
+            //Do we want to fix any param?
+            int fixed_index;
+            float fixed_val;
+
             //Save last values for gradient calculation
             Eigen::VectorXd last_param;
             float last_value;
@@ -60,6 +64,9 @@ namespace PROfit{
             /*Function: operator() is what is passed to minimizer.*/
             float operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient);
             float operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient, bool nograd);
+
+            void fixSpline(int fix, double valin);
+
     };
 
 
