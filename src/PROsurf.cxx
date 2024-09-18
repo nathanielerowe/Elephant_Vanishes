@@ -146,9 +146,7 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
         for(int s=0; s<N_multistart; s++){
 
 
-            log<LOG_INFO>(L"%1% || : %2%") % __func__ % s ;
             x = Eigen::Map<Eigen::VectorXd>(latin_samples[s].data(), latin_samples[s].size());
-            log<LOG_INFO>(L"%1% || before chi %2%") % __func__ % s ;
             fx =  chi(x,grad,false);
             chi2s_multistart.push_back(fx);
 
@@ -258,6 +256,8 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
 
     std::vector<std::future<std::vector<surfOut>>> futures; 
 
+    log<LOG_INFO>(L"%1% || Starting THREADS  : %2% , Loops %3%, Chunks %4%") % __func__ % nThreads % loopSize % chunkSize;
+
     for (int t = 0; t < nThreads; ++t) {
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
@@ -274,6 +274,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
    }
 
    for (const auto& item : combinedResults) {
+        log<LOG_INFO>(L"%1% || Finished  : %2% %3% %4%") % __func__ % item.grid_val[1] % item.grid_val[0] %item.chi ;
         surface(item.grid_index[0], item.grid_index[1]) = item.chi;
         chi_file<<"\n"<<item.grid_val[1]<<" "<<item.grid_val[0]<<" "<<item.chi<<std::flush;
    }
