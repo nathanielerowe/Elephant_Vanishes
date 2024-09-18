@@ -242,7 +242,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
     std::vector<surfOut> grid;
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
-            std::vector<int> grid_pts = {i,j};
+            std::vector<int> grid_pts = {(int)i,(int)j};
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};  //deltam^2, sin^22thetamumu
             surfOut pt; pt.grid_val = physics_params; pt.grid_index = grid_pts;
             grid.push_back(pt);
