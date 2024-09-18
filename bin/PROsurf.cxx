@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     // Define options
     std::string xmlname = "NULL.xml"; 
     int maxevents = 50000;
-    size_t nfit = 1, nthread = 1;
+    size_t  nthread = 1;
     //Define a filename to save chisq values in
     std::string filename;
     bool binned=false;
@@ -49,7 +49,6 @@ int main(int argc, char* argv[])
     app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.");
     app.add_option("-m, --max",       maxevents, "Max number of events to run over.");
     app.add_option("-v, --verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
-    app.add_option("-n, --nfit",      nfit, "Number of fits.");
     app.add_option("-t, --nthread",   nthread, "Number of fits.");
     app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name");
     app.add_option("-g, --grid", grid_size, "Set grid size. If one dimension passed, grid assumed to be square, else rectangular")->expected(0, 2);
@@ -58,7 +57,6 @@ int main(int argc, char* argv[])
 
     CLI11_PARSE(app, argc, argv);
 
-    if(nthread > nfit) nthread = nfit;
 
     if (grid_size.empty()) {
         grid_size = {40, 40};
