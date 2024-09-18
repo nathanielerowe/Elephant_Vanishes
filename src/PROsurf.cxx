@@ -240,8 +240,6 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             log<LOG_INFO>(L"%1% || Best Point post BF is  : %2% ") % __func__ % spec_string.c_str();
 
 
-
-
             lastx=bestx;
             
             log<LOG_INFO>(L"%1% || FINAL has a chi %2%") % __func__ %  chimin;

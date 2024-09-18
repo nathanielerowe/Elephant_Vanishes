@@ -513,8 +513,11 @@ namespace PROfit {
         size_t LE_bin = 0;
         for(size_t i = 0; i < inconfig.m_num_channels; ++i) {
             const std::vector<double> &edges = inconfig.m_channel_truebin_edges[i];
-            for(size_t j = 0; j < edges.size() - 1; ++j)
-                inprop.histLE(LE_bin++) = (edges[j+1] - edges[j])/2;
+            for(size_t j = 0; j < edges.size() - 1; ++j){
+                inprop.histLE(LE_bin++) = (edges[j+1] + edges[j])/2;
+                //double kk = (edges[j+1] + edges[j])/2;
+                //log<LOG_INFO>(L"%1% || AGGGGGH %2% %3% %4% %5% %6% %7%") % __func__ % i % j % edges[j+1] % edges[j] % LE_bin % kk ;
+            }
         }
 
         time_t start_time = time(nullptr), time_stamp = time(nullptr);

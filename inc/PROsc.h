@@ -45,12 +45,12 @@ namespace PROfit{
                 model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmue(a, b, c, d); });
 
                 for(size_t m = 0; m < model_functions.size(); ++m) {
-                    hists.emplace_back(prop.hist.rows(), prop.hist.cols());
+                    hists.emplace_back(Eigen::MatrixXd::Constant(prop.hist.rows(), prop.hist.cols(),0.0));
                     Eigen::MatrixXd &h = hists.back();
                     for(size_t i = 0; i < prop.bin_indices.size(); ++i) {
                         if(prop.model_rule[i] != (int)m) continue;
                         int tbin = prop.true_bin_indices[i], rbin = prop.bin_indices[i];
-                        h(tbin, rbin) = prop.added_weights[i];
+                        h(tbin, rbin) += prop.added_weights[i];
                     }
                 }
 
