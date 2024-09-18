@@ -314,7 +314,7 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
                 if(div_bin){
                     TList *stlists = (TList*)stacks.back()->GetHists();
                     for(const auto&& obj: *stlists){
-                        //((TH1*)obj)->Scale(1.0,"width");
+                        ((TH1*)obj)->Scale(1,"width");
                         log<LOG_DEBUG>(L"%1% || Stack contains  %2% ") % __func__ % obj->GetName();
                     }
                 }
@@ -326,7 +326,7 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
 
                 stacks.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
                 stacks.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
-                stacks.back()->GetYaxis()->SetTitle("Events");
+                stacks.back()->GetYaxis()->SetTitle("Events/GeV");
 
                 ++global_channel_index;
             }//end chan

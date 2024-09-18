@@ -43,11 +43,13 @@ int main(int argc, char* argv[])
     size_t nfit = 1, nthread = 1;
     //Define a filename to save chisq values in
     std::string filename;
+    int gridDim = 40;
 
     //doubles
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
+    app.add_option("-g,--grid",gridDim, "Grid Dim, NxN (default 40)");
     app.add_option("-n,--nfit",nfit, "Number of fits.");
     app.add_option("-t,--nthread",nthread, "Number of fits.");
     app.add_option("-o, --outfile", filename, "text file name (preferably absolute path otherwise behavior undefined)");
@@ -74,7 +76,7 @@ int main(int argc, char* argv[])
     //Define the model (currently 3+1 SBL)
     PROsc osc(prop);
 
-    size_t nbinsx = 40, nbinsy = 40;
+    size_t nbinsx = gridDim, nbinsy = gridDim;
 
     PROspec data = systsstructs.back().CV();
 
