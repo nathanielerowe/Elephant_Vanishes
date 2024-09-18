@@ -149,11 +149,6 @@ int main(int argc, char* argv[])
             graphs.back()->Draw("AL");
             graphs.back()->SetLineWidth(2);
             
-            graphs.back()->GetXaxis()->SetLabelSize(0.05 * 1.5);  
-            graphs.back()->GetXaxis()->SetTitleSize(0.05 * 1.5);  
-            graphs.back()->GetYaxis()->SetLabelSize(0.05 * 1.5);  
-            graphs.back()->GetYaxis()->SetTitleSize(0.05 * 1.5);  
-            
             gprior->Draw("L same");
             gprior->SetLineStyle(2);
             gprior->SetLineWidth(1);
