@@ -43,20 +43,29 @@ int main(int argc, char* argv[])
     size_t nfit = 1, nthread = 1;
     //Define a filename to save chisq values in
     std::string filename;
-    int gridDim = 40;
+    bool binned=false;
+    std::vector<int> grid_size;
 
-    //doubles
-    app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
-    app.add_option("-m,--max", maxevents, "Max number of events to run over.");
-    app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
-    app.add_option("-g,--grid",gridDim, "Grid Dim, NxN (default 40)");
-    app.add_option("-n,--nfit",nfit, "Number of fits.");
-    app.add_option("-t,--nthread",nthread, "Number of fits.");
-    app.add_option("-o, --outfile", filename, "text file name (preferably absolute path otherwise behavior undefined)");
+    app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.");
+    app.add_option("-m, --max",       maxevents, "Max number of events to run over.");
+    app.add_option("-v, --verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
+    app.add_option("-n, --nfit",      nfit, "Number of fits.");
+    app.add_option("-t, --nthread",   nthread, "Number of fits.");
+    app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name");
+    app.add_option("-g, --grid", grid_size, "Set grid size. If one dimension passed, grid assumed to be square, else rectangular")->expected(0, 2);
+
+    app.add_flag(  "-b, --binned",    binned, "Do you want to weight event-by-event?");
 
     CLI11_PARSE(app, argc, argv);
 
     if(nthread > nfit) nthread = nfit;
+
+    if (grid_size.empty()) {
+        grid_size = {40, 40};
+    }
+    if (grid_size.size() == 1) {
+        grid_size.push_back(grid_size[0]); //make it square
+    }
 
     //Initilize configuration from the XML;
     PROconfig config(xmlname);
@@ -73,18 +82,24 @@ int main(int argc, char* argv[])
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
 
+    //Set 'data' to CV prediction
+    PROspec data = systsstructs.back().CV();
+
     //Define the model (currently 3+1 SBL)
     PROsc osc(prop);
 
-    size_t nbinsx = gridDim, nbinsy = gridDim;
 
-    PROspec data = systsstructs.back().CV();
-
+    //Define grid and Surface
+    size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
     PROsurf surface(nbinsx, PROsurf::LogAxis, 1e-4, 1.0, nbinsy, PROsurf::LogAxis, 1e-2, 1e2);
-    //surface.FillSurfaceFast(config, prop, systs, osc, data, filename);
-    surface.FillSurface(config, prop, systs, osc, data, filename);
+    
+    //Run over surface and Fill it. FillSurfaceSimple does a much simpler minimization.
+    //FullSurface is recommended.
+    //surface.FillSurfaceSimple(config, prop, systs, osc, data, filename, binned, nthread);
+    surface.FillSurface(config, prop, systs, osc, data, filename, binned, nthread);
 
-
+    //Fit is done here. Below is
+    //root plotting code
     std::vector<double> binedges_x, binedges_y;
     for(size_t i = 0; i < surface.nbinsx+1; i++)
         binedges_x.push_back(std::pow(10, surface.edges_x(i)));
