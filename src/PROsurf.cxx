@@ -58,7 +58,7 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceFast(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nthreads) {
+void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nthreads) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
@@ -140,10 +140,10 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
             param.max_iterations = 100;
             param.max_linesearch = 50;
             param.delta = 1e-6;
-            
+
             LBFGSpp::LBFGSBSolver<double> solver(param);
             int nparams = systs.GetNSplines();
-            std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
+            std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};  //deltam^2, sin^22thetamumu
             //std::vector<float> physics_params = {1,0.5};//deltam^2, sin^22thetamumu
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), strat, physics_params);
 	    Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
