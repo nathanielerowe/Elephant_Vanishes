@@ -78,7 +78,20 @@ int main(int argc, char* argv[])
         c->Divide(4,7);
 
 
-        std::vector<std::unique_ptr<TGraph>> graphs;  
+        std::vector<std::unique_ptr<TGraph>> graphs; 
+
+        //hack
+        std::vector<double> priorX;
+        std::vector<double> priorY;
+
+       for(int i=0; i<=20;i++){
+           double which_value = -2.0+0.2*i;
+           priorX.push_back(which_value);
+           priorY.push_back(which_value*which_value);
+
+       }
+       std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
+
 
 
         for(int w=0; w<nparams;w++){
@@ -128,20 +141,20 @@ int main(int argc, char* argv[])
             log<LOG_INFO>(L"%1% || Knob Values: %2%") % __func__ %  knob_vals;
             log<LOG_INFO>(L"%1% || Knob Chis: %2%") % __func__ %  knob_chis;
 
-            //hack
-            int n = knob_vals.size();  // Number of points
-            std::vector<double> prior;
-            for(auto &f: knob_vals)prior.push_back(f*f);
-            std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(n, knob_vals.data(), prior.data());
-
             c->cd(w+1);
-            std::unique_ptr<TGraph> g = std::make_unique<TGraph>(n, knob_vals.data(), knob_chis.data());
+            std::unique_ptr<TGraph> g = std::make_unique<TGraph>(knob_vals.size(), knob_vals.data(), knob_chis.data());
             std::string tit = std::to_string(which_spline)+ ";#sigma Shift; #Chi^{2}";
             g->SetTitle(tit.c_str());
             graphs.push_back(std::move(g));
             graphs.back()->Draw("AL");
             graphs.back()->SetLineWidth(2);
-            gprior->Draw("L");
+            
+            graphs.back()->GetXaxis()->SetLabelSize(0.05 * 1.5);  
+            graphs.back()->GetXaxis()->SetTitleSize(0.05 * 1.5);  
+            graphs.back()->GetYaxis()->SetLabelSize(0.05 * 1.5);  
+            graphs.back()->GetYaxis()->SetTitleSize(0.05 * 1.5);  
+            
+            gprior->Draw("L same");
             gprior->SetLineStyle(2);
             gprior->SetLineWidth(1);
         
