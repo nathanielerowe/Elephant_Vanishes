@@ -75,7 +75,7 @@ void fc_worker(fc_args args) {
         param.delta = 1e-6;
         LBFGSpp::LBFGSBSolver<double> solver(param); 
         int nparams = systs.GetNSplines();
-        PROchi chi("3plus1",&config,&prop,&systs,NULL, newSpec, nparams, systs.GetNSplines());
+        PROchi chi("3plus1",&config,&prop,&systs,NULL, newSpec, nparams, systs.GetNSplines(), PROchi::BinnedChi2);
         Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
         Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
         Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
@@ -114,7 +114,7 @@ void fc_worker(fc_args args) {
         param_osc.delta = 1e-6;
         LBFGSpp::LBFGSBSolver<double> solver_osc(param_osc); 
         nparams = 2 + systs.GetNSplines();
-        PROchi chi_osc("3plus1",&config,&prop,&systs,&osc, newSpec, nparams, systs.GetNSplines());
+        PROchi chi_osc("3plus1",&config,&prop,&systs,&osc, newSpec, nparams, systs.GetNSplines(), PROchi::BinnedChi2);
         Eigen::VectorXd lb_osc = Eigen::VectorXd::Constant(nparams, -3.0);
         //lb_osc(0) = 0.01; lb_osc(1) = 0;
         lb_osc(0) = -2; lb_osc(1) = -std::numeric_limits<double>::infinity();
@@ -133,8 +133,8 @@ void fc_worker(fc_args args) {
         do {
             nfit++;
             for(size_t i = 0; i < nparams; ++i)
-                x_osc(i) = 0.3*d(rng);
-            x_osc(0) = x_osc(0) < -2 ? -2 : x_osc(1) > 2 ? 2 : x_osc(0);
+                x_osc(i) = d(rng);
+            x_osc(0) = x_osc(0) < -2 ? -2 : x_osc(0) > 2 ? 2 : x_osc(0);
             x_osc(1) -= 4;
             try {
                 niter_osc = solver_osc.minimize(chi_osc, x_osc, fx_osc, lb_osc, ub_osc);
