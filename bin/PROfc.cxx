@@ -11,11 +11,7 @@
 #include "CLI11.h"
 #include "LBFGSB.h"
 
-#include <Eigen/Dense>
 #include <Eigen/Eigen>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
-#include <Eigen/Core>
 #include <algorithm>
 #include <numeric>
 #include <random>
@@ -25,27 +21,6 @@ using namespace PROfit;
 
 //log_level_t GLOBAL_LEVEL = LOG_DEBUG;
 log_level_t GLOBAL_LEVEL = LOG_ERROR;
-
-class ChiTest
-{
-    private:
-        int n;
-    public:
-        ChiTest(int n_) : n(n_) {}
-        double operator()(const Eigen::VectorXd &x, Eigen::VectorXd &grad)
-        {
-            double fx = 0.0;
-            for(int i = 0; i < n; i += 2)
-            {
-                double t1 = 1.0 - x[i];
-                double t2 = 10 * (x[i + 1] - x[i] * x[i]);
-                grad[i + 1] = 20 * t2;
-                grad[i]     = -2.0 * (x[i] * grad[i + 1] + t1);
-                fx += t1 * t1 + t2 * t2;
-            }
-            return fx;
-        }
-};
 
 struct fc_out{
     int niter_syst, niter_osc;
@@ -142,10 +117,10 @@ void fc_worker(fc_args args) {
         PROchi chi_osc("3plus1",&config,&prop,&systs,&osc, newSpec, nparams, systs.GetNSplines());
         Eigen::VectorXd lb_osc = Eigen::VectorXd::Constant(nparams, -3.0);
         //lb_osc(0) = 0.01; lb_osc(1) = 0;
-        lb_osc(0) = -2; lb_osc(1) = 0;
+        lb_osc(0) = -2; lb_osc(1) = -std::numeric_limits<double>::infinity();
         Eigen::VectorXd ub_osc = Eigen::VectorXd::Constant(nparams, 3.0);
         //ub_osc(0) = 100; ub_osc(1) = 1;
-        ub_osc(0) = 2; ub_osc(1) = 1;
+        ub_osc(0) = 2; ub_osc(1) = 0;
         Eigen::VectorXd x_osc = Eigen::VectorXd::Constant(nparams, 0.0);
         x_osc(0) = 1.0;
 
@@ -153,18 +128,14 @@ void fc_worker(fc_args args) {
         log<LOG_INFO>(L"%1% || Fit with oscillations") % __func__;
         double fx_osc;
         int niter_osc;
-        chi2s.clear();
+        std::vector<std::tuple<double, double, double>> res;
         nfit = 0;
         do {
             nfit++;
             for(size_t i = 0; i < nparams; ++i)
                 x_osc(i) = 0.3*d(rng);
-            //x_osc(0) = exp(x_osc(1));
-            //x_osc(0) = x_osc(0) < 0.01 ? 0.01 : x_osc(1) > 100 ? 100 : x_osc(0);
             x_osc(0) = x_osc(0) < -2 ? -2 : x_osc(1) > 2 ? 2 : x_osc(0);
-            x_osc(1) += 0.5;
-            x_osc(1) /= 6;
-            x_osc(1) = x_osc(1) < 0 ? 0.0 : x_osc(1) > 1 ? 1.0 : x_osc(1);
+            x_osc(1) -= 4;
             try {
                 niter_osc = solver_osc.minimize(chi_osc, x_osc, fx_osc, lb_osc, ub_osc);
             } catch(std::runtime_error &except) {
@@ -172,22 +143,22 @@ void fc_worker(fc_args args) {
                 //for(auto &t: throws) log<LOG_ERROR>(L"%1% || Throws, %2%") % __func__ % t;
                 continue;
             }
-            chi2s.push_back(fx_osc);
-        } while(chi2s.size() < 10 && nfit < 100);
-        if(chi2s.size() < 10) continue;
-        fx_osc = *std::min_element(chi2s.begin(), chi2s.end());
-        //std::cout<<"Chis min: "<<fx_osc<<" || ";
-        //for(auto &c: chi2s)std::cout<<c<<" ";
-        //std::cout<<std::endl;
-        log<LOG_INFO>(L"%1% || Chi2 min %2% || %3%") % __func__ % fx_osc % chi2s;
+            res.emplace_back(fx_osc, x(0), x(1));
+        } while(res.size() < 10 && nfit < 100);
+        if(res.size() < 10) continue;
+        const auto [chi2_osc, ldmsq, lss2t] = *std::min_element(res.begin(), res.end(),
+            [](const auto& l, const auto& r) {
+              return std::get<0>(l) < std::get<0>(r);
+            });
+        //log<LOG_INFO>(L"%1% || Chi2 min %2% || %3%") % __func__ % fx_osc % chi2s;
         
 
         Eigen::VectorXd t = Eigen::VectorXd::Constant(throws.size(), 0);
         for(size_t i = 0; i < throws.size(); i++) t(i) = throws[i];
 
-        out->push_back({niter, niter_osc, fx, fx_osc, x_osc(0), x_osc(1), x, x_osc.segment(2, nparams-2), t});
+        out->push_back({niter, niter_osc, fx, chi2_osc, std::pow(10, ldmsq), std::pow(10, lss2t), x, x_osc.segment(2, nparams-2), t});
 
-        dchi2s->push_back(std::abs(fx - fx_osc));
+        dchi2s->push_back(std::abs(fx - chi2_osc ));
     }
 }
 
@@ -205,7 +176,7 @@ int main(int argc, char* argv[])
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
     app.add_option("-n,--nfit",nfit, "Number of fits.");
-    app.add_option("-t,--nthread",nthread, "Number of fits.");
+    app.add_option("-t,--nthread",nthread, "Number of threads.");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -257,11 +228,38 @@ int main(int argc, char* argv[])
     for(auto&& t: threads) {
         t.join();
     }
+
+    TH1D hdchi2s("hdchi2s", ";#Delta#chi^{2}", 50, 0, 50);
+    std::vector<double> dmsqedges;
+    for(size_t i = 0; i < 41; ++i)
+        dmsqedges.push_back(std::pow(10.0, -2.0 + i * 4.0 / 40));
+    TH1D hdmsqs("hdmsqs", ";#Deltam^{2}", 40, dmsqedges.data());
+    TH1D hss2t("hss2t", ";sin^{2}2#theta_{#mu#mu}", 50, 0, 1);
+
     size_t count = std::accumulate(counts.begin(), counts.end(), 0);
     std::vector<double> flattened_dchi2s;
-    for(const auto& v: dchi2s)
-        for(const auto& dchi2: v)
+    for(const auto& v: dchi2s) {
+        for(const auto& dchi2: v) {
             flattened_dchi2s.push_back(dchi2);
+            hdchi2s.Fill(dchi2);
+        }
+    }
+    for(const auto& out: outs) {
+      for(const auto& fco: out) {
+        hdmsqs.Fill(fco.dmsq);
+        hss2t.Fill(fco.sinsq2tmm);
+      }
+    }
+
+    TCanvas c;
+    c.SetLogy();
+    hdchi2s.Draw("hist");
+    c.Print("dchi2s.pdf");
+    hss2t.Draw("hist");
+    c.Print("sinsq2tmm.pdf");
+    c.SetLogx();
+    hdmsqs.Draw("hist");
+    c.Print("dmsqs.pdf");
 
     std::sort(flattened_dchi2s.begin(), flattened_dchi2s.end());
 
