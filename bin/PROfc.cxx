@@ -143,14 +143,14 @@ void fc_worker(fc_args args) {
                 //for(auto &t: throws) log<LOG_ERROR>(L"%1% || Throws, %2%") % __func__ % t;
                 continue;
             }
-            res.emplace_back(fx_osc, x(0), x(1));
+            res.emplace_back(fx_osc, x_osc(0), x_osc(1));
         } while(res.size() < 10 && nfit < 100);
         if(res.size() < 10) continue;
         const auto [chi2_osc, ldmsq, lss2t] = *std::min_element(res.begin(), res.end(),
             [](const auto& l, const auto& r) {
               return std::get<0>(l) < std::get<0>(r);
             });
-        //log<LOG_INFO>(L"%1% || Chi2 min %2% || %3%") % __func__ % fx_osc % chi2s;
+        log<LOG_INFO>(L"%1% || Chi2 min %2% || %3% %4%") % __func__ % fx_osc % std::pow(10, ldmsq) % std::pow(10, lss2t);
         
 
         Eigen::VectorXd t = Eigen::VectorXd::Constant(throws.size(), 0);
