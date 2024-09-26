@@ -80,7 +80,7 @@ namespace PROfit{
             exit(EXIT_FAILURE);
         }
 
-        log<LOG_DEBUG>(L"%1% || CT  %2% x %3%. Full matrix: %4% x %5% ") % __func__ % collapsing_matrix.transpose().rows() %  collapsing_matrix.transpose().cols() % full_matrix.rows() % full_matrix.cols();
+        //log<LOG_DEBUG>(L"%1% || CT  %2% x %3%. Full matrix: %4% x %5% ") % __func__ % collapsing_matrix.transpose().rows() %  collapsing_matrix.transpose().cols() % full_matrix.rows() % full_matrix.cols();
         Eigen::MatrixXd result_matrix   = collapsing_matrix.transpose()*full_matrix*collapsing_matrix;
         return result_matrix;
     }
