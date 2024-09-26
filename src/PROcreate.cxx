@@ -181,13 +181,14 @@ namespace PROfit {
 
                 for(const auto& it : *f_weight){
                     log<LOG_DEBUG>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
+                    int ncount = std::count(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), it.first);
 
-                    if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
+                    if(ncount==0){
                         log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
                         continue;
                     }
-
-                    if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
+                    ncount = std::count(inconfig.m_mcgen_variation_denylist.begin(), inconfig.m_mcgen_variation_denylist.end(), it.first);
+                    if(ncount>0){
                         log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
                         continue;
                     }
@@ -314,7 +315,7 @@ namespace PROfit {
 
     int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller& inprop){
 
-        log<LOG_DEBUG>(L"%1% || Starting to construct CovarianceMatrixGeneration in EventWeight Mode  ") % __func__ ;
+        log<LOG_DEBUG>(L"%1% || Loading Monte Carlo Files") % __func__ ;
 
         int num_files = inconfig.m_num_mcgen_files;
 
@@ -339,7 +340,7 @@ namespace PROfit {
             if(files[fid]->IsOpen()){
                 log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
             }else{
-                log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % fn.c_str();
+                log<LOG_ERROR>(L"%1% || Failed to open root file: %2%") % __func__  % fn.c_str();
                 exit(EXIT_FAILURE);
             }
             log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
@@ -411,7 +412,8 @@ namespace PROfit {
                 //grab eventweight branch
                 for(const TObject* branch: *trees[fid]->GetListOfBranches()) {
                     log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
-                    if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
+
+                    if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
                         log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                         trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
                     }
@@ -419,7 +421,9 @@ namespace PROfit {
                 for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
                     for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
                         log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
-                        if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
+
+                        if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
+                        //if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
                             log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                             trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
                         }
@@ -438,12 +442,14 @@ namespace PROfit {
                 for(const auto& it : f_weight){
                     log<LOG_DEBUG>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
 
-                    if(inconfig.m_mcgen_variation_allowlist.count(it.first)==0){
+                    int count = std::count(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), it.first);
+                    if(count==0){
                         log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as its not in the AllowList!!") % __func__ % it.first.c_str();
                         continue;
                     }
 
-                    if(inconfig.m_mcgen_variation_denylist.count(it.first)>0){
+                    count = std::count(inconfig.m_mcgen_variation_denylist.begin(), inconfig.m_mcgen_variation_denylist.end(), it.first);
+                    if(count>0){
                         log<LOG_DEBUG>(L"%1% || Skip systematic: %2% as it is in the DenyList!!") % __func__ % it.first.c_str();
                         continue;
                     }
@@ -480,7 +486,7 @@ namespace PROfit {
                     sys_weight_formula = sys_weight_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
                     sys_mode=inconfig.m_mcgen_weightmaps_mode[i];
 
-                    log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for patten %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
+                    log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for pattern %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
                     log<LOG_INFO>(L"%1% || Corresponding weight is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_formulas[i].c_str();
                     log<LOG_INFO>(L"%1% || Corresponding mode is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_mode[i].c_str();
                 }
@@ -717,14 +723,16 @@ namespace PROfit {
                 log<LOG_DEBUG>(L"%1% || starting %2% ") % __func__ % varname.c_str()  ;
 
                 if(inconfig.m_mcgen_variation_allowlist.size()> 0 ){
-                    if(inconfig.m_mcgen_variation_allowlist.count(varname)==0){
+                    int ncount = std::count(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), varname);
+                    if(ncount==0){
                         log<LOG_INFO>(L"%1% || Skipping %2% as its not in allowlist ") % __func__ % varname.c_str();
                         continue;
                     }
                 }
 
                 if(inconfig.m_mcgen_variation_denylist.size()> 0 ){
-                    if(inconfig.m_mcgen_variation_denylist.count(varname)>0){
+                    int ncount = std::count(inconfig.m_mcgen_variation_denylist.begin(), inconfig.m_mcgen_variation_denylist.end(), varname);
+                    if(ncount>0){
                         log<LOG_INFO>(L"%1% || Skipping %2% as it in denylist ") % __func__ % varname.c_str();
                         continue;
                     }

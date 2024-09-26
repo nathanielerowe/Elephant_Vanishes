@@ -111,6 +111,8 @@ namespace PROfit {
             std::vector<Eigen::MatrixXd> covmat;
             std::vector<Eigen::MatrixXd> corrmat;
             //std::vector<MFA> mfa;
+            bool anyspline = false;
+            bool anycovar  = true;
     };
 
 };

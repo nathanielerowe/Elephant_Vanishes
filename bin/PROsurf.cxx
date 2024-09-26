@@ -28,8 +28,8 @@
 
 using namespace PROfit;
 
-//log_level_t GLOBAL_LEVEL = LOG_DEBUG;
-log_level_t GLOBAL_LEVEL = LOG_ERROR;
+log_level_t GLOBAL_LEVEL = LOG_DEBUG;
+//log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 int main(int argc, char* argv[])
 {
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
-
+    std::cout<<"\n FINSISHED SYSTS \n\n" << std::endl;
     //Set 'data' to CV prediction
     PROspec data = systsstructs.back().CV();
 

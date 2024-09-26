@@ -21,7 +21,6 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
 
 float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient, bool rungradient){
 
-
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXd subvector1 = param.segment(0, nparams - nsyst);
     std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
@@ -39,29 +38,31 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     //std::cout<<"Spec "<< result.Spec()<<" .. "<<std::endl;
     //result.plotSpectrum(*config,"TTPT");
     
-    // Calcuate Full Covariance matrix
-    Eigen::MatrixXd diag = result.Spec().array().matrix().asDiagonal(); 
-    Eigen::MatrixXd full_covariance =  diag*(syst->fractional_covariance)*diag;
-    //std::cout<<"Full: "<<full_covariance.size()<<std::endl;
-    //std::cout<<full_covariance<<std::endl;
+    if(config->m_num_variation_type_covariance > 0){
 
-    // Collapse Covariance and Spectra 
-    Eigen::MatrixXd collapsed_full_covariance =  CollapseMatrix(*config,full_covariance);  
-    //std::cout<<"cFull: "<<collapsed_full_covariance.size()<<std::endl;
-    //std::cout<<collapsed_full_covariance<<std::endl;
+      // Calculate Full Covariance matrix
+      Eigen::MatrixXd diag = result.Spec().array().matrix().asDiagonal(); 
+      Eigen::MatrixXd full_covariance =  diag*(syst->fractional_covariance)*diag;
+      //std::cout<<"Full: "<<full_covariance.size()<<std::endl;
+      //std::cout<<full_covariance<<std::endl;
 
-    Eigen::MatrixXd stat_covariance = data.Spec().array().matrix().asDiagonal();
-    Eigen::MatrixXd collapsed_stat_covariance = CollapseMatrix(*config, stat_covariance); 
-    //std::cout<<"cStat: "<<collapsed_stat_covariance.size()<<std::endl;
-    //std::cout<<collapsed_stat_covariance<<std::endl;
+      // Collapse Covariance and Spectra 
+      Eigen::MatrixXd collapsed_full_covariance =  CollapseMatrix(*config,full_covariance);  
+      //std::cout<<"cFull: "<<collapsed_full_covariance.size()<<std::endl;
+      //std::cout<<collapsed_full_covariance<<std::endl;
+
+      Eigen::MatrixXd stat_covariance = data.Spec().array().matrix().asDiagonal();
+      Eigen::MatrixXd collapsed_stat_covariance = CollapseMatrix(*config, stat_covariance); 
+      //std::cout<<"cStat: "<<collapsed_stat_covariance.size()<<std::endl;
+      //std::cout<<collapsed_stat_covariance<<std::endl;
 
 
-    // Invert Collaped Matrix Matrix 
-    Eigen::MatrixXd inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
+      // Invert Collaped Matrix Matrix 
+      Eigen::MatrixXd inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
 
-    //std::cout<<"shape: "<<inverted_collapsed_full_covariance.size()<<std::endl;
-    //std::cout<<inverted_collapsed_full_covariance<<std::endl;
-
+      //std::cout<<"shape: "<<inverted_collapsed_full_covariance.size()<<std::endl;
+      //std::cout<<inverted_collapsed_full_covariance<<std::endl;
+    }
     // Calculate Chi^2  value
     Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
     

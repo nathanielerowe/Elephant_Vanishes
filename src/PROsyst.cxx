@@ -9,12 +9,20 @@ namespace PROfit {
     PROsyst::PROsyst(const std::vector<SystStruct>& systs) {
         for(const auto& syst: systs) {
             if(syst.mode == "multisigma") {
+                log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
+                anyspline=true;
             } else if(syst.mode == "multisim") {
+                log<LOG_INFO>(L"%1% || Entering covariance syst world?") % __func__;
                 this->CreateMatrix(syst);
+                anycovar=true;
             }
         }
-        fractional_covariance = this->SumMatrices();
+       
+        if(anycovar){
+
+          fractional_covariance = this->SumMatrices();
+        }
     }
 
 
@@ -77,7 +85,7 @@ namespace PROfit {
 
 
     std::pair<Eigen::MatrixXd, Eigen::MatrixXd>  PROsyst::GenerateCovarMatrices(const SystStruct& sys_obj){
-        //get fractioal covar
+        //get fractional covar
         Eigen::MatrixXd frac_covar_matrix = PROsyst::GenerateFracCovarMatrix(sys_obj);
 
         //get fractional covariance matrix
@@ -223,6 +231,8 @@ namespace PROfit {
         ratios.reserve(syst.p_multi_spec.size());
         bool found0 = false;
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
+            log<LOG_ERROR>(L"%1% || p_multi_spec, knobval, i, cv (%2%): %3%") % __func__ % tolerance % val;
+       
             if(syst.knobval[i] > 0 && !found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
             if(syst.knobval[i] == 0) found0 = true;
             ratios.push_back(*syst.p_multi_spec[i] / *syst.p_cv);
