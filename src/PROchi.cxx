@@ -46,6 +46,7 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     //std::cout<<full_covariance<<std::endl;
 
     // Collapse Covariance and Spectra 
+
     Eigen::MatrixXd collapsed_full_covariance =  CollapseMatrix(*config,full_covariance);  
     //std::cout<<"cFull: "<<collapsed_full_covariance.size()<<std::endl;
     //std::cout<<collapsed_full_covariance<<std::endl;
@@ -64,7 +65,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
 
     // Calculate Chi^2  value
     Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
-    
+    //Collapse
+    delta = CollapseMatrix(*config, delta);  
 
     if(!(fixed_index<0)){
         subvector2[fixed_index]=0;   
@@ -78,7 +80,6 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
     float value = covar_portion + dmsq_penalty + pull;
 
-    log<LOG_DEBUG>(L"%1% || Chi^2 %2%, Covar %3% and Pull %4%") % __func__ % value % covar_portion % pull;
 
     if(rungradient){
         float dval = 1e-4;
@@ -110,7 +111,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
             Eigen::MatrixXd inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
             // Calculate Chi^2  value
             Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
-            
+            delta = CollapseMatrix(*config, delta);  
+
             if(!(fixed_index<0)){
                 subvector2[fixed_index]=0;   
             }

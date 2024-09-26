@@ -72,6 +72,7 @@ namespace PROfit{
 
     Eigen::MatrixXd CollapseMatrix(const PROconfig &inconfig, const Eigen::MatrixXd& full_matrix){
         Eigen::MatrixXd collapsing_matrix = inconfig.GetCollapsingMatrix();
+        
         int num_bin_before_collapse = collapsing_matrix.rows();
         if(full_matrix.rows() != num_bin_before_collapse || full_matrix.cols() != num_bin_before_collapse){
             log<LOG_ERROR>(L"%1% || Matrix dimension doesn't match expected size. Provided matrix: %2% x %3%. Expected matrix size: %4% x %5%") % __func__ % full_matrix.rows() % full_matrix.cols() % num_bin_before_collapse% num_bin_before_collapse;
@@ -79,8 +80,8 @@ namespace PROfit{
             exit(EXIT_FAILURE);
         }
 
-        log<LOG_DEBUG>(L"%1% || Collapsed matrix will be %2% x %3%") % __func__ % collapsing_matrix.cols() % collapsing_matrix.cols();
-        Eigen::MatrixXd result_matrix = collapsing_matrix.transpose() * full_matrix * collapsing_matrix;
+        log<LOG_DEBUG>(L"%1% || CT  %2% x %3%. Full matrix: %4% x %5% ") % __func__ % collapsing_matrix.transpose().rows() %  collapsing_matrix.transpose().cols() % full_matrix.rows() % full_matrix.cols();
+        Eigen::MatrixXd result_matrix   = collapsing_matrix.transpose()*full_matrix*collapsing_matrix;
         return result_matrix;
     }
 
