@@ -17,6 +17,9 @@
 #include <random>
 #include <thread>
 
+#include "TH2D.h"
+#include "TStyle.h"
+
 using namespace PROfit;
 
 //log_level_t GLOBAL_LEVEL = LOG_DEBUG;
@@ -164,6 +167,7 @@ void fc_worker(fc_args args) {
 
 int main(int argc, char* argv[])
 {
+    gStyle->SetOptStat(0);
     CLI::App app{"Test for PROfit"}; 
 
     // Define options
@@ -235,6 +239,7 @@ int main(int argc, char* argv[])
         dmsqedges.push_back(std::pow(10.0, -2.0 + i * 4.0 / 40));
     TH1D hdmsqs("hdmsqs", ";#Deltam^{2}", 40, dmsqedges.data());
     TH1D hss2t("hss2t", ";sin^{2}2#theta_{#mu#mu}", 50, 0, 1);
+    TH2D hdmsqvss2t("hdmsqvss2t", ";sin^{2}2#theta_{#mu#mu};#Deltam^{2}", 50, 0, 1, 40, dmsqedges.data());
 
     size_t count = std::accumulate(counts.begin(), counts.end(), 0);
     std::vector<double> flattened_dchi2s;
@@ -248,6 +253,7 @@ int main(int argc, char* argv[])
       for(const auto& fco: out) {
         hdmsqs.Fill(fco.dmsq);
         hss2t.Fill(fco.sinsq2tmm);
+        hdmsqvss2t.Fill(fco.sinsq2tmm, fco.dmsq);
       }
     }
 
@@ -257,6 +263,9 @@ int main(int argc, char* argv[])
     c.Print("dchi2s.pdf");
     hss2t.Draw("hist");
     c.Print("sinsq2tmm.pdf");
+    c.SetLogz();
+    hdmsqvss2t.Draw("colz");
+    c.Print("dmsq_v_sinsq2tmm.pdf");
     c.SetLogx();
     hdmsqs.Draw("hist");
     c.Print("dmsqs.pdf");
