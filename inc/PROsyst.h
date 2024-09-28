@@ -39,9 +39,9 @@ namespace PROfit {
             /* Function: given systematic name, return type of systematic */
             SystType GetSystType(const std::string& syst) const;
 
-            size_t GetNSplines() const { return n_splines; }
+            size_t GetNSplines() const { return splines.size(); }
 
-            size_t GetNSplines() { return n_splines; }
+            size_t GetNSplines() { return splines.size(); }
 
             //----- Spline and Covariance matrix related ---
             //----- Spline and Covariance matrix related ---
