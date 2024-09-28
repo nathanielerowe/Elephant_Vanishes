@@ -38,9 +38,7 @@
     <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
      <branch
          name                  = "recoE"
-         type                  = "double"
          associated_subchannel = "nu_SBND_numu_cc"
-         oscillate             = "true"
          model_rule            = "1"
          true_param_name       = "trueE" 
          true_L_name           = "trueL / 1000"
@@ -54,9 +52,7 @@
     <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
      <branch
          name                  = "recoE"
-         type                  = "double"
          associated_subchannel = "nu_SBND_numu_nc"
-         oscillate             = "true"
          model_rule            = "1"
          true_param_name       = "trueE" 
          true_L_name           = "trueL / 1000"
@@ -70,9 +66,7 @@
     <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
      <branch
          name                  = "recoE"
-         type                  = "double"
          associated_subchannel = "nu_SBND_numu_other"
-         oscillate             = "true"
          model_rule            = "1"
          true_param_name       = "trueE" 
          true_L_name           = "trueL / 1000"
@@ -86,9 +80,7 @@
     <friend treename="events/multisigmaTree" filename="selected_events_dependentdetsysts.root"/>
      <branch
          name                  = "recoE"
-         type                  = "double"
          associated_subchannel = "nu_SBND_nue_nc"
-         oscillate             = "true"
          model_rule            = "1"
          true_param_name       = "trueE" 
          true_L_name           = "trueL / 1000"

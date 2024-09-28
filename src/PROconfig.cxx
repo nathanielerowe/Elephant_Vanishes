@@ -459,7 +459,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
             while(pBranch){
 
                 const char* bnam = pBranch->Attribute("name");
-                const char* btype = pBranch->Attribute("type");
                 const char* bhist = pBranch->Attribute("associated_subchannel");
                 const char* bsyst = pBranch->Attribute("associated_systematic");
                 const char* bcentral = pBranch->Attribute("central_value");
@@ -481,10 +480,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     exit(EXIT_FAILURE);
                 }
 
-                if(btype == NULL){
-                    log<LOG_WARNING>(L"%1% || WARNING: No branch type has been specified, assuming double. @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
-                    btype= "double";
-                }
 
                 if(bhist == NULL){
                     log<LOG_ERROR>(L"%1% || Each branch must have an associated_subchannel to fill! On branch %4% : @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__ % bnam;
@@ -521,23 +516,17 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
 
 
-                if((std::string)btype == "double"){
                     if(use_universe){
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, btype, bhist ) );
+                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "double", bhist ) );
                     } else  if((std::string)bcentral == "true"){
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, btype, bhist,bsyst, true) );
+                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "double", bhist,bsyst, true) );
                         log<LOG_DEBUG>(L"%1% || Setting as  CV for det sys.") % __func__ ;
                     } else {
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, btype, bhist,bsyst, false) );
+                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "double", bhist,bsyst, false) );
                         log<LOG_DEBUG>(L"%1% || Setting as individual (not CV) for det sys.") % __func__ ;
                     }
-                }else{
-                    log<LOG_ERROR>(L"%1% || ERROR: currently only double, allowed for input branch variables (sorry!) i @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__ % bnam;
-                    log<LOG_ERROR>(L"Terminating.");
-                    exit(EXIT_FAILURE);
-                }
 
-                std::string oscillate = "false";
+                std::string oscillate = "true";
                 if(pBranch->Attribute("oscillate")!=NULL){
                     oscillate =pBranch->Attribute("oscillate");
                 }	
