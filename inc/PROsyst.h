@@ -17,8 +17,9 @@ namespace PROfit {
     */
     class PROsyst {
         public:
-            using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
-
+            //using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
+            using Spline = std::vector<std::pair<float, std::array<float, 4>>>;
+            
             enum class SystType {
                 Spline, Covariance, MFA
             };
@@ -39,9 +40,9 @@ namespace PROfit {
             /* Function: given systematic name, return type of systematic */
             SystType GetSystType(const std::string& syst) const;
 
-            size_t GetNSplines() const { return splines.size(); }
+            size_t GetNSplines() const { return n_splines; }
 
-            size_t GetNSplines() { return splines.size(); }
+            size_t GetNSplines() { return n_splines; }
 
             //----- Spline and Covariance matrix related ---
             //----- Spline and Covariance matrix related ---
@@ -108,6 +109,7 @@ namespace PROfit {
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
             std::vector<Spline> splines;
+            size_t n_splines;
             std::vector<Eigen::MatrixXd> covmat;
             std::vector<Eigen::MatrixXd> corrmat;
             //std::vector<MFA> mfa;
