@@ -8,21 +8,20 @@ namespace PROfit {
 
     PROsyst::PROsyst(const std::vector<SystStruct>& systs) {
         for(const auto& syst: systs) {
+            log<LOG_ERROR>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
             if(syst.mode == "multisigma") {
                 log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
-                anyspline=true;
+                //anyspline=true;
             } else if(syst.mode == "multisim") {
                 log<LOG_INFO>(L"%1% || Entering covariance syst world?") % __func__;
                 this->CreateMatrix(syst);
-                anycovar=true;
+                //anycovar=true;
             }
         }
-       
-        if(anycovar){
+        log<LOG_ERROR>(L"%1% || No systematics?") % __func__ ;
 
-          fractional_covariance = this->SumMatrices();
-        }
+        fractional_covariance = this->SumMatrices();
     }
 
 
@@ -31,6 +30,8 @@ namespace PROfit {
         Eigen::MatrixXd sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
+            log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
+
             sum_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
             for(auto& p : covmat){
                 sum_matrix += p;
@@ -47,10 +48,12 @@ namespace PROfit {
         Eigen::MatrixXd sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
+            log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
+
             sum_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
         }
         else{
-            log<LOG_ERROR>(L"%1% || There is no covariance available!") % __func__;
+            log<LOG_ERROR>(L"%1% || There is no covariance available!!") % __func__;
             log<LOG_ERROR>(L"%1% || Returning empty matrix") % __func__;
             return sum_matrix;
         }
@@ -231,7 +234,7 @@ namespace PROfit {
         ratios.reserve(syst.p_multi_spec.size());
         bool found0 = false;
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
-            log<LOG_ERROR>(L"%1% || p_multi_spec, knobval, i, cv (%2%): %3%") % __func__ % tolerance % val;
+            //log<LOG_ERROR>(L"%1% || p_multi_spec, knobval, i, cv (%2%): %3%") % __func__ % tolerance % val;
        
             if(syst.knobval[i] > 0 && !found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
             if(syst.knobval[i] == 0) found0 = true;
