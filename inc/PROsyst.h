@@ -17,8 +17,7 @@ namespace PROfit {
     */
     class PROsyst {
         public:
-            //using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
-            using Spline = std::vector<std::pair<float, std::array<float, 4>>>;
+            using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
             
             enum class SystType {
                 Spline, Covariance, MFA
