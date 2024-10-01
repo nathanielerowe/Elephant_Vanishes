@@ -10,7 +10,7 @@ namespace PROfit {
         PROspec myspectrum(inconfig.m_num_bins_total);
 
         if(binned) {
-            for(size_t i = 0; i < inprop.hist.rows(); ++i) {
+            for(long int i = 0; i < inprop.hist.rows(); ++i) {
                 float le = inprop.histLE[i];
                 float systw = 1;
                 for(size_t j = 0; j < inshifts.size(); ++j) {

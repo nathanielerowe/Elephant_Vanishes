@@ -120,18 +120,19 @@ int main(int argc, char* argv[])
 
     // Bounds
     Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-    if(oscillate)
+    if(oscillate){
         lb(0) = 0.01; lb(1) = 0;
+    }
     Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-    if(oscillate)
+    if(oscillate){
         ub(0) = 100; ub(1) = 1;
-
+    }
     // Initial guess
     Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.2);
 
     // x will be overwritten to be the best point found
     double fx;
-    int niter;
+    int niter = -1;
     try {
         niter = solver.minimize(chi, x, fx, lb, ub);
     } catch(std::runtime_error &except) {

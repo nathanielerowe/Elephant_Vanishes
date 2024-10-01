@@ -52,7 +52,7 @@ void fc_worker(fc_args args) {
     auto &prop = args.prop;
     auto &systs = args.systs;
     auto &cv = args.cv;
-    auto &err = args.err;
+    //auto &err = args.err;
     auto &L = args.L;
     std::random_device rd{};
     std::mt19937 rng{rd()};
@@ -65,7 +65,7 @@ void fc_worker(fc_args args) {
         Eigen::VectorXd throwC = Eigen::VectorXd::Constant(cv.size(), 0);
         for(size_t i = 0; i < systs.GetNSplines(); i++)
             throws.push_back(d(rng));
-        for(size_t i = 0; i < cv.size(); i++)
+        for(size_t i = 0; i < (size_t)cv.size(); i++)
             throwC(i) = d(rng);
         PROspec shifted = systs.GetSplineShiftedSpectrum(config, prop, throws);
         PROspec newSpec = PROspec::PoissonVariation(PROspec(shifted.Spec() + L * throwC, shifted.Error()));
@@ -77,14 +77,14 @@ void fc_worker(fc_args args) {
         param.max_linesearch = 50;
         param.delta = 1e-6;
         LBFGSpp::LBFGSBSolver<double> solver(param); 
-        int nparams = systs.GetNSplines();
+        size_t nparams = systs.GetNSplines();
         PROchi chi("3plus1",&config,&prop,&systs,NULL, newSpec, nparams, systs.GetNSplines(), PROchi::BinnedChi2);
         Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
         Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
         Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
 
         double fx;
-        int niter;
+        int niter=-1;
         std::vector<double> chi2s;
         int nfit = 0;
         do {
@@ -130,7 +130,7 @@ void fc_worker(fc_args args) {
         // x will be overwritten to be the best point found
         log<LOG_INFO>(L"%1% || Fit with oscillations") % __func__;
         double fx_osc;
-        int niter_osc;
+        int niter_osc = -1;
         std::vector<std::tuple<double, double, double>> res;
         nfit = 0;
         do {

@@ -229,7 +229,7 @@ namespace PROfit {
         }
         Spline spline_coeffs;
         spline_coeffs.reserve(syst.p_cv->GetNbins());
-        for(long i = 0; i < syst.p_cv->GetNbins(); ++i) {
+        for(size_t i = 0; i < syst.p_cv->GetNbins(); ++i) {
             std::vector<std::pair<float, std::array<float, 4>>> spline;
             spline.reserve(syst.knobval.size());
 
