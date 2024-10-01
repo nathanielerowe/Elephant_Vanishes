@@ -502,8 +502,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 }
 
-                std::string chk_wei = badditional_weight;
-                if(badditional_weight == NULL || badditional_weight == "" ){ //|| (chk_wei.find_first_not_of(' ') != std::string::npos) ){
+                //std::string chk_wei = badditional_weight;
+                if(badditional_weight == NULL || strcmp(badditional_weight, "") == 0){ //|| (chk_wei.find_first_not_of(' ') != std::string::npos) ){
                     TEMP_additional_weight_bool.push_back(0);
                     TEMP_additional_weight_name.push_back("1");
                     log<LOG_DEBUG>(L"%1% || Setting NO additional weight for branch %2% (1)") % __func__ % bnam ;
@@ -777,7 +777,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         log<LOG_INFO>(L"%1% || num_modes: %2% ") % __func__ % m_num_modes;
         log<LOG_INFO>(L"%1% || num_detectors: %2% ") % __func__ % m_num_detectors;
         log<LOG_INFO>(L"%1% || num_channels: %2% ") % __func__ % m_num_channels;
-        for(int i = 0 ; i!=m_num_channels; ++i){
+        for(size_t i = 0 ; i!=m_num_channels; ++i){
             log<LOG_INFO>(L"%1% || num of subchannels: %2% ") % __func__ % m_num_subchannels[i];
             log<LOG_INFO>(L"%1% || num of bins: %2% ") % __func__ % m_channel_num_bins[i];
 
@@ -802,7 +802,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         this->remove_unused_channel();
 
         log<LOG_INFO>(L"%1% || Calculating number of bins involved") % __func__;
-        for(int i = 0; i != m_num_channels; ++i){
+        for(size_t i = 0; i != m_num_channels; ++i){
             m_num_bins_detector_block += m_num_subchannels[i]*m_channel_num_bins[i];
             m_num_truebins_detector_block += m_num_subchannels[i]*m_channel_num_truebins[i];
             m_num_bins_detector_block_collapsed += m_channel_num_bins[i];
@@ -820,7 +820,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return;
     }
 
-    int PROconfig::GetSubchannelIndex(const std::string& fullname) const{
+    size_t PROconfig::GetSubchannelIndex(const std::string& fullname) const{
         auto pos_iter = m_map_fullname_subchannel_index.find(fullname);
         if(pos_iter == m_map_fullname_subchannel_index.end()){
             log<LOG_ERROR>(L"%1% || Subchannel name: %2% does not exist in the indexing map!") % __func__ % fullname.c_str();
@@ -830,34 +830,34 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return pos_iter->second;
     }
 
-    int PROconfig::GetChannelIndex(int subchannel_index) const{
+    size_t PROconfig::GetChannelIndex(size_t subchannel_index) const{
         size_t index = this->find_equal_index(m_vec_subchannel_index, subchannel_index);
         return m_vec_channel_index[index];
     }
 
-    int PROconfig::GetGlobalBinStart(int subchannel_index) const{
+    size_t PROconfig::GetGlobalBinStart(size_t subchannel_index) const{
         size_t index = this->find_equal_index(m_vec_subchannel_index, subchannel_index);
         return m_vec_global_reco_index_start[index];
     }
 
-    int PROconfig::GetGlobalTrueBinStart(int subchannel_index) const{
+    size_t PROconfig::GetGlobalTrueBinStart(size_t subchannel_index) const{
         size_t index = this->find_equal_index(m_vec_subchannel_index, subchannel_index);
         return m_vec_global_true_index_start[index];
     }
 
-    int PROconfig::GetSubchannelIndexFromGlobalBin(int global_reco_index) const {
+    size_t PROconfig::GetSubchannelIndexFromGlobalBin(size_t global_reco_index) const {
         size_t index = this->find_less_or_equal_index(m_vec_global_reco_index_start, global_reco_index); 
         return m_vec_subchannel_index[index];
     }
 
-    int PROconfig::GetSubchannelIndexFromGlobalTrueBin(int global_trueindex) const{
+    size_t PROconfig::GetSubchannelIndexFromGlobalTrueBin(size_t global_trueindex) const{
         size_t index = this->find_less_or_equal_index(m_vec_global_true_index_start, global_trueindex);
         return m_vec_subchannel_index[index];
     }
 
-    const std::vector<double>& PROconfig::GetChannelBinEdges(int channel_index) const{
+    const std::vector<double>& PROconfig::GetChannelBinEdges(size_t channel_index) const{
 
-        if(channel_index < 0 || channel_index >= m_num_channels){
+        if( channel_index >= m_num_channels){
             log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
             log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
             log<LOG_ERROR>(L"Terminating.");
@@ -867,8 +867,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return m_channel_bin_edges[channel_index];
     }
 
-    int PROconfig::GetChannelNTrueBins(int channel_index) const{
-        if(channel_index < 0 || channel_index >= m_num_channels){
+    size_t PROconfig::GetChannelNTrueBins(size_t channel_index) const{
+        if(channel_index >= m_num_channels){
             log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
             log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
             log<LOG_ERROR>(L"Terminating.");
@@ -877,10 +877,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return m_channel_num_truebins[channel_index];
     }
 
-    const std::vector<double>& PROconfig::GetChannelTrueBinEdges(int channel_index) const{
+    const std::vector<double>& PROconfig::GetChannelTrueBinEdges(size_t channel_index) const{
 
         //check for out of bound
-        if(channel_index < 0 || channel_index >= m_num_channels){
+        if(channel_index >= m_num_channels){
             log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
             log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
             log<LOG_ERROR>(L"Terminating.");
@@ -905,7 +905,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         m_num_channels = std::count(m_channel_bool.begin(), m_channel_bool.end(), true);
 
         //update mode-info
-        if(m_num_modes != (int)m_mode_bool.size()){
+        if(m_num_modes != m_mode_bool.size()){
             log<LOG_DEBUG>(L"%1% || Found unused modes!! Clean it up...") % __func__;
             std::vector<std::string> temp_mode_names(m_num_modes), temp_mode_plotnames(m_num_modes);
             for(size_t i = 0, mode_index = 0; i != m_mode_bool.size(); ++i){
@@ -921,7 +921,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         }
 
         ///update detector-info
-        if(m_num_detectors != (int)m_detector_bool.size()){
+        if(m_num_detectors != m_detector_bool.size()){
             log<LOG_DEBUG>(L"%1% || Found unused detectors!! Clean it up...") % __func__;
             std::vector<std::string> temp_detector_names(m_num_detectors), temp_detector_plotnames(m_num_detectors);
             for(size_t i = 0, det_index = 0; i != m_detector_bool.size(); ++i){
@@ -936,15 +936,15 @@ int PROconfig::LoadFromXML(const std::string &filename){
             m_detector_plotnames = temp_detector_plotnames;
         }
 
-        if(m_num_channels != (int)m_channel_bool.size()){
+        if(m_num_channels != m_channel_bool.size()){
             log<LOG_DEBUG>(L"%1% || Found unused channels!! Clean the messs up...") % __func__;
 
             //update channel-related info
-            std::vector<int> temp_channel_num_bins(m_num_channels, 0);
+            std::vector<size_t> temp_channel_num_bins(m_num_channels, 0);
             std::vector<std::vector<double>> temp_channel_bin_edges(m_num_channels, std::vector<double>());
             std::vector<std::vector<double>> temp_channel_bin_widths(m_num_channels, std::vector<double>());
 
-            std::vector<int> temp_channel_num_truebins(m_num_channels, 0);
+            std::vector<size_t> temp_channel_num_truebins(m_num_channels, 0);
             std::vector<std::vector<double>> temp_channel_truebin_edges(m_num_channels, std::vector<double>());
             std::vector<std::vector<double>> temp_channel_truebin_widths(m_num_channels, std::vector<double>());
 
@@ -985,7 +985,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             //update subchannel-related info
             m_num_subchannels.resize(m_num_channels);
             std::vector<std::vector<std::string >> temp_subchannel_names(m_num_channels), temp_subchannel_plotnames(m_num_channels), temp_subchannel_colors(m_num_channels);
-            std::vector<std::vector<int >> temp_subchannel_datas(m_num_channels), temp_subchannel_model_rules(m_num_channels);
+            std::vector<std::vector<size_t >> temp_subchannel_datas(m_num_channels), temp_subchannel_model_rules(m_num_channels);
             for(size_t i=0, chan_index = 0; i< m_channel_bool.size(); ++i){
                 if(m_channel_bool.at(i)){
                     m_num_subchannels[chan_index]= 0;
@@ -1015,10 +1015,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
         //grab list of fullnames used.
         log<LOG_DEBUG>(L"%1% || Sweet, now generating fullnames of all channels used...") % __func__;
         m_fullnames.clear();
-        for(int im = 0; im < m_num_modes; im++){
-            for(int id =0; id < m_num_detectors; id++){
-                for(int ic = 0; ic < m_num_channels; ic++){
-                    for(int sc = 0; sc < m_num_subchannels.at(ic); sc++){
+        for(size_t im = 0; im < m_num_modes; im++){
+            for(size_t id =0; id < m_num_detectors; id++){
+                for(size_t ic = 0; ic < m_num_channels; ic++){
+                    for(size_t sc = 0; sc < m_num_subchannels.at(ic); sc++){
 
                         std::string temp_name  = m_mode_names.at(im) +"_" +m_detector_names.at(id)+"_"+m_channel_names.at(ic)+"_"+m_subchannel_names.at(ic).at(sc);
                         log<LOG_INFO>(L"%1% || fullname of subchannel: %2% ") % __func__ % temp_name.c_str();
@@ -1126,7 +1126,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return;
     }
 
-    size_t PROconfig::find_equal_index(const std::vector<int>& input_vec, int val) const{
+    size_t PROconfig::find_equal_index(const std::vector<size_t>& input_vec, size_t val) const{
         auto pos_iter = std::lower_bound(input_vec.begin(), input_vec.end(), val);
         if(pos_iter == input_vec.end() || (*pos_iter) != val){
             log<LOG_ERROR>(L"%1% || Input value: %2% does not exist in the vector! Max element available: %3%") % __func__ % val % input_vec.back();
@@ -1138,7 +1138,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
     }
 
 
-    size_t PROconfig::find_less_or_equal_index(const std::vector<int>& input_vec, int val) const{
+    size_t PROconfig::find_less_or_equal_index(const std::vector<size_t>& input_vec, size_t val) const{
         auto pos_iter = std::lower_bound(input_vec.begin(), input_vec.end(), val);
         if(pos_iter == input_vec.end() || (*pos_iter) != val){
             return pos_iter - input_vec.begin() - 1;
@@ -1158,27 +1158,27 @@ int PROconfig::LoadFromXML(const std::string &filename){
         m_vec_global_true_index_start.clear();
 
 
-        int global_subchannel_index = 0;
-        for(int im = 0; im < m_num_modes; im++){
+        size_t global_subchannel_index = 0;
+        for(size_t im = 0; im < m_num_modes; im++){
 
-            int mode_bin_start = im*m_num_bins_mode_block;
-            int mode_truebin_start = im*m_num_truebins_mode_block;
+            size_t mode_bin_start = im*m_num_bins_mode_block;
+            size_t mode_truebin_start = im*m_num_truebins_mode_block;
 
-            for(int id =0; id < m_num_detectors; id++){
+            for(size_t id =0; id < m_num_detectors; id++){
 
-                int detector_bin_start = id*m_num_bins_detector_block;
-                int channel_bin_start = 0;
+                size_t detector_bin_start = id*m_num_bins_detector_block;
+                size_t channel_bin_start = 0;
 
-                int detector_truebin_start = id*m_num_truebins_detector_block;
-                int channel_truebin_start = 0;
+                size_t detector_truebin_start = id*m_num_truebins_detector_block;
+                size_t channel_truebin_start = 0;
 
 
-                for(int ic = 0; ic < m_num_channels; ic++){
-                    for(int sc = 0; sc < m_num_subchannels[ic]; sc++){
+                for(size_t ic = 0; ic < m_num_channels; ic++){
+                    for(size_t sc = 0; sc < m_num_subchannels[ic]; sc++){
 
                         std::string temp_name  = m_mode_names[im] +"_" +m_detector_names[id]+"_"+m_channel_names[ic]+"_"+m_subchannel_names[ic][sc];
-                        int global_bin_index = mode_bin_start + detector_bin_start + channel_bin_start + sc*m_channel_num_bins[ic];
-                        int global_truebin_index = mode_truebin_start + detector_truebin_start + channel_truebin_start + sc*m_channel_num_truebins[ic];
+                        size_t global_bin_index = mode_bin_start + detector_bin_start + channel_bin_start + sc*m_channel_num_bins[ic];
+                        size_t global_truebin_index = mode_truebin_start + detector_truebin_start + channel_truebin_start + sc*m_channel_num_truebins[ic];
 
                         m_map_fullname_subchannel_index[temp_name] = global_subchannel_index;
                         m_vec_subchannel_index.push_back(global_subchannel_index);
@@ -1196,10 +1196,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return;
     }
 
-    int PROconfig::find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const{
+    size_t PROconfig::find_global_subchannel_index_from_global_bin(size_t global_index, const std::vector<size_t>& num_subchannel_in_channel, const std::vector<size_t>& num_bins_in_channel, size_t num_channels, size_t num_bins_total) const{
 
         //check for out of bound
-        if(global_index <0 || global_index >= num_bins_total){
+        if( global_index >= num_bins_total){
             log<LOG_ERROR>(L"%1% || Given index: %2% is out of bound") % __func__ % global_index;
             log<LOG_ERROR>(L"%1% || Total number of bins : %2%") % __func__ % num_bins_total;
             log<LOG_ERROR>(L"Terminating.");
@@ -1207,8 +1207,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
         }
 
         // get number of bins per detector block 
-        int num_bins_per_detector_block = 0;
-        for( int ic = 0; ic != num_channels; ++ic)
+        size_t num_bins_per_detector_block = 0;
+        for( size_t ic = 0; ic != num_channels; ++ic)
             num_bins_per_detector_block += num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
         if(num_bins_per_detector_block == 0){
             log<LOG_ERROR>(L"%1% || There is zero bins for each detector!! Provided global bin index: %2% ") % __func__ % global_index;
@@ -1217,13 +1217,13 @@ int PROconfig::LoadFromXML(const std::string &filename){
         }
 
         // get number of subchannels in detector block  
-        int num_subchannel_in_detector_block = std::accumulate(num_subchannel_in_channel.begin(), num_subchannel_in_channel.end(), 0);
-        int subchannel_index = (global_index / num_bins_per_detector_block) * num_subchannel_in_detector_block;
+        size_t num_subchannel_in_detector_block = std::accumulate(num_subchannel_in_channel.begin(), num_subchannel_in_channel.end(), 0);
+        size_t subchannel_index = (global_index / num_bins_per_detector_block) * num_subchannel_in_detector_block;
 
         global_index %= num_bins_per_detector_block;   //get the index inside a block 
         //check for each channel
-        for( int ic = 0; ic != num_channels; ++ic){
-            int total_bins_in_channel = num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
+        for( size_t ic = 0; ic != num_channels; ++ic){
+            size_t total_bins_in_channel = num_subchannel_in_channel[ic] * num_bins_in_channel[ic];
             if(global_index >= total_bins_in_channel){
                 global_index -= total_bins_in_channel;
                 subchannel_index += num_subchannel_in_channel[ic];
@@ -1244,16 +1244,16 @@ int PROconfig::LoadFromXML(const std::string &filename){
         //construct the matrix by detector block
         Eigen::MatrixXd block_collapser = Eigen::MatrixXd::Zero(m_num_bins_detector_block, m_num_bins_detector_block_collapsed);
 
-        int channel_row_start = 0, channel_col_start = 0;
-        for(int ic =0; ic != m_num_channels; ++ic){
+        size_t channel_row_start = 0, channel_col_start = 0;
+        for(size_t ic =0; ic != m_num_channels; ++ic){
 
             //first, build matrix for each channel block
-            int total_num_bins_channel = m_num_subchannels[ic] * m_channel_num_bins[ic];
+            size_t total_num_bins_channel = m_num_subchannels[ic] * m_channel_num_bins[ic];
 
             Eigen::MatrixXd channel_collapser = Eigen::MatrixXd::Zero(total_num_bins_channel, m_channel_num_bins[ic]);
-            for(int col = 0; col != m_channel_num_bins[ic]; ++col){
-                for(int subch = 0; subch != m_num_subchannels[ic]; ++subch){
-                    int row = subch * m_channel_num_bins[ic] + col;
+            for(size_t col = 0; col != m_channel_num_bins[ic]; ++col){
+                for(size_t subch = 0; subch != m_num_subchannels[ic]; ++subch){
+                    size_t row = subch * m_channel_num_bins[ic] + col;
                     channel_collapser(row, col) = 1.0;
                 }
             }
@@ -1264,11 +1264,11 @@ int PROconfig::LoadFromXML(const std::string &filename){
             channel_col_start += m_channel_num_bins[ic];
         }
 
-        //okay! now stuff every detector block into the final collapse matrix
-        for(int im = 0; im != m_num_modes; ++im){
-            for(int id =0; id != m_num_detectors; ++id){
-                int row_block_start = im * m_num_bins_mode_block + id * m_num_bins_detector_block;
-                int col_block_start = im * m_num_bins_mode_block_collapsed + id * m_num_bins_detector_block_collapsed;
+        //okay! now stuff every detector block size_to the final collapse matrix
+        for(size_t im = 0; im != m_num_modes; ++im){
+            for(size_t id =0; id != m_num_detectors; ++id){
+                size_t row_block_start = im * m_num_bins_mode_block + id * m_num_bins_detector_block;
+                size_t col_block_start = im * m_num_bins_mode_block_collapsed + id * m_num_bins_detector_block_collapsed;
                 collapsing_matrix(Eigen::seqN(row_block_start, m_num_bins_detector_block), Eigen::seqN(col_block_start, m_num_bins_detector_block_collapsed)) = block_collapser;
             }
         }

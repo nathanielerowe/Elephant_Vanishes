@@ -46,7 +46,7 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nThreads) {
+void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
@@ -69,7 +69,7 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
             param.max_linesearch = 50;
             param.delta = 1e-6;
             LBFGSpp::LBFGSBSolver<double> solver(param); 
-            int nparams = systs.GetNSplines();
+            size_t nparams = systs.GetNSplines();
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), strat, physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
@@ -77,7 +77,7 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
 
             double fx;
-            int niter;
+            int niter=-1;
             std::vector<double> chi2s;
             int nfit = 0;
             do {
@@ -88,7 +88,7 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
                 try {
                     niter = solver.minimize(chi, x, fx, lb, ub);
                 } catch(std::runtime_error &except) {
-                    log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                    log<LOG_ERROR>(L"%1% || Fit failed on iter %2%,  %3%") % __func__ % niter % except.what();
                     continue;
                 }
                 chi2s.push_back(fx);
@@ -108,6 +108,7 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
     std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
+    strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
 
     std::vector<surfOut> outs;
 
@@ -136,7 +137,7 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
 
         //First do 100 simple function calls suing LATIN hypercube setup
         double fx;
-        int niter;
+        int niter =-1;
         int N_multistart = 100;
         std::vector<double> chi2s_multistart;
         std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(N_multistart, nparams,d_uni,rng);
@@ -159,7 +160,6 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
 
         int N_localfits = 5;
         std::vector<double> chi2s_localfits;
-        int nfit = 0;
         double chimin = 9999999;
 
         log<LOG_INFO>(L"%1% || Starting Local Gradients runs : %2%") % __func__ % N_localfits ;
@@ -169,7 +169,7 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
             try {
                 niter = solver.minimize(chi, x, fx, lb, ub);
             } catch(std::runtime_error &except) {
-                log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                log<LOG_ERROR>(L"%1% || Fit failed on niter,%2% : %3%") % __func__ % niter % except.what();
             }
             chi2s_localfits.push_back(fx);
             if(fx<chimin){

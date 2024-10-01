@@ -35,7 +35,7 @@ namespace PROfit{
 
         private:
             //Base
-            int nbins;
+            size_t nbins;
             Eigen::VectorXd spec;
             Eigen::VectorXd error;
 
@@ -57,7 +57,7 @@ namespace PROfit{
             PROspec(const Eigen::VectorXd &in_spec, const Eigen::VectorXd &in_error) : nbins(in_spec.size()), spec(in_spec), error(in_error){}
 
             /* Function: create PROspec of given size */
-            PROspec(int num_bins);
+            PROspec(size_t num_bins);
 
             //PROspec(PROconfig const & configin); //Load in config file EMPTY hists
             //PROspec(std::string &xmlname); //Load directly from XML 
@@ -94,7 +94,7 @@ namespace PROfit{
             void Print() const;
 
             /*Return number of bins in spectrum */
-            int GetNbins() const;
+            size_t GetNbins() const;
 
 
 

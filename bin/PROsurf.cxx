@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
     
     //Run over surface and Fill it. FillSurfaceSimple does a much simpler minimization.
     //FullSurface is recommended.
-    //surface.FillSurfaceSimple(config, prop, systs, osc, data, filename, binned, nthread);
+    //surface.FillSurfaceSimple(config, prop, systs, osc, data, filename, binned);
     surface.FillSurface(config, prop, systs, osc, data, filename, binned, nthread);
 
     //Fit is done here. Below is

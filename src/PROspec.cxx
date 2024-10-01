@@ -4,7 +4,7 @@
 
 using namespace PROfit;
 
-PROspec::PROspec(int num_bins):
+PROspec::PROspec(size_t num_bins):
     nbins(num_bins),
     spec(Eigen::VectorXd::Zero(num_bins)),
     error(Eigen::VectorXd::Zero(num_bins)){
@@ -16,7 +16,7 @@ PROspec PROspec::PoissonVariation(const PROspec &s) {
 
     PROspec newSpec(s.nbins);
 
-    for(int i = 0; i < s.nbins; i++) {
+    for(size_t i = 0; i < s.nbins; i++) {
         std::poisson_distribution<> d(s.GetBinContent(i));
         newSpec.Fill(i, d(gen));
     }
@@ -24,7 +24,7 @@ PROspec PROspec::PoissonVariation(const PROspec &s) {
     return newSpec;
 }
 
-int PROspec::GetNbins() const{
+size_t PROspec::GetNbins() const{
     return nbins;
 }
 
@@ -271,7 +271,7 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
     for(size_t im = 0; im < inconfig.m_num_modes; im++){
         for(size_t id =0; id < inconfig.m_num_detectors; id++){
             for(size_t ic = 0; ic < inconfig.m_num_channels; ic++){
-                TPad *p = (TPad*)c->cd(global_channel_index+1);
+                c->cd(global_channel_index+1);
                
                 std::unique_ptr<THStack> s = std::make_unique<THStack>((output_name+std::to_string(global_channel_index)).c_str(),(output_name+std::to_string(global_channel_index)).c_str());
                 stacks.push_back(std::move(s));

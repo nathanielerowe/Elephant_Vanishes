@@ -44,12 +44,11 @@ namespace PROfit{
             const PROsyst *syst; 
             const PROsc *osc;
             const PROspec data;
-            std::vector<float> physics_param_fixed;
             int nparams;
             int nsyst;
             EvalStrategy strat;
-
-            //Do we want to fix any param?
+            std::vector<float> physics_param_fixed;
+                        //Do we want to fix any param?
             int fixed_index;
             float fixed_val;
 

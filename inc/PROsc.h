@@ -40,7 +40,7 @@ namespace PROfit{
 
             PROsc(const PROpeller &prop){
 
-                model_functions.push_back([this](float a, float b, float c, float d) {return 1.0; });
+                model_functions.push_back([this](float , float , float , float ) {return 1.0; });//c++14 way of ignoring unused
                 model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmumu(a, b, c, d); });
                 model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmue(a, b, c, d); });
 
