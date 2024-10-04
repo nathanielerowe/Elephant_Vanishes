@@ -281,4 +281,108 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
 
 }
 
+int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename) {
+
+
+        LBFGSpp::LBFGSBParam<double> param;
+        param.epsilon = 1e-6;
+        param.max_iterations = 100;
+        param.max_linesearch = 50;
+        param.delta = 1e-6;
+
+        LBFGSpp::LBFGSBSolver<double> solver(param);
+        int nparams = systs.GetNSplines();
+        std::vector<float> physics_params; 
+
+        
+
+        TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*7);
+        c->Divide(4,7);
+
+
+        std::vector<std::unique_ptr<TGraph>> graphs; 
+
+        //hack
+        std::vector<double> priorX;
+        std::vector<double> priorY;
+
+       for(int i=0; i<=20;i++){
+           double which_value = -2.0+0.2*i;
+           priorX.push_back(which_value);
+           priorY.push_back(which_value*which_value);
+
+       }
+       std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
+
+
+
+        for(int w=0; w<nparams;w++){
+            int which_spline = w;
+
+
+            std::vector<double> knob_vals;
+            std::vector<double> knob_chis;
+
+            for(int i=0; i<=20;i++){
+                
+                Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+                Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+                Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
+                Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
+                Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
+
+
+                double which_value = -2.0+0.2*i;
+                double fx;
+                knob_vals.push_back(which_value);
+
+                lb[which_spline] = which_value;
+                ub[which_spline] = which_value;
+                x[which_spline] = which_value;
+
+
+                PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
+                chi.fixSpline(which_spline,which_value);
+
+                log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
+                try {
+                    x = Eigen::VectorXd::Constant(nparams, 0.012);
+                    solver.minimize(chi, x, fx, lb, ub);
+                } catch(std::runtime_error &except) {
+                    log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                }
+
+                std::string spec_string = "";
+                for(auto &f : x) spec_string+=" "+std::to_string(f); 
+                log<LOG_INFO>(L"%1% || Fixed value of %2% for spline %3% was post  : %4% ") % __func__ % which_spline % which_value % fx;
+                log<LOG_INFO>(L"%1% || BF splines @ %2%") % __func__ %  spec_string.c_str();
+
+                knob_chis.push_back(fx);
+            }            
+
+            log<LOG_INFO>(L"%1% || Knob Values: %2%") % __func__ %  knob_vals;
+            log<LOG_INFO>(L"%1% || Knob Chis: %2%") % __func__ %  knob_chis;
+
+            c->cd(w+1);
+            std::unique_ptr<TGraph> g = std::make_unique<TGraph>(knob_vals.size(), knob_vals.data(), knob_chis.data());
+            std::string tit = systs.spline_names[which_spline]+ ";#sigma Shift; #Chi^{2}";
+            g->SetTitle(tit.c_str());
+            graphs.push_back(std::move(g));
+            graphs.back()->Draw("AL");
+            graphs.back()->SetLineWidth(2);
+            
+            gprior->Draw("L same");
+            gprior->SetLineStyle(2);
+            gprior->SetLineWidth(1);
+        
+        }
+
+        c->SaveAs((filename+".pdf").c_str(),"pdf");
+
+        delete c;
+
+
+
+    return 0;
+}
 
