@@ -105,6 +105,8 @@ namespace PROfit {
             /* the fractional covariance that is the sum of all during constructor*/
             Eigen::MatrixXd fractional_covariance;
 
+            /* names of all systs*/
+            std::vector<std::string> spline_names;
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
             std::vector<Spline> splines;

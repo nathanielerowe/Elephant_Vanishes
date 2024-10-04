@@ -10,6 +10,7 @@ namespace PROfit {
         for(const auto& syst: systs) {
             if(syst.mode == "multisigma") {
                 FillSpline(syst);
+                spline_names.push_back(syst.systname); 
             } else if(syst.mode == "multisim") {
                 this->CreateMatrix(syst);
             }

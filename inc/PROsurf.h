@@ -16,6 +16,7 @@
 #include <thread>
 #include <future>
 
+#include "TGraph.h"
 
 namespace PROfit {
 
@@ -24,6 +25,8 @@ struct surfOut{
     std::vector<float> grid_val;
     double chi;
 };
+
+int PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename);
 
 class PROsurf {
 public:
