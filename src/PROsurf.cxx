@@ -283,7 +283,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
 
 std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     double step = 0.001;
-    range = range+2.0*step;
+    range = range+step;
     int n = g->GetN();
     double minY = 1e9, minX = 0;
     for (int i = 0; i < n; ++i) {
@@ -305,6 +305,7 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
             break;
         }
     }
+    
 
     // Search to the right of the minimum
     for (double x = minX; x <= range; x += step) {
@@ -423,7 +424,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
     c2->cd();
     c2->SetBottomMargin(0.25);
-    c2->SetRightMargin(0.1);
+    c2->SetRightMargin(0.2);
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
     int nBins = systs.spline_names.size();
@@ -438,13 +439,13 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two igma turned on? : %2% ") % __func__ % twosig;
 
     for(auto &g:graphs){
-        std::vector<double> tmp = findMinAndBounds(g.get(),1.0,1.0);
+        std::vector<double> tmp = findMinAndBounds(g.get(),1.0,3.0);
         bfvalues.push_back(tmp[0]);
         values1_down.push_back(tmp[1]);
         values1_up.push_back(tmp[2]);
 
         if(twosig){
-            std::vector<double> tmp2 = findMinAndBounds(g.get(),4.0,2.0);
+            std::vector<double> tmp2 = findMinAndBounds(g.get(),4.0,3.0);
             values2_down.push_back(tmp2[1]);
             values2_up.push_back(tmp2[2]);
         }
@@ -453,8 +454,9 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     
     log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% ") % __func__ % nBins % bfvalues.size() % values1_down.size() % values1_up.size() ;
 
+    double minVal = *std::min_element(values1_down.begin(), values1_down.end());
+    double maxVal = *std::max_element(values1_up.begin(), values1_up.end());
 
-    double range = twosig? 2 : 1;
     double wid = twosig? 0.4  : 0.8;
     double off1 = twosig?0.1   : 0.0;
     double off2 = twosig?0.5  : 0.0;
@@ -470,8 +472,8 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     h1up->SetBarWidth(wid);
     h1up->SetBarOffset(off1);
     h1up->SetStats(0);
-    h1up->SetMinimum(-range*1.2);
-    h1up->SetMaximum(range*1.2);
+    h1up->SetMinimum(minVal*1.2);
+    h1up->SetMaximum(maxVal*1.2);
 
     h1down->SetFillColor(kBlue-7);
     h1down->SetBarWidth(wid);
