@@ -281,7 +281,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
 
 }
 
-std::vector<double> findMinAndBounds(TGraph* g, double val,double range) {
+std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     int n = g->GetN();
     double minY = 1e9, minX = 0;
     for (int i = 0; i < n; ++i) {
@@ -432,13 +432,13 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     std::vector<double> values2_down;
 
     for(auto &g:graphs){
-        std::vector<double> tmp1 = findMinAndBounds(g,1.0,1.0);
+        std::vector<double> tmp = findMinAndBounds(g.get(),1.0,1.0);
         bfvalues.push_back(tmp[0]);
         values1_down.push_back(tmp[1]);
         values1_up.push_back(tmp[2]);
 
         if(twosig){
-            std::vector<double> tmp2 = findMinAndBounds(g,4.0,2.0);
+            std::vector<double> tmp2 = findMinAndBounds(g.get(),4.0,2.0);
             values2_down.push_back(tmp2[1]);
             values2_up.push_back(tmp2[2]);
         }

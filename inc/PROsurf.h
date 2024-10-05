@@ -17,6 +17,8 @@
 #include <future>
 
 #include "TGraph.h"
+#include "TMarker.h"
+#include "TLine.h"
 
 namespace PROfit {
 
