@@ -424,7 +424,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
     c2->cd();
     c2->SetBottomMargin(0.25);
-    c2->SetRightMargin(0.1);
+    c2->SetRightMargin(0.2);
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
     int nBins = systs.spline_names.size();
