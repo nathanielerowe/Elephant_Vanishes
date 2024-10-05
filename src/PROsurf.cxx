@@ -422,7 +422,8 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     //Next version
     TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
     c2->cd();
-    c2->SetBottomMargin(0.3);
+    c2->SetBottomMargin(0.25);
+    c2->SetRightMargin(0.1);
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
     int nBins = systs.spline_names.size();
@@ -469,8 +470,8 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     h1up->SetBarWidth(wid);
     h1up->SetBarOffset(off1);
     h1up->SetStats(0);
-    h1up->SetMinimum(-range);
-    h1up->SetMaximum(range);
+    h1up->SetMinimum(-range*1.2);
+    h1up->SetMaximum(range*1.2);
 
     h1down->SetFillColor(kBlue-7);
     h1down->SetBarWidth(wid);
@@ -519,6 +520,20 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     l.SetLineColor(kBlack);
     l.SetLineWidth(1);
     l.Draw();
+
+    TLine l1(0,1,nBins,1);
+    l1.SetLineStyle(2);
+    l1.SetLineColor(kBlack);
+    l1.SetLineWidth(1);
+    l1.Draw();
+
+    TLine l2(0,-1,nBins,-1);
+    l2.SetLineStyle(2);
+    l2.SetLineColor(kBlack);
+    l2.SetLineWidth(1);
+    l2.Draw();
+
+
 
     for (int i = 0; i < nBins; ++i) {
         TMarker* star = new TMarker(i + wid/2.0, bfvalues[i], 29);
