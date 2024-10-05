@@ -282,13 +282,15 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
 }
 
 std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
+    double step = 0.001;
+    range = range+2.0*step;
     int n = g->GetN();
     double minY = 1e9, minX = 0;
     for (int i = 0; i < n; ++i) {
         double x, y;
         g->GetPoint(i, x, y);
-        if (y < minY) {
-            minY = y;
+        if (y+x*x < minY) {
+            minY = y+x*x;
             minX = x;
         }
     }
@@ -296,8 +298,8 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     double leftX = minX, rightX = minX;
     
     // Search to the left of the minimum
-    for (double x = minX; x >= -range; x -= 0.01) {
-        double y = g->Eval(x);
+    for (double x = minX; x >= -range; x -= step) {
+        double y = g->Eval(x)+x*x;
         if (y >= val) {
             leftX = x;
             break;
@@ -305,8 +307,8 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     }
 
     // Search to the right of the minimum
-    for (double x = minX; x <= range; x += 0.01) {
-        double y = g->Eval(x);
+    for (double x = minX; x <= range; x += step) {
+        double y = g->Eval(x)+x*x;
         if (y >= val) {
             rightX = x;
             break;
@@ -342,8 +344,8 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     std::vector<double> priorX;
     std::vector<double> priorY;
 
-    for(int i=0; i<=20;i++){
-        double which_value = -2.0+0.2*i;
+    for(int i=0; i<=30;i++){
+        double which_value = -3.0+0.2*i;
         priorX.push_back(which_value);
         priorY.push_back(which_value*which_value);
 
@@ -359,7 +361,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
         std::vector<double> knob_vals;
         std::vector<double> knob_chis;
 
-        for(int i=0; i<=20;i++){
+        for(int i=0; i<=30;i++){
 
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
             Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
@@ -368,7 +370,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
 
 
-            double which_value = -2.0+0.2*i;
+            double which_value = -3.0+0.2*i;
             double fx;
             knob_vals.push_back(which_value);
 
@@ -420,9 +422,10 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     //Next version
     TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
     c2->cd();
-    
+    c2->SetBottomMargin(0.3);
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
+    int nBins = systs.spline_names.size();
 
     std::vector<double> bfvalues;
     std::vector<double> values1_up;
@@ -430,6 +433,8 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
     std::vector<double> values2_up;
     std::vector<double> values2_down;
+
+    log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two igma turned on? : %2% ") % __func__ % twosig;
 
     for(auto &g:graphs){
         std::vector<double> tmp = findMinAndBounds(g.get(),1.0,1.0);
@@ -445,7 +450,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     }
 
     
-    int nBins = systs.spline_names.size();
+    log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% ") % __func__ % nBins % bfvalues.size() % values1_down.size() % values1_up.size() ;
 
 
     double range = twosig? 2 : 1;
@@ -483,13 +488,18 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     h2down->SetStats(0);
 
 
+
+
     // Fill the histogram with values from the vector
     for (int i = 0; i < nBins; ++i) {
         h1up->SetBinContent(i+1, values1_up[i]); 
         h1down->SetBinContent(i+1, values1_down[i]); 
 
-        h2up->SetBinContent(i+1, values2_up[i]); 
-        h2down->SetBinContent(i+1, values2_down[i]); 
+       log<LOG_DEBUG>(L"%1% || on spline %2% BF down up : %3% %4% %5% ") % __func__ % i % bfvalues[i] % values1_down[i] % values1_up[i] ;
+        if(twosig){
+            h2up->SetBinContent(i+1, values2_up[i]); 
+            h2down->SetBinContent(i+1, values2_down[i]); 
+        }
 
         h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
 
@@ -511,7 +521,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     l.Draw();
 
     for (int i = 0; i < nBins; ++i) {
-        std::unique_ptr<TMarker> star = std::make_unique<TMarker>(i + wid/2.0, bfvalues[i], 29);
+        TMarker* star = new TMarker(i + wid/2.0, bfvalues[i], 29);
         star->SetMarkerSize(2); 
         star->SetMarkerColor(kBlack); 
         star->Draw();
