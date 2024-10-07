@@ -70,10 +70,11 @@ namespace PROfit{
         std::string true_L_name;
         std::string pdg_name;
         int model_rule;
+        int include_systematics;
 
         //constructor
-        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9){}
-        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9){}
+        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), include_systematics(1){}
+        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9),include_systematics(1){}
 
         /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
         std::shared_ptr<TTreeFormula> GetFormula(){
@@ -86,6 +87,7 @@ namespace PROfit{
         void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
         void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
         void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;} 
+        void SetIncludeSystematics(int insyst){include_systematics = insyst; return;} 
 
         //Function: evaluate branch "pdg", and return the value. Usually it's the pdg value of the particle
         //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
@@ -95,6 +97,11 @@ namespace PROfit{
         int GetModelRule() const{
             return model_rule;
         };
+
+        int GetIncludeSystematics() const{
+            return include_systematics;
+        };
+
 
         // Function: evaluate additional weight setup in the branch and return in floating precision 
         // Note: if no additional weight is set, value of 1.0 will be returned.
@@ -265,6 +272,7 @@ namespace PROfit{
             std::vector<long int> m_mcgen_maxevents;	
             std::vector<double> m_mcgen_pot;	
             std::vector<double> m_mcgen_scale;	
+            std::vector<int> m_mcgen_numfriends;	
             std::vector<bool> m_mcgen_fake;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_map;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_treename_map;
@@ -272,7 +280,7 @@ namespace PROfit{
             std::vector<std::vector<bool>> m_mcgen_additional_weight_bool;
             std::vector<std::vector<std::shared_ptr<BranchVariable>>> m_branch_variables;
             std::vector<std::vector<std::string>> m_mcgen_eventweight_branch_names;
-            std::vector<std::vector<bool>> m_mcgen_eventweight_branch_syst;
+            std::vector<std::vector<int>> m_mcgen_eventweight_branch_syst;
 
 
             //specific bits for covariancegeneration
