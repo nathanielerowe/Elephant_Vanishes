@@ -289,17 +289,18 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     for (int i = 0; i < n; ++i) {
         double x, y;
         g->GetPoint(i, x, y);
-        if (y+x*x < minY) {
-            minY = y+x*x;
+        if (y < minY) {
+            minY = y;
             minX = x;
         }
     }
+    //..ok so minX is the min and Currentl minY is the chi^2. Want this to be delta chi^2
 
     double leftX = minX, rightX = minX;
     
     // Search to the left of the minimum
     for (double x = minX; x >= -range; x -= step) {
-        double y = g->Eval(x)+x*x;
+        double y = g->Eval(x) - minY; //DeltaChi^2
         if (y >= val) {
             leftX = x;
             break;
@@ -309,7 +310,7 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
 
     // Search to the right of the minimum
     for (double x = minX; x <= range; x += step) {
-        double y = g->Eval(x)+x*x;
+        double y = g->Eval(x)-minY;
         if (y >= val) {
             rightX = x;
             break;
