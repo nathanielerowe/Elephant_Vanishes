@@ -426,6 +426,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             log<LOG_DEBUG>(L"%1% || MultisimFile %2%, treename: %3%  ") % __func__ % m_mcgen_file_name.back().c_str() % m_mcgen_tree_name.back().c_str();
 
 
+
             //Here we can grab some friend tree information
             tinyxml2::XMLElement *pFriend;
             pFriend = pMC->FirstChildElement("friend");
@@ -443,7 +444,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 m_mcgen_file_friend_treename_map[m_mcgen_file_name.back()].push_back( pFriend->Attribute("treename") );
                 m_mcgen_file_friend_map[m_mcgen_file_name.back()].push_back(ffname);
-
                 pFriend = pFriend->NextSiblingElement("friend");
             }//END of friend loop
 

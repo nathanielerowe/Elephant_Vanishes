@@ -342,7 +342,7 @@ namespace PROfit {
                 log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % fn.c_str();
                 exit(EXIT_FAILURE);
             }
-            log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
+            log<LOG_INFO>(L"%1% || Total Entries: %2% with %3%") % __func__ %  nentries[fid] % fn;
 
 
             //first, grab friend trees
