@@ -272,6 +272,7 @@ namespace PROfit{
             std::vector<std::vector<bool>> m_mcgen_additional_weight_bool;
             std::vector<std::vector<std::shared_ptr<BranchVariable>>> m_branch_variables;
             std::vector<std::vector<std::string>> m_mcgen_eventweight_branch_names;
+            std::vector<std::vector<bool>> m_mcgen_eventweight_branch_syst;
 
 
             //specific bits for covariancegeneration
