@@ -34,9 +34,7 @@ namespace PROfit {
 
                 float oscw  = physparams.size() != 0 ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
                 float add_w = inprop.added_weights[i]; 
-
-                const int subchannel = FindSubchannelIndexFromGlobalBin(inconfig, inprop.bin_indices[i]);
-                const int true_bin = FindGlobalTrueBin(inconfig, inprop.baseline[i] / inprop.truth[i], subchannel);
+                const int true_bin = inprop.true_bin_indices[i]; 
                 
                 float systw = 1;
                 for(size_t j = 0; j < inshifts.size(); ++j) {

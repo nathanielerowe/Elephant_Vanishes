@@ -425,6 +425,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             log<LOG_DEBUG>(L"%1% || MultisimFile %2%, treename: %3%  ") % __func__ % m_mcgen_file_name.back().c_str() % m_mcgen_tree_name.back().c_str();
 
+            m_mcgen_numfriends.push_back(0);
 
             //Here we can grab some friend tree information
             tinyxml2::XMLElement *pFriend;
@@ -443,7 +444,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 m_mcgen_file_friend_treename_map[m_mcgen_file_name.back()].push_back( pFriend->Attribute("treename") );
                 m_mcgen_file_friend_map[m_mcgen_file_name.back()].push_back(ffname);
-
+                m_mcgen_numfriends.back()+=1;
                 pFriend = pFriend->NextSiblingElement("friend");
             }//END of friend loop
 
@@ -455,10 +456,12 @@ int PROconfig::LoadFromXML(const std::string &filename){
             std::vector<bool> TEMP_additional_weight_bool;
             std::vector<std::string> TEMP_additional_weight_name;
             std::vector<std::string> TEMP_eventweight_branch_names;
+            std::vector<int> TEMP_eventweight_branch_syst;
             std::vector<std::shared_ptr<BranchVariable>> TEMP_branch_variables;
             while(pBranch){
 
                 const char* bnam = pBranch->Attribute("name");
+                const char* bincsyst = pBranch->Attribute("incl_systematics");
                 const char* bhist = pBranch->Attribute("associated_subchannel");
                 const char* bsyst = pBranch->Attribute("associated_systematic");
                 const char* bcentral = pBranch->Attribute("central_value");
@@ -480,6 +483,13 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     exit(EXIT_FAILURE);
                 }
 
+                if(bincsyst== NULL || strcmp(bincsyst, "true") == 0){
+                    log<LOG_DEBUG>(L"%1% ||Apply systemtics to this file (default) ' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                    TEMP_eventweight_branch_syst.push_back(1);
+                }else{
+                    log<LOG_DEBUG>(L"%1% || DO NOT systemtics to this file (e.g for cosmics) ' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                    TEMP_eventweight_branch_syst.push_back(0);
+                }
 
                 if(bhist == NULL){
                     log<LOG_ERROR>(L"%1% || Each branch must have an associated_subchannel to fill! On branch %4% : @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__ % bnam;
@@ -526,6 +536,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
                         log<LOG_DEBUG>(L"%1% || Setting as individual (not CV) for det sys.") % __func__ ;
                     }
 
+                TEMP_branch_variables.back()->SetIncludeSystematics(TEMP_eventweight_branch_syst.back());
+
                 std::string oscillate = "true";
                 if(pBranch->Attribute("oscillate")!=NULL){
                     oscillate =pBranch->Attribute("oscillate");
@@ -563,6 +575,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 m_mcgen_additional_weight_bool.push_back(TEMP_additional_weight_bool);
                 m_branch_variables.push_back(TEMP_branch_variables);
                 m_mcgen_eventweight_branch_names.push_back(TEMP_eventweight_branch_names);
+                m_mcgen_eventweight_branch_syst.push_back(TEMP_eventweight_branch_syst);
                 //next file
                 pMC=pMC->NextSiblingElement("MCFile");
             }
@@ -1058,6 +1071,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             std::vector<long int> temp_maxevents;
             std::vector<double> temp_pot;
             std::vector<double> temp_scale;
+            std::vector<int> temp_numfriends;
             std::vector<bool> temp_fake;
             std::map<std::string,std::vector<std::string>> temp_file_friend_map;
             std::map<std::string,std::vector<std::string>> temp_file_friend_treename_map;
@@ -1065,6 +1079,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             std::vector<std::vector<bool>> temp_additional_weight_bool;
             std::vector<std::vector<std::shared_ptr<BranchVariable>>> temp_branch_variables;
             std::vector<std::vector<std::string>> temp_eventweight_branch_names;
+            std::vector<std::vector<int>> temp_eventweight_branch_syst;
 
             for(size_t i = 0; i != m_mcgen_file_name.size(); ++i){
                 log<LOG_DEBUG>(L"%1% || Check on @%2% th file: %3%...") % __func__ % i % m_mcgen_file_name[i].c_str();
@@ -1074,6 +1089,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 std::vector<bool> this_file_additional_weight_bool;
                 std::vector<std::shared_ptr<BranchVariable>> this_file_branch_variables;
                 std::vector<std::string> this_file_eventweight_branch_names;
+                std::vector<int> this_file_eventweight_branch_syst;
                 for(size_t j = 0; j != m_branch_variables[i].size(); ++j){
 
                     if(set_all_names.find(m_branch_variables[i][j]->associated_hist) == set_all_names.end()){
@@ -1086,6 +1102,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                         this_file_additional_weight_bool.push_back(m_mcgen_additional_weight_bool[i][j]);
                         this_file_branch_variables.push_back(m_branch_variables[i][j]);
                         this_file_eventweight_branch_names.push_back(m_mcgen_eventweight_branch_names[i][j]);
+                        this_file_eventweight_branch_syst.push_back(m_mcgen_eventweight_branch_syst[i][j]);
                     }
                 }
 
@@ -1096,6 +1113,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     temp_maxevents.push_back(m_mcgen_maxevents[i]);
                     temp_pot.push_back(m_mcgen_pot[i]);
                     temp_scale.push_back(m_mcgen_scale[i]);
+                    temp_numfriends.push_back(m_mcgen_numfriends[i]);
                     temp_fake.push_back(m_mcgen_fake[i]);
                     temp_file_friend_map[m_mcgen_file_name[i]] = m_mcgen_file_friend_map[m_mcgen_file_name[i]];		
                     temp_file_friend_treename_map[m_mcgen_file_name[i]] = m_mcgen_file_friend_treename_map[m_mcgen_file_name[i]];
@@ -1112,6 +1130,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             m_mcgen_maxevents = temp_maxevents;
             m_mcgen_pot = temp_pot;
             m_mcgen_scale = temp_scale;
+            m_mcgen_numfriends = temp_numfriends;
             m_mcgen_fake = temp_fake;
             m_mcgen_file_friend_map =temp_file_friend_map;
             m_mcgen_file_friend_treename_map = temp_file_friend_treename_map;
@@ -1119,6 +1138,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             m_mcgen_additional_weight_bool = temp_additional_weight_bool;
             m_branch_variables = temp_branch_variables;
             m_mcgen_eventweight_branch_names = temp_eventweight_branch_names;
+            m_mcgen_eventweight_branch_syst = temp_eventweight_branch_syst;
         }
 
         m_num_mcgen_files = m_mcgen_file_name.size();
