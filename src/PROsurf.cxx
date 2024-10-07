@@ -316,7 +316,7 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
         }
     }
     
-    return {minY,leftX,rightX};
+    return {minX,leftX,rightX};
 }
 
 
