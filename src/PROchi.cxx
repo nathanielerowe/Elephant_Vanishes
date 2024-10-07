@@ -69,7 +69,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
     delta = CollapseMatrix(*config, delta);  
 
     if(!(fixed_index<0)){
-        subvector2[fixed_index]=0;   
+        //subvector2[fixed_index]=0;   
+        //Dont do this anymore
     }
 
 
@@ -114,7 +115,8 @@ float PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient
             delta = CollapseMatrix(*config, delta);  
 
             if(!(fixed_index<0)){
-                subvector2[fixed_index]=0;   
+                //subvector2[fixed_index]=0;   
+                //dont do this, cinlude it
             }
             float pull = subvector2.array().square().sum(); 
             float dmsq_penalty = 0;
