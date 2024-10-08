@@ -79,7 +79,6 @@ int main(int argc, char* argv[])
   //Build a PROsyst to sort and analyze all systematics
   PROsyst systs(systsstructs);
 
-  log<LOG_INFO>(L"%1% || Mock data parameters ") % __func__  ;
   for (size_t i = 0; i < mockparams.size(); ++i) {
     log<LOG_INFO>(L"%1% || Mock data parameters %2%") % __func__  % mockparams[i].c_str();
   }
@@ -99,11 +98,40 @@ int main(int argc, char* argv[])
     data = systs.GetSplineShiftedSpectrum(config,prop,mockparams,mockshifts);
   }
 
-  cv.plotSpectrum(config, "CV");
-  cv.Print();
-  data.plotSpectrum(config, "Mock data");
-  data.Print();
+  //cv.plotSpectrum(config, filename+"_spec_cv");
+  //cv.Print();
+  //data.plotSpectrum(config, filename+"_spec_mockdata");
+  //data.Print();
 
+  TH1D hcv = cv.toTH1D(config,0);
+  TH1D hmock = data.toTH1D(config,0);
+  hcv.Scale(1, "width");
+  hmock.Scale(1, "width");
+  hcv.GetYaxis()->SetTitle("Events/GeV");
+  hmock.GetYaxis()->SetTitle("Events/GeV");
+  
+  TCanvas *c = new TCanvas((filename+"_spec_cv").c_str(), (filename+"_spec_cv").c_str(), 800, 800);
+  hcv.SetLineColor(kBlack);
+  hmock.SetLineColor(5);
+  hmock.SetFillColor(5);
+  hmock.Draw("h");
+  hcv.Draw("hsame");
+  std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.4,0.65,0.89,0.89);
+  leg->SetFillStyle(0);
+  leg->SetLineWidth(0);
+  leg->AddEntry(&hcv,"CV","l");
+  leg->AddEntry(&hmock,"Mock data: ", "f");
+  TObject *null = new TObject(); 
+  int i=0;
+  for (const auto& m : mockparams) {
+    char ns[6];
+    snprintf(ns, sizeof(ns),"%.2f", mockshifts[i]);
+    leg->AddEntry(null, (m+": "+ns+ " sigma").c_str(),"");
+    i++;
+  }
+  leg->Draw();
+  c->SaveAs((filename+"_spec.pdf").c_str());
+     
 
   //I think setting these here is not doing anything - want to be able to define them...
   if (physics_params.empty()) {
