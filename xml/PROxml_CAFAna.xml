@@ -11,7 +11,7 @@
     <subchannel name="cc" plotname="#nu_{#mu} CC" color="#FF6961"/>
 </channel>
 
-<plotpot value="1"/>
+<plotpot value="2e20"/>
 
 <variation_list>
     <allowlist>expskin_Flux</allowlist>  
@@ -107,7 +107,7 @@
 </model>
 
 
-<MCFile treename="events/selectedNu" filename="selected_events.root" scale = "1.0" maxevents="50000" pot="1"> 
+<MCFile treename="events/selectedNu" filename="selected_events.root" scale = "1.0" maxevents="50000" pot="2.8e20"> 
     <friend treename="events/multisimTree" filename="selected_events.root"/>
     <friend treename="events/multisigmaTree" filename="selected_events.root"/>
      <branch

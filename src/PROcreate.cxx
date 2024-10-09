@@ -591,7 +591,7 @@ namespace PROfit {
 
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
+                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], inconfig.m_mcgen_pot[fid], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
                 } 
 
             } //end of entry loop
@@ -1080,7 +1080,7 @@ namespace PROfit {
         return spec;
     }
 
-    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop){
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, double mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop){
 
         int total_num_sys = syst_vector.size(); 
         double reco_value = branch->GetValue<double>();
@@ -1090,6 +1090,7 @@ namespace PROfit {
         double pdg_id = branch->GetTruePDG();//No need, depreciated
         int run_syst = branch->GetIncludeSystematics();
         double mc_weight = branch->GetMonteCarloWeight();
+        mc_weight *= inconfig.m_plot_pot / mcpot;
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 
         int model_rule = branch->GetModelRule();
