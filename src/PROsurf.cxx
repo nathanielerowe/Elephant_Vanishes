@@ -336,8 +336,9 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
 
 
-    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*7);
-    c->Divide(4,7);
+    int depth = std::ceil(nparams/4.0);
+    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
+    c->Divide(4,depth);
 
 
     std::vector<std::unique_ptr<TGraph>> graphs; 
