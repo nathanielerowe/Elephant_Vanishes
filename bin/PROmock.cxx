@@ -26,6 +26,8 @@
 #include "TCanvas.h"
 #include "TGraph.h"
 #include "TStyle.h"
+#include "TRatioPlot.h"
+#include "TGraphAsymmErrors.h"
 
 using namespace PROfit;
 
@@ -109,14 +111,24 @@ int main(int argc, char* argv[])
   hmock.Scale(1, "width");
   hcv.GetYaxis()->SetTitle("Events/GeV");
   hmock.GetYaxis()->SetTitle("Events/GeV");
-  
+  hcv.SetTitle("");
+  hmock.SetTitle("");
+
   TCanvas *c = new TCanvas((filename+"_spec_cv").c_str(), (filename+"_spec_cv").c_str(), 800, 800);
   hcv.SetLineColor(kBlack);
   hmock.SetLineColor(5);
   hmock.SetFillColor(5);
-  hmock.Draw("h");
-  hcv.Draw("hsame");
-  std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.4,0.65,0.89,0.89);
+  TRatioPlot * rp = new TRatioPlot(&hmock,&hcv);
+  rp->Draw();
+  rp->GetLowerRefGraph()->SetMarkerStyle(21);
+  TGraphAsymmErrors *lowerGraph = dynamic_cast<TGraphAsymmErrors*>(rp->GetLowerRefGraph());
+  if (lowerGraph) {
+    int nPoints = lowerGraph->GetN();
+    for (int i = 0; i < nPoints; i++) {
+      lowerGraph->SetPointError(i, 0, 0, 0, 0); // Set both x and y errors to zero
+    }
+  }
+  std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.35,0.7,0.89,0.89);
   leg->SetFillStyle(0);
   leg->SetLineWidth(0);
   leg->AddEntry(&hcv,"CV","l");
@@ -131,7 +143,6 @@ int main(int argc, char* argv[])
   }
   leg->Draw();
   c->SaveAs((filename+"_spec.pdf").c_str());
-     
 
   //I think setting these here is not doing anything - want to be able to define them...
   if (physics_params.empty()) {
