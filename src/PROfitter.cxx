@@ -45,6 +45,18 @@ double PROfitter::Fit(PROmetric &metric) {
     std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
 
     std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(n_multistart, ub.size(), d_uni,rng);
+    for(std::vector<double> &pt: latin_samples) {
+        for(size_t i = 0; i < pt.size(); ++i) {
+            if(ub(i) != 3 || lb(i) != -3) {
+                double width = std::isinf(ub(i)) || std::isinf(lb(i)) ? 4 : ub(i) - lb(i);
+                double center = std::isinf(ub(i)) ? lb(i) + width/2.0 :
+                                std::isinf(lb(i)) ? ub(i) - width/2.0 :
+                                (ub(i) + lb(i)) / 2.0;
+                double randpt = pt[i] / 4.0;
+                pt[i] = center + randpt * width;
+            }
+        }
+    }
     std::vector<double> chi2s_multistart;
     chi2s_multistart.reserve(n_multistart);
 
