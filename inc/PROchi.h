@@ -27,7 +27,7 @@ namespace PROfit{
      *  Improve gradient calculation
      *  */
 
-    class PROchi : PROmetric
+    class PROchi : public PROmetric
     {
         public:
             enum EvalStrategy {
