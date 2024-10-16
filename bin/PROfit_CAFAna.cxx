@@ -1,4 +1,3 @@
-#include "LBFGSpp/LineSearchMoreThuente.h"
 #include "PROconfig.h"
 #include "PROspec.h"
 #include "PROsyst.h"
@@ -9,15 +8,8 @@
 
 #include "CLI11.h"
 #include "LBFGSB.h"
-#include "LBFGS.h"
 
-#include <Eigen/Dense>
 #include <Eigen/Eigen>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
-#include <Eigen/Core>
-#include <unsupported/Eigen/CXX11/Tensor>
-#include <unsupported/Eigen/NumericalDiff>
 #include <random>
 
 #include "TCanvas.h"
@@ -28,28 +20,6 @@
 using namespace PROfit;
 
 log_level_t GLOBAL_LEVEL = LOG_DEBUG;
-
-class ChiTest
-{
-    private:
-        int n;
-    public:
-        ChiTest(int n_) : n(n_) {}
-        double operator()(const Eigen::VectorXd &x, Eigen::VectorXd &grad)
-        {
-            double fx = 0.0;
-            for(int i = 0; i < n; i += 2)
-            {
-                double t1 = 1.0 - x[i];
-                double t2 = 10 * (x[i + 1] - x[i] * x[i]);
-                grad[i + 1] = 20 * t2;
-                grad[i]     = -2.0 * (x[i] * grad[i + 1] + t1);
-                fx += t1 * t1 + t2 * t2;
-            }
-            return fx;
-        }
-};
-
 
 int main(int argc, char* argv[])
 {
@@ -88,7 +58,7 @@ int main(int argc, char* argv[])
     //Define the model (currently 3+1 SBL)
     PROsc osc(myprop);
 
-    //Setup minimization parameetrs
+    //Setup minimization parameetrsM
     LBFGSpp::LBFGSBParam<double> param;  
     //LBFGSpp::LBFGSParam<double> param;  
     param.epsilon = 1e-6;
@@ -145,7 +115,6 @@ int main(int argc, char* argv[])
     std::cout << "f(x) = " << fx << std::endl;
 
     std::cout << "Throw: \n" << Eigen::VectorXf::Map(throws.data(), throws.size()).transpose() << std::endl;
-
     return 0;
 }
 
