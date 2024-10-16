@@ -63,7 +63,7 @@ double PROfitter::Fit(PROmetric &metric) {
     log<LOG_INFO>(L"%1% || Starting MultiGlobal runs : %2%") % __func__ % n_multistart ;
     for(int s = 0; s < n_multistart; s++){
         Eigen::VectorXd x = Eigen::Map<Eigen::VectorXd>(latin_samples[s].data(), latin_samples[s].size());
-        Eigen::VectorXd grad = Eigen::VectorXd::Constant(0, x.size());
+        Eigen::VectorXd grad = Eigen::VectorXd::Constant(x.size(), 0);
         double fx =  metric(x, grad, false);
         chi2s_multistart.push_back(fx);
 
