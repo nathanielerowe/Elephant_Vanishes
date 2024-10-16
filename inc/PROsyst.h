@@ -110,7 +110,7 @@ namespace PROfit {
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
             std::vector<Spline> splines;
-            size_t n_splines;
+            [[maybe_unused]] size_t n_splines;
             std::vector<Eigen::MatrixXd> covmat;
             std::vector<Eigen::MatrixXd> corrmat;
             //std::vector<MFA> mfa;
