@@ -172,7 +172,7 @@ namespace PROfit {
             } //end of branch loop
 
 
-            //calculate how many "universes" each systematoc has.
+            //calculate how many "universes" each systematic has.
             log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
             trees.at(fid)->GetEntry(good_event);
             for(int ib = 0; ib != num_branch; ++ib) {
@@ -195,9 +195,13 @@ namespace PROfit {
 
                     log<LOG_INFO>(L"%1% || %2% has %3% montecarlo variations in branch %4%") % __func__ % it.first.c_str() % it.second.size() % branch_variable->associated_hist.c_str();
 
-                    map_systematic_num_universe[it.first] = std::max((int)map_systematic_num_universe[it.first], (int)it.second.size());
+                    map_systematic_num_universe[it.first]   = std::max((int)map_systematic_num_universe[it.first], (int)it.second.size());
+
                 }
             }
+
+
+
         } // end fid
 
         size_t total_num_systematics = map_systematic_num_universe.size();
@@ -326,7 +330,7 @@ namespace PROfit {
         std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
         std::vector<std::vector<std::map<std::string, std::vector<eweight_type>*>>> f_event_weights(num_files);
         std::map<std::string, int> map_systematic_num_universe;
-
+        std::map<std::string, std::string> map_systematic_type;
 
         //open files, and link trees and branches
         int good_event = 0;
@@ -432,7 +436,7 @@ namespace PROfit {
             } //end of branch loop
 
 
-            //calculate how many "universes" each systematoc has.
+            //calculate how many universes each systematic has.
             log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
             trees.at(fid)->GetEntry(good_event);
             for(int ib = 0; ib != num_branch; ++ib) {
@@ -477,28 +481,30 @@ namespace PROfit {
 
             // Check to see if pattern is in this variation
             std::string sys_weight_formula = "1";
-            std::string sys_mode = sys_name.find("multisigma") != std::string::npos ?
-                                   "multisigma" :
-                                   "multisim";
+            //std::string sys_mode = sys_name.find("multisigma") != std::string::npos ?
+            //                       "multisigma" :
+            //                       "multisim";
+            std::string sys_mode = inconfig.m_mcgen_variation_type_map.at(sys_name);
 
             log<LOG_ERROR>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
            
-            for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
-                if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
-                    sys_weight_formula = sys_weight_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
-                    sys_mode=inconfig.m_mcgen_weightmaps_mode[i];
+            //for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
+            //    if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
+            //        sys_weight_formula = sys_weight_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
+                    //sys_mode           = inconfig.m_mcgen_weightmaps_mode[i];
 
-                    log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for pattern %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
-                    log<LOG_INFO>(L"%1% || Corresponding weight is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_formulas[i].c_str();
-                    log<LOG_INFO>(L"%1% || Corresponding mode is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_mode[i].c_str();
-                }
-            }
+
+            //        log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for pattern %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
+            //        log<LOG_INFO>(L"%1% || Corresponding weight is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_formulas[i].c_str();
+            //        log<LOG_INFO>(L"%1% || Corresponding mode is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_mode[i].c_str();
+            //    }
+            //}
 
             if(sys_weight_formula != "1" || sys_mode !=""){
                 syst_vector.back().SetWeightFormula(sys_weight_formula);
                 syst_vector.back().SetMode(sys_mode);
             }
-            if(sys_mode == "multisigma") {
+            if(sys_mode == "spline") {
                 // Hard code -3, 3 sigma for now
                 syst_vector.back().knobval = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
                 syst_vector.back().knob_index = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
@@ -571,6 +577,7 @@ namespace PROfit {
                 }
                 trees[fid]->GetEntry(i);
 
+                log<LOG_INFO>(L"%1% || GetEntry succeeded. now grabbing additional weights.") % __func__;
 
                 //grab additional weight for systematics
                 for(size_t is = 0; is != total_num_systematics; ++is){
@@ -579,6 +586,8 @@ namespace PROfit {
                         sys_weight_value[is] = sys_weight_formula[is]->EvalInstance();
                     }
                 }
+
+                log<LOG_INFO>(L"%1% || Grabbed additional weights. now entering process cafana event loop") % __func__;
 
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
@@ -1073,7 +1082,7 @@ namespace PROfit {
     void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop){
 
         int total_num_sys = syst_vector.size(); 
-	    double reco_value = branch->GetValue<double>();
+	double reco_value = branch->GetValue<double>();
         double true_param = branch->GetTrueValue<double>();
         double baseline = branch->GetTrueL<double>();
         double true_value = baseline / true_param;
@@ -1082,6 +1091,7 @@ namespace PROfit {
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = FindGlobalTrueBin(inconfig, true_value, subchannel_index);
         int model_rule = branch->GetModelRule();
+        
         if(global_bin < 0 )  //out of range
             return;
         if(global_true_bin < 0)
@@ -1103,11 +1113,17 @@ namespace PROfit {
             double additional_weight = syst_additional_weight.at(i);
 
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
-            if(syst_obj.mode == "multisigma") {
+            std::string aa = syst_obj.mode;
+            log<LOG_INFO>(L"%1% || syst_obj mode: %2%") % __func__ % aa.c_str();
+
+            if(syst_obj.mode == "spline") {
+                log<LOG_INFO>(L"%1% || Filling true bin %2% with mc weight %3%") % __func__ % global_true_bin % mc_weight;
                 syst_obj.FillCV(global_true_bin, mc_weight);
-                for(int i = 0; i < syst_obj.GetNUniverse(); ++i)
+                for(int i = 0; i < syst_obj.GetNUniverse(); ++i){
+                    log<LOG_INFO>(L"%1% || Filling Universe %2% with additional weight %3%") % __func__ % i % static_cast<double>(map_iter->second->at(i)); 
                     syst_obj.FillUniverse(i, global_true_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(i)));
                 continue;
+                }
             }
             syst_obj.FillCV(global_bin, mc_weight);
             int map_variation_size = (map_iter == eventweight_map.end()) ? 0 : map_iter->second->size();

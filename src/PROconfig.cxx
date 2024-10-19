@@ -589,6 +589,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     std::string wt = std::string(pAllowList->GetText());
                     const char* variation_type = pAllowList->Attribute("type");
                     m_mcgen_variation_type.push_back(variation_type);
+                    m_mcgen_variation_type_map[wt] = variation_type;
                     m_mcgen_variation_allowlist.push_back(wt);
                     log<LOG_DEBUG>(L"%1% || Allowlisting variations: %2%") % __func__ % wt.c_str() ;
                     pAllowList = pAllowList->NextSiblingElement("allowlist");
@@ -1262,6 +1263,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
     void PROconfig::construct_collapsing_matrix(){
 
         collapsing_matrix = Eigen::MatrixXd::Zero(m_num_bins_total, m_num_bins_total_collapsed);
+        log<LOG_ERROR>(L"%1% || Creating Collapsing Matrix. m_num_bins_total, m_num_bins_total_collapsed:  %2%  %3%") % __func__ % m_num_bins_total % m_num_bins_total_collapsed;
 
         //construct the matrix by detector block
         Eigen::MatrixXd block_collapser = Eigen::MatrixXd::Zero(m_num_bins_detector_block, m_num_bins_detector_block_collapsed);

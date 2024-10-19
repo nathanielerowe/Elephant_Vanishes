@@ -283,6 +283,7 @@ namespace PROfit{
             std::vector<std::string> m_mcgen_variation_allowlist;
             std::vector<std::string> m_mcgen_variation_denylist;
             std::vector<std::string> m_mcgen_variation_type;
+            std::map<std::string, std::string> m_mcgen_variation_type_map;
             std::map<std::string, std::vector<std::string>> m_mcgen_shapeonly_listmap; //a map of shape-only systematic and corresponding subchannels
 
             //FIX skepic
