@@ -21,7 +21,7 @@ target_link_libraries(PROsurf PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${librari
 
 add_executable(PROmock PROmock.cxx )
 target_include_directories(PROmock PRIVATE ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROmock PRIVATE cxx_std_14)
+target_compile_features(PROmock PRIVATE cxx_std_17)
 target_link_libraries(PROmock PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
 add_executable(PROplot PROplot.cxx )
