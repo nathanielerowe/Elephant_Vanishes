@@ -264,7 +264,8 @@ namespace PROfit{
             bool m_write_out_variation;
             bool m_form_covariance;
             std::string m_write_out_tag;
-
+            int m_num_variation_type_covariance = 0;
+            int m_num_variation_type_spline = 0;
 
             int m_num_mcgen_files;
             std::vector<std::string> m_mcgen_tree_name;	
@@ -288,8 +289,10 @@ namespace PROfit{
             std::vector<bool> m_mcgen_weightmaps_uses;
             std::vector<std::string> m_mcgen_weightmaps_patterns;
             std::vector<std::string> m_mcgen_weightmaps_mode;
-            std::unordered_set<std::string> m_mcgen_variation_allowlist;
-            std::unordered_set<std::string> m_mcgen_variation_denylist;
+            std::vector<std::string> m_mcgen_variation_allowlist;
+            std::vector<std::string> m_mcgen_variation_denylist;
+            std::vector<std::string> m_mcgen_variation_type;
+            std::map<std::string, std::string> m_mcgen_variation_type_map;
             std::map<std::string, std::vector<std::string>> m_mcgen_shapeonly_listmap; //a map of shape-only systematic and corresponding subchannels
 
             //FIX skepic

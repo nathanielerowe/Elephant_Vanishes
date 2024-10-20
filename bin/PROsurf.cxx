@@ -28,8 +28,8 @@
 
 using namespace PROfit;
 
-//log_level_t GLOBAL_LEVEL = LOG_DEBUG;
-log_level_t GLOBAL_LEVEL = LOG_ERROR;
+log_level_t GLOBAL_LEVEL = LOG_DEBUG;
+//log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 int main(int argc, char* argv[])
 {
@@ -79,14 +79,14 @@ int main(int argc, char* argv[])
 
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
-
-    //Set 'data' to CV prediction
-    PROspec data = systsstructs.back().CV();
-
+    
+    //Grab Asimov Data
+    PROspec data = FillCVSpectrum(config, prop, binned);
+    
     //Define the model (currently 3+1 SBL)
     PROsc osc(prop);
 
-        //Define grid and Surface
+    //Define grid and Surface
     size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
     PROsurf surface(nbinsx, PROsurf::LogAxis, 1e-4, 1.0, nbinsy, PROsurf::LogAxis, 1e-2, 1e2);
     

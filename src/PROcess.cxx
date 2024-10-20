@@ -4,6 +4,28 @@
 #include "PROsyst.h"
 
 namespace PROfit {
+    PROspec FillCVSpectrum(const PROconfig &inconfig, const PROpeller &inprop, bool binned){
+
+        PROspec myspectrum(inconfig.m_num_bins_total);
+
+        if(binned) {
+            for(size_t i = 0; i < inprop.hist.rows(); ++i) {
+                float le = inprop.histLE[i];
+                float systw = 1;
+                for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
+                    myspectrum.Fill(k, systw * inprop.hist(i, k));
+                }
+            }
+        } else {
+            for(size_t i = 0; i<inprop.truth.size(); ++i){
+
+                float add_w = inprop.added_weights[i]; 
+                myspectrum.Fill(inprop.bin_indices[i], add_w);
+            }
+        }
+        return myspectrum;
+
+    }
 
     PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, std::vector<float> &inshifts, std::vector<float> &physparams, bool binned){
 

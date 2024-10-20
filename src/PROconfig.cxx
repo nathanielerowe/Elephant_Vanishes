@@ -589,7 +589,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 tinyxml2::XMLElement *pAllowList = pList->FirstChildElement("allowlist");
                 while(pAllowList){
                     std::string wt = std::string(pAllowList->GetText());
-                    m_mcgen_variation_allowlist.insert(wt); 
+                    const char* variation_type = pAllowList->Attribute("type");
+                    m_mcgen_variation_type.push_back(variation_type);
+                    m_mcgen_variation_type_map[wt] = variation_type;
+                    m_mcgen_variation_allowlist.push_back(wt);
                     log<LOG_DEBUG>(L"%1% || Allowlisting variations: %2%") % __func__ % wt.c_str() ;
                     pAllowList = pAllowList->NextSiblingElement("allowlist");
                 }
@@ -597,7 +600,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 tinyxml2::XMLElement *pDenyList = pList->FirstChildElement("denylist");
                 while(pDenyList){
                     std::string bt = std::string(pDenyList->GetText());
-                    m_mcgen_variation_denylist.insert(bt); 
+                    m_mcgen_variation_denylist.push_back(bt); 
                     log<LOG_DEBUG>(L"%1% || Denylisting variations: %2%") % __func__ % bt.c_str() ;
                     pDenyList = pDenyList->NextSiblingElement("denylist");
                 }
@@ -779,12 +782,21 @@ int PROconfig::LoadFromXML(const std::string &filename){
             }
         }//end model
 
+        for(int i = 0 ; i<m_mcgen_variation_type.size(); ++i){
+            if(m_mcgen_variation_type[i] == "spline"){
+                m_num_variation_type_spline+=1;
+            }
 
+            else if(m_mcgen_variation_type[i] == "covariance"){
+                m_num_variation_type_covariance+=1;
+            }
+        }
 
+        log<LOG_INFO>(L"%1% || num_variation_type_covariance: %2% ") % __func__ % m_num_variation_type_covariance;
+        log<LOG_INFO>(L"%1% || num_variation_type_spline: %2% ") % __func__ % m_num_variation_type_spline; 
 
 
         this->CalcTotalBins();
-
 
         log<LOG_INFO>(L"%1% || Checking number of Mode/Detector/Channel/Subchannels and BINs") % __func__;
         log<LOG_INFO>(L"%1% || num_modes: %2% ") % __func__ % m_num_modes;
@@ -1260,6 +1272,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
     void PROconfig::construct_collapsing_matrix(){
 
         collapsing_matrix = Eigen::MatrixXd::Zero(m_num_bins_total, m_num_bins_total_collapsed);
+        log<LOG_ERROR>(L"%1% || Creating Collapsing Matrix. m_num_bins_total, m_num_bins_total_collapsed:  %2%  %3%") % __func__ % m_num_bins_total % m_num_bins_total_collapsed;
 
         //construct the matrix by detector block
         Eigen::MatrixXd block_collapser = Eigen::MatrixXd::Zero(m_num_bins_detector_block, m_num_bins_detector_block_collapsed);
