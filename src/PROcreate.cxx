@@ -424,36 +424,25 @@ namespace PROfit {
                         trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
                     }
                 }
+                if(inconfig.m_mcgen_numfriends[fid]>0){
                 for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
                     for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
                         log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
 
                         if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
                         //if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
-                            log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
-                            trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
-                        }else{
-                            log<LOG_INFO>(L"%1% || EXPLICITLY NOT Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
-                        }
-                    }
-                }
-                log<LOG_INFO>(L"%1% || This mcgen file has %2% friends.") % __func__ %  inconfig.m_mcgen_numfriends[fid];
-
-                if(inconfig.m_mcgen_numfriends[fid]>0){
-                    for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
-                        for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
-                            log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
-                            if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
-                                if(branch_variable->GetIncludeSystematics()){
+                          if(branch_variable->GetIncludeSystematics()){
                                     log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                                     trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
                                 }else{
                                     log<LOG_INFO>(L"%1% || EXPLICITLY NOT Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                                 }
-                            }
-                        }
                     }
                 }
+                }
+                }
+                log<LOG_INFO>(L"%1% || This mcgen file has %2% friends.") % __func__ %  inconfig.m_mcgen_numfriends[fid];
+
             } //end of branch loop
 
 
