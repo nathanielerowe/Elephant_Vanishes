@@ -104,21 +104,23 @@ namespace PROfit {
 
 
             //first, grab friend trees
-            auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
-            if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
+            if (inconfig.m_mcgen_numfriends[fid]>0){
+                auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
+                if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
 
-                auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
-                if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
-                    log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
-                    log<LOG_ERROR>(L"Terminating.");
-                    exit(EXIT_FAILURE);
-                }
+                    auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
+                    if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
+                        log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
+                        log<LOG_ERROR>(L"Terminating.");
+                        exit(EXIT_FAILURE);
+                    }
 
-                for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+                    for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
 
-                    std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
-                    std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                    trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                        std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
+                        std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
+                        trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                    }
                 }
             }
 
@@ -347,28 +349,28 @@ namespace PROfit {
                 log<LOG_ERROR>(L"%1% || Failed to open root file: %2%") % __func__  % fn.c_str();
                 exit(EXIT_FAILURE);
             }
-            log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
 
 
             //first, grab friend trees
-            auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
-            if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
+            if(inconfig.m_mcgen_numfriends[fid]>0){
+                auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
+                if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
 
-                auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
-                if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
-                    log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
-                    log<LOG_ERROR>(L"Terminating.");
-                    exit(EXIT_FAILURE);
-                }
+                    auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
+                    if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
+                        log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
+                        log<LOG_ERROR>(L"Terminating.");
+                        exit(EXIT_FAILURE);
+                    }
 
-                for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
-                    std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
-                    std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                    log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from file %3%") % __func__ %  treefriendname.c_str() % treefriendfile.c_str();
-                    trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                    for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+                        std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
+                        std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
+                        log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from file %3%") % __func__ %  treefriendname.c_str() % treefriendfile.c_str();
+                        trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                    }
                 }
             }
-
             // grab branches 
             int num_branch = inconfig.m_branch_variables[fid].size();
             f_event_weights[fid].resize(num_branch);
@@ -430,6 +432,25 @@ namespace PROfit {
                         //if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
                             log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                             trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                        }else{
+                            log<LOG_INFO>(L"%1% || EXPLICITLY NOT Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
+                        }
+                    }
+                }
+                log<LOG_INFO>(L"%1% || This mcgen file has %2% friends.") % __func__ %  inconfig.m_mcgen_numfriends[fid];
+
+                if(inconfig.m_mcgen_numfriends[fid]>0){
+                    for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
+                        for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
+                            log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
+                            if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
+                                if(branch_variable->GetIncludeSystematics()){
+                                    log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
+                                    trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                                }else{
+                                    log<LOG_INFO>(L"%1% || EXPLICITLY NOT Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
+                                }
+                            }
                         }
                     }
                 }
@@ -439,12 +460,14 @@ namespace PROfit {
             //calculate how many universes each systematic has.
             log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
             trees.at(fid)->GetEntry(good_event);
+
             for(int ib = 0; ib != num_branch; ++ib) {
                 const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
                 auto& f_weight = f_event_weights[fid][ib];
 
-                for(const auto& it : f_weight){
-                    log<LOG_DEBUG>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
+                if(branch_variable->GetIncludeSystematics()){
+                    for(const auto& it : f_weight){
+                        log<LOG_DEBUG>(L"%1% || On systematic: %2%") % __func__ % it.first.c_str();
 
                     int count = std::count(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), it.first);
                     if(count==0){
@@ -458,9 +481,10 @@ namespace PROfit {
                         continue;
                     }
 
-                    log<LOG_INFO>(L"%1% || %2% has %3% montecarlo variations in branch %4%") % __func__ % it.first.c_str() % it.second->size() % branch_variable->associated_hist.c_str();
+                        log<LOG_INFO>(L"%1% || %2% has %3% montecarlo variations in branch %4%") % __func__ % it.first.c_str() % it.second->size() % branch_variable->associated_hist.c_str();
 
-                    map_systematic_num_universe[it.first] = std::max((int)map_systematic_num_universe[it.first], (int)it.second->size());
+                        map_systematic_num_universe[it.first] = std::max((int)map_systematic_num_universe[it.first], (int)it.second->size());
+                    }
                 }
             }
         } // end fid
@@ -481,9 +505,6 @@ namespace PROfit {
 
             // Check to see if pattern is in this variation
             std::string sys_weight_formula = "1";
-            //std::string sys_mode = sys_name.find("multisigma") != std::string::npos ?
-            //                       "multisigma" :
-            //                       "multisim";
             std::string sys_mode = inconfig.m_mcgen_variation_type_map.at(sys_name);
 
             log<LOG_ERROR>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
@@ -588,7 +609,7 @@ namespace PROfit {
 
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
+                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], inconfig.m_mcgen_pot[fid], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
                 } 
 
             } //end of entry loop
@@ -831,10 +852,10 @@ namespace PROfit {
                 if(i%1000==0)log<LOG_DEBUG>(L"%1% || ---- universe %2%/%3% ") % __func__  % files[fid]->GetName() % nevents ;
 
                 for(int ib = 0; ib != num_branch; ++ib) {
-		    double reco_value = branches[ib]->GetValue<double>();
+                    double reco_value = branches[ib]->GetValue<double>();
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
-		    //additional_weight *= pot_scale[fid]; POT NOT YET FIX
-		    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
+                    //additional_weight *= pot_scale[fid]; POT NOT YET FIX
+                    int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     int pdg_id = branches[ib]->GetTruePDG<int>();
                     double true_param = branches[ib]->GetTrueValue<double>();
                     double baseline = branches[ib]->GetTrueL<double>();
@@ -954,21 +975,24 @@ namespace PROfit {
             log<LOG_INFO>(L"%1% || POT scale factor: %2%") % __func__ %  pot_scale[fid];
 
             //first, grab friend trees
-            auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
-            if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
 
-                auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
-                if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
-                    log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
-                    log<LOG_ERROR>(L"Terminating.");
-                    exit(EXIT_FAILURE);
-                }
+            if (inconfig.m_mcgen_numfriends[fid]>0){
+                auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
+                if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
 
-                for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+                    auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
+                    if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
+                        log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
+                        log<LOG_ERROR>(L"Terminating.");
+                        exit(EXIT_FAILURE);
+                    }
 
-                    std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
-                    std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                    trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                    for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+
+                        std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
+                        std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
+                        trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                    }
                 }
             }
 
@@ -1047,7 +1071,7 @@ namespace PROfit {
 
                     //guanqun: why have different types for branch_variables 
                     double reco_value = branches[ib]->GetValue<double>();
-		    double additional_weight = branches[ib]->GetMonteCarloWeight();
+                    double additional_weight = branches[ib]->GetMonteCarloWeight();
                     additional_weight *= pot_scale[fid];
 
                     if(additional_weight == 0) //skip on event failing cuts
@@ -1076,17 +1100,19 @@ namespace PROfit {
         return spec;
     }
 
-    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop){
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, double mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop){
 
         int total_num_sys = syst_vector.size(); 
-	double reco_value = branch->GetValue<double>();
+      	double reco_value = branch->GetValue<double>();
         double true_param = branch->GetTrueValue<double>();
         double baseline = branch->GetTrueL<double>();
         double true_value = baseline / true_param;
-        double pdg_id = branch->GetTruePDG();
-    	double mc_weight = branch->GetMonteCarloWeight();
+        double pdg_id = branch->GetTruePDG();//No need, depreciated
+        int run_syst = branch->GetIncludeSystematics();
+        double mc_weight = branch->GetMonteCarloWeight();
+        mc_weight *= inconfig.m_plot_pot / mcpot;
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
-        int global_true_bin = FindGlobalTrueBin(inconfig, true_value, subchannel_index);
+        int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 
         int model_rule = branch->GetModelRule();
         
         if(global_bin < 0 )  //out of range
@@ -1117,20 +1143,17 @@ namespace PROfit {
                     syst_obj.FillUniverse(i, global_true_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(i)));
                 }
                 continue;
-            }
-            syst_obj.FillCV(global_bin, mc_weight);
-            int map_variation_size = (map_iter == eventweight_map.end()) ? 0 : map_iter->second->size();
-            int iuni = 0;
-            for(; iuni != std::min(map_variation_size, syst_obj.GetNUniverse()); ++iuni){
-                syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(iuni)));
+            }else{
+
+                syst_obj.FillCV(global_bin, mc_weight);
+                for(int iuni = 0; iuni < syst_obj.GetNUniverse(); ++iuni){
+                    double sys_wei = run_syst ? additional_weight * static_cast<double>(map_iter->second->at(iuni) ) :  1.0;
+                    syst_obj.FillUniverse(iuni, global_bin, mc_weight *sys_wei );
+                }
             }
 
-            while(iuni != syst_obj.GetNUniverse()){
-                //syst_obj.FillUniverse(iuni, global_bin, mc_weight);
-                syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight);
-                ++iuni;
-            }
         }
+
 
         return;
     }
@@ -1138,8 +1161,8 @@ namespace PROfit {
     void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight){
 
         int total_num_sys = syst_vector.size(); 
-	double reco_value = branch->GetValue<double>();
-    	double mc_weight = branch->GetMonteCarloWeight();
+        double reco_value = branch->GetValue<double>();
+        double mc_weight = branch->GetMonteCarloWeight();
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         if(global_bin < 0 )  //out of range
             return;

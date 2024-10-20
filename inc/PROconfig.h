@@ -70,10 +70,11 @@ namespace PROfit{
         std::string true_L_name;
         std::string pdg_name;
         int model_rule;
+        int include_systematics;
 
         //constructor
-        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9){}
-        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9){}
+        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), include_systematics(1){}
+        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9),include_systematics(1){}
 
         /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
         std::shared_ptr<TTreeFormula> GetFormula(){
@@ -86,6 +87,7 @@ namespace PROfit{
         void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
         void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
         void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;} 
+        void SetIncludeSystematics(int insyst){include_systematics = insyst; return;} 
 
         //Function: evaluate branch "pdg", and return the value. Usually it's the pdg value of the particle
         //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
@@ -95,6 +97,11 @@ namespace PROfit{
         int GetModelRule() const{
             return model_rule;
         };
+
+        int GetIncludeSystematics() const{
+            return include_systematics;
+        };
+
 
         // Function: evaluate additional weight setup in the branch and return in floating precision 
         // Note: if no additional weight is set, value of 1.0 will be returned.
@@ -147,11 +154,11 @@ namespace PROfit{
 
 
             //map from subchannel name/index to global index and channel index
-            std::unordered_map<std::string, int> m_map_fullname_subchannel_index;
-            std::vector<int> m_vec_subchannel_index; //vector of global subchannel index, in increasing order
-            std::vector<int> m_vec_channel_index;    //vector of corresponding channel index
-            std::vector<int> m_vec_global_reco_index_start;  //vector of global reco bin index, in increasing order
-            std::vector<int> m_vec_global_true_index_start;  //vector of global true bin index, in increasing order
+            std::unordered_map<std::string, size_t> m_map_fullname_subchannel_index;
+            std::vector<size_t> m_vec_subchannel_index; //vector of global subchannel index, in increasing order
+            std::vector<size_t> m_vec_channel_index;    //vector of corresponding channel index
+            std::vector<size_t> m_vec_global_reco_index_start;  //vector of global reco bin index, in increasing order
+            std::vector<size_t> m_vec_global_true_index_start;  //vector of global true bin index, in increasing order
 
 
             //---- PRIVATE FUNCTION ------
@@ -176,15 +183,15 @@ namespace PROfit{
             /* Function: given an input vector that's sorted in ascending order, and input val, return the index of elmeent which is equal to val
              * Note: it gives exception when input value is not present in the vector 
              */
-            size_t find_equal_index(const std::vector<int>& input_vec, int val) const;
+            size_t find_equal_index(const std::vector<size_t>& input_vec, size_t val) const;
 
             /* Function: given an input vector that's sorted in ascending order, and input val, return the index of the closest element which is equal or smaller than val */
-            size_t find_less_or_equal_index(const std::vector<int>& input_vec, int val) const;
+            size_t find_less_or_equal_index(const std::vector<size_t>& input_vec, size_t val) const;
 
             /* Function: given global bin index, return associated global subchannel index 
              * Note: not used anymore 
              */
-            int find_global_subchannel_index_from_global_bin(int global_index, const std::vector<int>& num_subchannel_in_channel, const std::vector<int>& num_bins_in_channel, int num_channels, int num_bins_total) const;
+            size_t find_global_subchannel_index_from_global_bin(size_t global_index, const std::vector<size_t>& num_subchannel_in_channel, const std::vector<size_t>& num_bins_in_channel, size_t num_channels, size_t num_bins_total) const;
 
 
         public:
@@ -203,18 +210,18 @@ namespace PROfit{
             double m_plot_pot;
             std::vector<std::string> m_fullnames;
 
-            int m_num_detectors;
-            int m_num_channels;
-            int m_num_modes;
+            size_t m_num_detectors;
+            size_t m_num_channels;
+            size_t m_num_modes;
 
             /*Vectors of length num_channels. Unless specificed all refer to fittable (reco) variables*/
-            std::vector<int> m_num_subchannels; 
-            std::vector<int> m_channel_num_bins;
+            std::vector<size_t> m_num_subchannels; 
+            std::vector<size_t> m_channel_num_bins;
             std::vector<std::vector<double> > m_channel_bin_edges;
             std::vector<std::vector<double> > m_channel_bin_widths;
 
             /* New true bins to save the truth level variables in addition.*/
-            std::vector<int> m_channel_num_truebins;
+            std::vector<size_t> m_channel_num_truebins;
             std::vector<std::vector<double> > m_channel_truebin_edges;
             std::vector<std::vector<double> > m_channel_truebin_widths;
 
@@ -236,19 +243,19 @@ namespace PROfit{
             std::vector<std::vector<std::string >> m_subchannel_names; 
             std::vector<std::vector<std::string >> m_subchannel_plotnames; 
             std::vector<std::vector<std::string >> m_subchannel_colors; 
-            std::vector<std::vector<int >> m_subchannel_datas; 
+            std::vector<std::vector<size_t >> m_subchannel_datas; 
 
-            int m_num_bins_detector_block;
-            int m_num_bins_mode_block;
-            int m_num_bins_total;
+            size_t m_num_bins_detector_block;
+            size_t m_num_bins_mode_block;
+            size_t m_num_bins_total;
 
-            int m_num_truebins_detector_block;
-            int m_num_truebins_mode_block;
-            int m_num_truebins_total;
+            size_t m_num_truebins_detector_block;
+            size_t m_num_truebins_mode_block;
+            size_t m_num_truebins_total;
 
-            int m_num_bins_detector_block_collapsed;
-            int m_num_bins_mode_block_collapsed;
-            int m_num_bins_total_collapsed;
+            size_t m_num_bins_detector_block_collapsed;
+            size_t m_num_bins_mode_block_collapsed;
+            size_t m_num_bins_total_collapsed;
 
             /* Eigen Matrix for collapsing subchannels->channels*/
             Eigen::MatrixXd collapsing_matrix;
@@ -266,6 +273,7 @@ namespace PROfit{
             std::vector<long int> m_mcgen_maxevents;	
             std::vector<double> m_mcgen_pot;	
             std::vector<double> m_mcgen_scale;	
+            std::vector<int> m_mcgen_numfriends;	
             std::vector<bool> m_mcgen_fake;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_map;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_treename_map;
@@ -273,6 +281,7 @@ namespace PROfit{
             std::vector<std::vector<bool>> m_mcgen_additional_weight_bool;
             std::vector<std::vector<std::shared_ptr<BranchVariable>>> m_branch_variables;
             std::vector<std::vector<std::string>> m_mcgen_eventweight_branch_names;
+            std::vector<std::vector<int>> m_mcgen_eventweight_branch_syst;
 
 
             //specific bits for covariancegeneration
@@ -315,43 +324,43 @@ namespace PROfit{
             /* Function: given subchannel full name, return global subchannel index 
              * Note: index start from 0, not 1
              */
-            int GetSubchannelIndex(const std::string& fullname) const;
+            size_t GetSubchannelIndex(const std::string& fullname) const;
 
             /* Function: given global index (in the full vector), return global subchannel index of associated subchannel
              * Note: returns a 0-based index 
              */
-            int GetSubchannelIndexFromGlobalBin(int global_index) const;
+            size_t GetSubchannelIndexFromGlobalBin(size_t global_index) const;
 
             /* Function: given global true index , return global subchannel index of associated subchannel
              * Note: returns a 0-based index 
              */
-            int GetSubchannelIndexFromGlobalTrueBin(int global_trueindex) const;
+            size_t GetSubchannelIndexFromGlobalTrueBin(size_t global_trueindex) const;
 
             /* Function: given subchannel global index, return corresponding channel index 
              * Note: index start from 0, not 1
              */
-            int GetChannelIndex(int subchannel_index) const;
+            size_t GetChannelIndex(size_t subchannel_index) const;
 
 
             /* Function: given subchannel global index, return corresponding global bin start
              * Note: global bin index start from 0, not 1
              */
-            int GetGlobalBinStart(int subchannel_index) const;
+            size_t GetGlobalBinStart(size_t subchannel_index) const;
 
 
             /* Function: given channel index, return list of bin edges for this channel */
-            const std::vector<double>& GetChannelBinEdges(int channel_index) const;
+            const std::vector<double>& GetChannelBinEdges(size_t channel_index) const;
 
             /* Function: given channel index, return number of true bins for this channel */
-            int GetChannelNTrueBins(int channel_index) const;
+            size_t GetChannelNTrueBins(size_t channel_index) const;
 
             /* Function: given subchannel global index, return corresponding global bin start
              * Note: global bin index start from 0, not 1
              */
-            int GetGlobalTrueBinStart(int subchannel_index) const;
+            size_t GetGlobalTrueBinStart(size_t subchannel_index) const;
 
             /* Function: given channel index, return list of bin edges for this channel */
-            const std::vector<double>& GetChannelTrueBinEdges(int channel_index) const;
+            const std::vector<double>& GetChannelTrueBinEdges(size_t channel_index) const;
 
             /* Function: Hex to int*/
             int HexToROOTColor(const std::string& hexColor) const;

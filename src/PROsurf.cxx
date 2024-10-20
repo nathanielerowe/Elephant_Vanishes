@@ -1,4 +1,5 @@
 #include "PROsurf.h"
+#include "PROfitter.h"
 
 using namespace PROfit;
 
@@ -46,11 +47,11 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nThreads) {
+void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
-    
+
     std::ofstream chi_file;
     PROchi::EvalStrategy strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
 
@@ -69,7 +70,7 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
             param.max_linesearch = 50;
             param.delta = 1e-6;
             LBFGSpp::LBFGSBSolver<double> solver(param); 
-            int nparams = systs.GetNSplines();
+            size_t nparams = systs.GetNSplines();
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
             PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), strat, physics_params);
             Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
@@ -77,7 +78,7 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
 
             double fx;
-            int niter;
+            int niter=-1;
             std::vector<double> chi2s;
             int nfit = 0;
             do {
@@ -88,7 +89,7 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
                 try {
                     niter = solver.minimize(chi, x, fx, lb, ub);
                 } catch(std::runtime_error &except) {
-                    log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+                    log<LOG_ERROR>(L"%1% || Fit failed on iter %2%,  %3%") % __func__ % niter % except.what();
                     continue;
                 }
                 chi2s.push_back(fx);
@@ -104,10 +105,7 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
 
 std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpeller *prop, const PROsyst *systs, const PROsc *osc, const PROspec *data, std::vector<surfOut> multi_physics_params, PROchi::EvalStrategy strat, bool binned_weighting, int start, int end){
 
-    std::random_device rd{};
-    std::mt19937 rng{rd()};
-    std::normal_distribution<float> d;
-    std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
+    strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
 
     std::vector<surfOut> outs;
 
@@ -124,94 +122,15 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
-        LBFGSpp::LBFGSBSolver<double> solver(param);
         int nparams = systs->GetNSplines();
-        PROchi chi("3plus1",config,prop,systs,osc,*data, nparams, systs->GetNSplines(), strat, physics_params);
-
         Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
         Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-        Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
-        Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
-        Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
 
-        //First do 100 simple function calls suing LATIN hypercube setup
-        double fx;
-        int niter;
-        int N_multistart = 100;
-        std::vector<double> chi2s_multistart;
-        std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(N_multistart, nparams,d_uni,rng);
+        PROfitter fitter(ub, lb, param);
 
+        PROchi chi("3plus1",config,prop,systs,osc,*data, nparams, systs->GetNSplines(), strat, physics_params);
 
-        log<LOG_INFO>(L"%1% || Starting MultiGlobal runs : %2%") % __func__ % N_multistart ;
-        for(int s=0; s<N_multistart; s++){
-
-
-            x = Eigen::Map<Eigen::VectorXd>(latin_samples[s].data(), latin_samples[s].size());
-            fx =  chi(x,grad,false);
-            chi2s_multistart.push_back(fx);
-
-        }
-        //Sort so we can take the best N_localfits for further zoning
-        std::vector<int> best_multistart = sorted_indices(chi2s_multistart);    
-
-        log<LOG_INFO>(L"%1% || Ending MultiGlobal Best two are : %2% and %3%") % __func__ % chi2s_multistart[best_multistart[0]] %   chi2s_multistart[best_multistart[1]];
-        log<LOG_INFO>(L"%1% || Best Points is  : %2% ") % __func__ % latin_samples[best_multistart[0]];
-
-        int N_localfits = 5;
-        std::vector<double> chi2s_localfits;
-        int nfit = 0;
-        double chimin = 9999999;
-
-        log<LOG_INFO>(L"%1% || Starting Local Gradients runs : %2%") % __func__ % N_localfits ;
-        for(int s=0; s<N_localfits; s++){
-            //Get the nth
-            x = Eigen::Map<Eigen::VectorXd>( latin_samples[best_multistart[s]].data(), latin_samples[best_multistart[s]].size());   
-            try {
-                niter = solver.minimize(chi, x, fx, lb, ub);
-            } catch(std::runtime_error &except) {
-                log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
-            }
-            chi2s_localfits.push_back(fx);
-            if(fx<chimin){
-                bestx = x;
-                chimin=fx;
-            }
-            log<LOG_INFO>(L"%1% ||  LocalGrad Run : %2% has a chi %3%") % __func__ % s % fx;
-            std::string spec_string = "";
-            for(auto &f : x) spec_string+=" "+std::to_string(f); 
-            log<LOG_INFO>(L"%1% || Best Point is  : %2% ") % __func__ % spec_string.c_str();
-
-
-        }
-
-
-        // and do CV
-        log<LOG_INFO>(L"%1% || Starting CV fit ") % __func__  ;
-        try {
-            x = Eigen::VectorXd::Constant(nparams, 0.012);
-            niter = solver.minimize(chi, x, fx, lb, ub);
-        } catch(std::runtime_error &except) {
-            log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
-        }
-        chi2s_localfits.push_back(fx);
-        if(fx<chimin){
-            bestx = x;
-            chimin=fx;
-        }
-
-        log<LOG_INFO>(L"%1% ||  CV Run has a chi %2%") % __func__ %  fx;
-        std::string spec_string = "";
-        for(auto &f : x) spec_string+=" "+std::to_string(f); 
-        log<LOG_INFO>(L"%1% || Best Point post CV is  : %2% ") % __func__ % spec_string.c_str();
-
-
-
-        log<LOG_INFO>(L"%1% || FINAL has a chi %2%") % __func__ %  chimin;
-        spec_string = "";
-        for(auto &f : bestx) spec_string+=" "+std::to_string(f); 
-        log<LOG_INFO>(L"%1% || FINAL is  : %2% ") % __func__ % spec_string.c_str();
-
-        output.chi = chimin;
+        output.chi = fitter.Fit(chi);
         outs.push_back(output);
 
     }
@@ -263,23 +182,294 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-                                        return this->PointHelper(&config, &prop, &systs, &osc, &data, grid, strat, binned_weighting, start, end);
-                                        }));
+                    return this->PointHelper(&config, &prop, &systs, &osc, &data, grid, strat, binned_weighting, start, end);
+                    }));
 
     }
 
-   std::vector<surfOut> combinedResults;
-   for (auto& fut : futures) {
-           std::vector<surfOut> result = fut.get();
-           combinedResults.insert(combinedResults.end(), result.begin(), result.end());
-   }
+    std::vector<surfOut> combinedResults;
+    for (auto& fut : futures) {
+        std::vector<surfOut> result = fut.get();
+        combinedResults.insert(combinedResults.end(), result.begin(), result.end());
+    }
 
-   for (const auto& item : combinedResults) {
+    for (const auto& item : combinedResults) {
         log<LOG_INFO>(L"%1% || Finished  : %2% %3% %4%") % __func__ % item.grid_val[1] % item.grid_val[0] %item.chi ;
         surface(item.grid_index[0], item.grid_index[1]) = item.chi;
         chi_file<<"\n"<<item.grid_val[1]<<" "<<item.grid_val[0]<<" "<<item.chi<<std::flush;
-   }
+    }
 
 }
 
+std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
+    double step = 0.001;
+    range = range+step;
+    int n = g->GetN();
+    double minY = 1e9, minX = 0;
+    for (int i = 0; i < n; ++i) {
+        double x, y;
+        g->GetPoint(i, x, y);
+        if (y < minY) {
+            minY = y;
+            minX = x;
+        }
+    }
+    //..ok so minX is the min and Currentl minY is the chi^2. Want this to be delta chi^2
+
+    double leftX = minX, rightX = minX;
+    
+    // Search to the left of the minimum
+    for (double x = minX; x >= -range; x -= step) {
+        double y = g->Eval(x) - minY; //DeltaChi^2
+        if (y >= val) {
+            leftX = x;
+            break;
+        }
+    }
+    
+
+    // Search to the right of the minimum
+    for (double x = minX; x <= range; x += step) {
+        double y = g->Eval(x)-minY;
+        if (y >= val) {
+            rightX = x;
+            break;
+        }
+    }
+    
+    return {minX,leftX,rightX};
+}
+
+
+int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename) {
+
+
+    LBFGSpp::LBFGSBParam<double> param;
+    param.epsilon = 1e-6;
+    param.max_iterations = 100;
+    param.max_linesearch = 50;
+    param.delta = 1e-6;
+
+    LBFGSpp::LBFGSBSolver<double> solver(param);
+    int nparams = systs.GetNSplines();
+    std::vector<float> physics_params; 
+
+
+
+    int depth = std::ceil(nparams/4.0);
+    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
+    c->Divide(4,depth);
+
+
+    std::vector<std::unique_ptr<TGraph>> graphs; 
+
+    //hack
+    std::vector<double> priorX;
+    std::vector<double> priorY;
+
+    for(int i=0; i<=30;i++){
+        double which_value = -3.0+0.2*i;
+        priorX.push_back(which_value);
+        priorY.push_back(which_value*which_value);
+
+    }
+    std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
+
+
+
+    for(int w=0; w<nparams;w++){
+        int which_spline = w;
+
+
+        std::vector<double> knob_vals;
+        std::vector<double> knob_chis;
+
+        for(int i=0; i<=30;i++){
+
+            Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+            Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+            Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
+            Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
+            Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
+
+
+            double which_value = -3.0+0.2*i;
+            double fx;
+            knob_vals.push_back(which_value);
+
+            lb[which_spline] = which_value;
+            ub[which_spline] = which_value;
+            x[which_spline] = which_value;
+
+
+            PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
+            chi.fixSpline(which_spline,which_value);
+
+            log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
+            try {
+                x = Eigen::VectorXd::Constant(nparams, 0.012);
+                solver.minimize(chi, x, fx, lb, ub);
+            } catch(std::runtime_error &except) {
+                log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+            }
+
+            std::string spec_string = "";
+            for(auto &f : x) spec_string+=" "+std::to_string(f); 
+            log<LOG_INFO>(L"%1% || Fixed value of %2% for spline %3% was post  : %4% ") % __func__ % which_spline % which_value % fx;
+            log<LOG_INFO>(L"%1% || BF splines @ %2%") % __func__ %  spec_string.c_str();
+
+            knob_chis.push_back(fx);
+        }            
+
+        log<LOG_INFO>(L"%1% || Knob Values: %2%") % __func__ %  knob_vals;
+        log<LOG_INFO>(L"%1% || Knob Chis: %2%") % __func__ %  knob_chis;
+
+        c->cd(w+1);
+        std::unique_ptr<TGraph> g = std::make_unique<TGraph>(knob_vals.size(), knob_vals.data(), knob_chis.data());
+        std::string tit = systs.spline_names[which_spline]+ ";#sigma Shift; #Chi^{2}";
+        g->SetTitle(tit.c_str());
+        graphs.push_back(std::move(g));
+        graphs.back()->Draw("AL");
+        graphs.back()->SetLineWidth(2);
+
+        gprior->Draw("L same");
+        gprior->SetLineStyle(2);
+        gprior->SetLineWidth(1);
+
+    }
+
+    c->SaveAs((filename+".pdf").c_str(),"pdf");
+
+    delete c;
+
+    //Next version
+    TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
+    c2->cd();
+    c2->SetBottomMargin(0.25);
+    c2->SetRightMargin(0.2);
+    //plot 2sigma also? default no, as its messier
+    bool twosig = false;
+    int nBins = systs.spline_names.size();
+
+    std::vector<double> bfvalues;
+    std::vector<double> values1_up;
+    std::vector<double> values1_down;
+
+    std::vector<double> values2_up;
+    std::vector<double> values2_down;
+
+    log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two igma turned on? : %2% ") % __func__ % twosig;
+
+    for(auto &g:graphs){
+        std::vector<double> tmp = findMinAndBounds(g.get(),1.0,3.0);
+        bfvalues.push_back(tmp[0]);
+        values1_down.push_back(tmp[1]);
+        values1_up.push_back(tmp[2]);
+
+        if(twosig){
+            std::vector<double> tmp2 = findMinAndBounds(g.get(),4.0,3.0);
+            values2_down.push_back(tmp2[1]);
+            values2_up.push_back(tmp2[2]);
+        }
+    }
+
+    
+    log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% ") % __func__ % nBins % bfvalues.size() % values1_down.size() % values1_up.size() ;
+
+    double minVal = *std::min_element(values1_down.begin(), values1_down.end());
+    double maxVal = *std::max_element(values1_up.begin(), values1_up.end());
+
+    double wid = twosig? 0.4  : 0.8;
+    double off1 = twosig?0.1   : 0.0;
+    double off2 = twosig?0.5  : 0.0;
+
+    TH1D *h1up = new TH1D("hup", "Bar Chart", nBins, 0, nBins);
+    TH1D *h1down = new TH1D("hdown", "Bar Chart", nBins, 0, nBins);
+
+    TH1D *h2up = new TH1D("h2up", "Bar Chart", nBins, 0, nBins);
+    TH1D *h2down = new TH1D("h2down", "Bar Chart", nBins, 0, nBins);
+
+
+    h1up->SetFillColor(kBlue-7);
+    h1up->SetBarWidth(wid);
+    h1up->SetBarOffset(off1);
+    h1up->SetStats(0);
+    h1up->SetMinimum(minVal*1.2);
+    h1up->SetMaximum(maxVal*1.2);
+
+    h1down->SetFillColor(kBlue-7);
+    h1down->SetBarWidth(wid);
+    h1down->SetBarOffset(off1);
+    h1down->SetStats(0);
+
+    h2up->SetFillColor(38);
+    h2up->SetBarWidth(wid);
+    h2up->SetBarOffset(off2);
+    h2up->SetStats(0);
+
+    h2down->SetFillColor(38);
+    h2down->SetBarWidth(wid);
+    h2down->SetBarOffset(off2);
+    h2down->SetStats(0);
+
+
+
+
+    // Fill the histogram with values from the vector
+    for (int i = 0; i < nBins; ++i) {
+        h1up->SetBinContent(i+1, values1_up[i]); 
+        h1down->SetBinContent(i+1, values1_down[i]); 
+
+       log<LOG_DEBUG>(L"%1% || on spline %2% BF down up : %3% %4% %5% ") % __func__ % i % bfvalues[i] % values1_down[i] % values1_up[i] ;
+        if(twosig){
+            h2up->SetBinContent(i+1, values2_up[i]); 
+            h2down->SetBinContent(i+1, values2_down[i]); 
+        }
+
+        h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
+
+    }
+    h1up->SetTitle("");
+    h1up->Draw("b");
+    h1up->GetYaxis()->SetTitle("#sigma Shift");
+
+    h1down->Draw("b same");
+    if(twosig){
+        h2up->Draw("b same");
+        h2down->Draw("b same");
+    }
+
+    TLine l(0,0,nBins,0);
+    l.SetLineStyle(2);
+    l.SetLineColor(kBlack);
+    l.SetLineWidth(1);
+    l.Draw();
+
+    TLine l1(0,1,nBins,1);
+    l1.SetLineStyle(2);
+    l1.SetLineColor(kBlack);
+    l1.SetLineWidth(1);
+    l1.Draw();
+
+    TLine l2(0,-1,nBins,-1);
+    l2.SetLineStyle(2);
+    l2.SetLineColor(kBlack);
+    l2.SetLineWidth(1);
+    l2.Draw();
+
+
+
+    for (int i = 0; i < nBins; ++i) {
+        TMarker* star = new TMarker(i + wid/2.0, bfvalues[i], 29);
+        star->SetMarkerSize(2); 
+        star->SetMarkerColor(kBlack); 
+        star->Draw();
+    }
+
+
+    c2->SaveAs((filename+"_1sigma.pdf").c_str(),"pdf");
+    delete c2;
+
+    return 0;
+}
 

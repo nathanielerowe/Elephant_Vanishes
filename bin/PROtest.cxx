@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 
 
     //PROfile development
-    if(true){
+    if(false){
 
         //Inititilize PROpeller to keep MC
         PROpeller prop;
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
 
 
     }
-    if(false){
+    if(true){
 
 
         //Inititilize PROpeller to keep MC
@@ -193,6 +193,15 @@ int main(int argc, char* argv[])
         PROsc osc(prop);
 
         PROspec data = systsstructs.back().CV();
+
+        //CovarCheck
+    //std::cout<<systs.fractional_covariance<<std::endl;
+
+    //SplineCheck
+    //PROspec test = systs.GetSplineShiftedSpectrum(config, prop, "GENIEReWeight_SBN_v1_multisigma_MaCCRES" , -2.0);
+    //data.Print();
+    //test.Print();
+
 
         std::vector<float> shift = {0.569111, 0.121685, 0.687138, 0.341982, 0.553843, 0.697239, 0.192107, 0.456814, 0.116422, 0.0806362, 0.501815, 0.781406, 0.321165, 0.525954, 0.0396827, 0.373735, 0.54393, 0.106545, 0.43473, 0.479401, 0.255056, 0.152222, 0.0812247, 0.153592, 0.256307, 0.0998781, 0.403397, 0.864244};
         std::vector<float> param = {0,0};

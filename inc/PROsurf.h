@@ -16,6 +16,9 @@
 #include <thread>
 #include <future>
 
+#include "TGraph.h"
+#include "TMarker.h"
+#include "TLine.h"
 
 namespace PROfit {
 
@@ -24,6 +27,8 @@ struct surfOut{
     std::vector<float> grid_val;
     double chi;
 };
+
+int PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename);
 
 class PROsurf {
 public:
@@ -42,7 +47,7 @@ public:
 
     std::vector<surfOut> PointHelper(const PROconfig *config, const PROpeller *prop, const PROsyst *systs, const PROsc *osc, const PROspec *data, std::vector<surfOut> multi_physics_params, PROchi::EvalStrategy strat, bool binned_weighting, int start, int end);
 
-    void FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nthreads = 1);
+    void FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting);
     void FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nthreads = 1);
 
 };

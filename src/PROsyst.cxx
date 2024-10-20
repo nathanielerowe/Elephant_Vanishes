@@ -135,7 +135,7 @@ namespace PROfit {
         PROsyst::toFiniteMatrix(frac_covar_matrix);
 
         //check if it's good
-        if(!PROsyst::isPositiveSemiDefinite_WithTolerance(frac_covar_matrix)){
+        if(!PROsyst::isPositiveSemiDefinite_WithTolerance(frac_covar_matrix,Eigen::NumTraits<double>::dummy_precision())){
             log<LOG_ERROR>(L"%1% || Fractional Covariance Matrix is not positive semi-definite!") % __func__;
             log<LOG_ERROR>(L"Terminating.");
             exit(EXIT_FAILURE);
@@ -242,7 +242,7 @@ namespace PROfit {
         }
         Spline spline_coeffs;
         spline_coeffs.reserve(syst.p_cv->GetNbins());
-        for(long i = 0; i < syst.p_cv->GetNbins(); ++i) {
+        for(size_t i = 0; i < syst.p_cv->GetNbins(); ++i) {
             std::vector<std::pair<float, std::array<float, 4>>> spline;
             spline.reserve(syst.knobval.size());
 
@@ -304,10 +304,7 @@ namespace PROfit {
     float PROsyst::GetSplineShift(int spline_num, float shift , int bin) const {
         if(bin < 0 || bin >= (int)splines[spline_num].size()) return -1;
         const float lowest_knobval = splines[spline_num][0][0].first;
-        int shiftBin = (shift < lowest_knobval) ? 0 : (int)(shift - lowest_knobval);
-        if(shiftBin > (int)splines[spline_num][0].size() - 1) shiftBin = splines[spline_num][0].size() - 1;
-        // We should use the line below if we switch to c++17
-        // const long shiftBin = std::clamp((int)(shift - lowest_knobval), 0, splines[spline_num][0].size() - 1);
+        const int shiftBin = std::clamp((int)(shift - lowest_knobval), 0, (int)splines[spline_num][0].size() - 1);
         std::array<float, 4> coeffs = splines[spline_num][bin][shiftBin].second;
         shift -= splines[spline_num][bin][shiftBin].first;
         return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;

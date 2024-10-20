@@ -18,7 +18,7 @@ namespace PROfit {
     class PROsyst {
         public:
             using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
-
+            
             enum class SystType {
                 Spline, Covariance, MFA
             };
@@ -105,9 +105,12 @@ namespace PROfit {
             /* the fractional covariance that is the sum of all during constructor*/
             Eigen::MatrixXd fractional_covariance;
 
+            /* names of all systs*/
+            std::vector<std::string> spline_names;
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
             std::vector<Spline> splines;
+            [[maybe_unused]] size_t n_splines;
             std::vector<Eigen::MatrixXd> covmat;
             std::vector<Eigen::MatrixXd> corrmat;
             //std::vector<MFA> mfa;

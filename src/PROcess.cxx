@@ -32,7 +32,7 @@ namespace PROfit {
         PROspec myspectrum(inconfig.m_num_bins_total);
 
         if(binned) {
-            for(size_t i = 0; i < inprop.hist.rows(); ++i) {
+            for(long int i = 0; i < inprop.hist.rows(); ++i) {
                 float le = inprop.histLE[i];
                 float systw = 1;
                 for(size_t j = 0; j < inshifts.size(); ++j) {
@@ -56,9 +56,7 @@ namespace PROfit {
 
                 float oscw  = physparams.size() != 0 ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
                 float add_w = inprop.added_weights[i]; 
-
-                const int subchannel = FindSubchannelIndexFromGlobalBin(inconfig, inprop.bin_indices[i]);
-                const int true_bin = FindGlobalTrueBin(inconfig, inprop.baseline[i] / inprop.truth[i], subchannel);
+                const int true_bin = inprop.true_bin_indices[i]; 
                 
                 float systw = 1;
                 for(size_t j = 0; j < inshifts.size(); ++j) {
