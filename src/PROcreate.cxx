@@ -487,19 +487,6 @@ namespace PROfit {
             std::string sys_mode = inconfig.m_mcgen_variation_type_map.at(sys_name);
 
             log<LOG_ERROR>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
-           
-            //for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
-            //    if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
-            //        sys_weight_formula = sys_weight_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
-                    //sys_mode           = inconfig.m_mcgen_weightmaps_mode[i];
-
-
-            //        log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for pattern %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
-            //        log<LOG_INFO>(L"%1% || Corresponding weight is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_formulas[i].c_str();
-            //        log<LOG_INFO>(L"%1% || Corresponding mode is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_mode[i].c_str();
-            //    }
-            //}
-
             if(sys_weight_formula != "1" || sys_mode !=""){
                 syst_vector.back().SetWeightFormula(sys_weight_formula);
                 syst_vector.back().SetMode(sys_mode);
@@ -509,7 +496,20 @@ namespace PROfit {
                 syst_vector.back().knobval = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
                 syst_vector.back().knob_index = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
             }
-        }
+           
+            for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
+                if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
+                    sys_weight_formula = sys_weight_formula + "*(" + inconfig.m_mcgen_weightmaps_formulas[i]+")";
+                    sys_mode           = inconfig.m_mcgen_weightmaps_mode[i];
+
+
+                    log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for pattern %3%") % __func__ % sys_name.c_str() % inconfig.m_mcgen_weightmaps_patterns[i].c_str();
+                    log<LOG_INFO>(L"%1% || Corresponding weight is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_formulas[i].c_str();
+                    log<LOG_INFO>(L"%1% || Corresponding mode is : %2%") % __func__ % inconfig.m_mcgen_weightmaps_mode[i].c_str();
+                }
+            }
+
+       }
 
 
         //sanity check 
@@ -519,7 +519,7 @@ namespace PROfit {
 
         //create 2D multi-universe spec.
         for(auto& s : syst_vector){
-            s.CreateSpecs(s.mode == "multisigma" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
+            s.CreateSpecs(s.mode == "spline" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
         inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
@@ -577,8 +577,6 @@ namespace PROfit {
                 }
                 trees[fid]->GetEntry(i);
 
-                log<LOG_INFO>(L"%1% || GetEntry succeeded. now grabbing additional weights.") % __func__;
-
                 //grab additional weight for systematics
                 for(size_t is = 0; is != total_num_systematics; ++is){
                     if(syst_vector[is].HasWeightFormula()){
@@ -587,7 +585,6 @@ namespace PROfit {
                     }
                 }
 
-                log<LOG_INFO>(L"%1% || Grabbed additional weights. now entering process cafana event loop") % __func__;
 
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
@@ -1113,17 +1110,13 @@ namespace PROfit {
             double additional_weight = syst_additional_weight.at(i);
 
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
-            std::string aa = syst_obj.mode;
-            log<LOG_INFO>(L"%1% || syst_obj mode: %2%") % __func__ % aa.c_str();
 
             if(syst_obj.mode == "spline") {
-                log<LOG_INFO>(L"%1% || Filling true bin %2% with mc weight %3%") % __func__ % global_true_bin % mc_weight;
                 syst_obj.FillCV(global_true_bin, mc_weight);
                 for(int i = 0; i < syst_obj.GetNUniverse(); ++i){
-                    log<LOG_INFO>(L"%1% || Filling Universe %2% with additional weight %3%") % __func__ % i % static_cast<double>(map_iter->second->at(i)); 
                     syst_obj.FillUniverse(i, global_true_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(i)));
-                continue;
                 }
+                continue;
             }
             syst_obj.FillCV(global_bin, mc_weight);
             int map_variation_size = (map_iter == eventweight_map.end()) ? 0 : map_iter->second->size();
