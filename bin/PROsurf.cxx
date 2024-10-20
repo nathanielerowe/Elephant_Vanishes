@@ -28,8 +28,8 @@
 
 using namespace PROfit;
 
-log_level_t GLOBAL_LEVEL = LOG_DEBUG;
-//log_level_t GLOBAL_LEVEL = LOG_ERROR;
+//log_level_t GLOBAL_LEVEL = LOG_DEBUG;
+log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 int main(int argc, char* argv[])
 {

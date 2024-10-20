@@ -12,6 +12,8 @@ namespace PROfit {
             if(syst.mode == "spline") {
                 log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
+                spline_names.push_back(syst.systname); 
+
                 //anyspline=true;
             } else if(syst.mode == "covariance") {
                 log<LOG_INFO>(L"%1% || Entering covariance syst world?") % __func__;
@@ -235,7 +237,7 @@ namespace PROfit {
         bool found0 = false;
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
             //log<LOG_ERROR>(L"%1% || p_multi_spec, knobval, i, cv (%2%): %3%") % __func__ % tolerance % val;
-       
+
             if(syst.knobval[i] > 0 && !found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
             if(syst.knobval[i] == 0) found0 = true;
             ratios.push_back(*syst.p_multi_spec[i] / *syst.p_cv);
