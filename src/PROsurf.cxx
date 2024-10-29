@@ -47,7 +47,7 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceStat(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
+void PROsurf::FillSurfaceStat(const PROconfig &config, const PROpeller &prop, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
     std::ofstream chi_file;
     PROchi::EvalStrategy strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
 
@@ -55,11 +55,14 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, const PROpeller &prop, co
         chi_file.open(filename);
     }
 
+    PROsyst dummy_syst;
+    dummy_syst.fractional_covariance = Eigen::MatrixXd::Constant(config.m_num_bins_total, config.m_num_bins_total, 0);
+    Eigen::VectorXd empty_vec;
+
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
-            Eigen::VectorXd empty_vec;
-            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, 0, 0, strat, physics_params);
+            PROchi chi("3plus1",&config,&prop,&dummy_syst,&osc, data, 0, 0, strat, physics_params);
             double fx = chi(empty_vec, empty_vec, false);
             surface(i, j) = fx;
             if(!filename.empty()){

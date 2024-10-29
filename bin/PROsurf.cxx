@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     PROsurf surface(nbinsx, PROsurf::LogAxis, 1e-4, 1.0, nbinsy, PROsurf::LogAxis, 1e-2, 1e2);
     
     if(statonly)
-        surface.FillSurfaceStat(config, prop, systs, osc, data, filename, binned);
+        surface.FillSurfaceStat(config, prop, osc, data, filename, binned);
     else
         surface.FillSurface(config, prop, systs, osc, data, filename, binned, nthread);
 
