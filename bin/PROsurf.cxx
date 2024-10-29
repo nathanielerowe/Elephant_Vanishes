@@ -92,11 +92,11 @@ int main(int argc, char* argv[])
     
     //Run over surface and Fill it. FillSurfaceSimple does a much simpler minimization.
     //FullSurface is recommended.
-    //surface.FillSurfaceSimple(config, prop, systs, osc, data, filename, binned);
+    //surface.FillSurfaceStat(config, prop, systs, osc, data, filename, binned);
     surface.FillSurface(config, prop, systs, osc, data, filename, binned, nthread);
 
     //And do a PROfile of pulls at the data also
-    PROfile(config,prop,systs,osc,data,filename+"_PROfile");
+    //PROfile(config,prop,systs,osc,data,filename+"_PROfile");
 
     //Fit is done here. Below is
     //root plotting code

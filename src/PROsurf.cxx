@@ -47,11 +47,7 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
-    std::random_device rd{};
-    std::mt19937 rng{rd()};
-    std::normal_distribution<float> d;
-
+void PROsurf::FillSurfaceStat(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
     std::ofstream chi_file;
     PROchi::EvalStrategy strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
 
@@ -59,42 +55,12 @@ void PROsurf::FillSurfaceSimple(const PROconfig &config, const PROpeller &prop, 
         chi_file.open(filename);
     }
 
-    std::cout << "In FillSurfaceFast\n";
-
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
-            std::cout << "Filling point " << i << " " << j << std::endl;
-            LBFGSpp::LBFGSBParam<double> param;  
-            param.epsilon = 1e-6;
-            param.max_iterations = 100;
-            param.max_linesearch = 50;
-            param.delta = 1e-6;
-            LBFGSpp::LBFGSBSolver<double> solver(param); 
-            size_t nparams = systs.GetNSplines();
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
-            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, nparams, systs.GetNSplines(), strat, physics_params);
-            Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-            Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-            Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
-
-            double fx;
-            int niter=-1;
-            std::vector<double> chi2s;
-            int nfit = 0;
-            do {
-                nfit++;
-                for(size_t i = 0; i < nparams; ++i)
-                    x(i) = 0.3*d(rng);
-                // x will be overwritten to be the best point found
-                try {
-                    niter = solver.minimize(chi, x, fx, lb, ub);
-                } catch(std::runtime_error &except) {
-                    log<LOG_ERROR>(L"%1% || Fit failed on iter %2%,  %3%") % __func__ % niter % except.what();
-                    continue;
-                }
-                chi2s.push_back(fx);
-            } while(chi2s.size() < 10 && nfit < 100);
-            fx = *std::min_element(chi2s.begin(), chi2s.end());
+            Eigen::VectorXd empty_vec;
+            PROchi chi("3plus1",&config,&prop,&systs,&osc, data, 0, 0, strat, physics_params);
+            double fx = chi(empty_vec, empty_vec, false);
             surface(i, j) = fx;
             if(!filename.empty()){
                 chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx<<std::flush;
