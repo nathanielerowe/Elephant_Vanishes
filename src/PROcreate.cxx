@@ -1119,6 +1119,7 @@ namespace PROfit {
         inprop.true_bin_indices.push_back((int)global_true_bin);
         inprop.hist(global_true_bin, global_bin) += mc_weight;
 
+        if(!run_syst) return;
 
         for(int i = 0; i != total_num_sys; ++i){
             SystStruct& syst_obj = syst_vector[i];
