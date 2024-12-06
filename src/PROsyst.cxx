@@ -41,7 +41,7 @@ namespace PROfit {
                 ret.corrmat.push_back(corrmat[idx]);
             }
         }
-        ret.SumMatrices();
+        ret.fractional_covariance = ret.SumMatrices();
         return ret;
     }
 
@@ -61,7 +61,7 @@ namespace PROfit {
                 ret.corrmat.push_back(corrmat[idx]);
             }
         }
-        ret.SumMatrices();
+        ret.fractional_covariance = ret.SumMatrices();
         return ret;
     }
 
