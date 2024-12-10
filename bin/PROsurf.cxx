@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     CLI::App app{"Test for PROfit"}; 
 
     // Define options
-    std::string xmlname, filename, xlabel, ylabel; 
+    std::string xmlname, filename, xlabel, ylabel;
     int maxevents;
     size_t  nthread;
     float xlo, xhi, ylo, yhi;
@@ -91,6 +91,8 @@ int main(int argc, char* argv[])
         yhi = ylims[1];
     }
 
+    bool savetoroot = filename.size() > 5 && filename.substr(filename.size() - 5) == ".root";
+
     //Initilize configuration from the XML;
     PROconfig config(xmlname);
 
@@ -130,9 +132,9 @@ int main(int argc, char* argv[])
                     nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
     
     if(statonly)
-        surface.FillSurfaceStat(config, prop, osc, data, filename, !eventbyevent);
+        surface.FillSurfaceStat(config, prop, osc, data, !savetoroot ? filename : "", !eventbyevent);
     else
-        surface.FillSurface(config, prop, systs, osc, data, filename, !eventbyevent, nthread);
+        surface.FillSurface(config, prop, systs, osc, data, !savetoroot ? filename : "", !eventbyevent, nthread);
 
     //And do a PROfile of pulls at the data also
     //PROfile(config,prop,systs,osc,data,filename+"_PROfile");
@@ -151,6 +153,11 @@ int main(int argc, char* argv[])
         for(size_t j = 0; j < surface.nbinsy; j++) {
             surf.SetBinContent(i+1, j+1, surface.surface(i, j));
         }
+    }
+
+    if(savetoroot) {
+      TFile fout(filename.c_str(), "RECREATE");
+      surf.Write();
     }
 
     TCanvas c;
