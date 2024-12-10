@@ -114,8 +114,8 @@ int main(int argc, char* argv[])
     for(const auto& [name, shift]: injected_systs)
       std::cout << "Injected syst: " << name << " shifted by " << shift << " sigma\n";
     //Grab Asimov Data
-    PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams) :
-                   injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs) :
+    PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams, !eventbyevent) :
+                   injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs, !eventbyevent) :
                    FillCVSpectrum(config, prop, !eventbyevent);
 
     if(syst_list.size()) {

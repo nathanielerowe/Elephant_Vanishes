@@ -117,23 +117,31 @@ namespace PROfit {
 
     }
 
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const std::map<std::string, float> &inshifts) {
+    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const std::map<std::string, float> &inshifts, bool binned) {
 
         PROspec myspectrum(inconfig.m_num_bins_total);
 
-        for(size_t i = 0; i<inprop.truth.size(); ++i){
-
-            float add_w = inprop.added_weights[i]; 
-            const int true_bin = inprop.true_bin_indices[i]; 
-            
-            float systw = 1;
-            for(const auto &[name, shift]: inshifts) {
-                systw *= insyst.GetSplineShift(name, shift, true_bin);
+        if(binned) {
+            for(long int i = 0; i < inprop.hist.rows(); ++i) {
+                float systw = 1;
+                for(const auto &[name, shift]: inshifts) {
+                    systw *= insyst.GetSplineShift(name, shift, i);
+                }
+                for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
+                    myspectrum.Fill(k, systw * inprop.hist(i, k));
+                }
             }
-
-            float finalw = systw * add_w;
-
-            myspectrum.Fill(inprop.bin_indices[i], finalw);
+        } else {
+            for(size_t i = 0; i<inprop.truth.size(); ++i){
+                float add_w = inprop.added_weights[i]; 
+                const int true_bin = inprop.true_bin_indices[i]; 
+                float systw = 1;
+                for(const auto &[name, shift]: inshifts) {
+                    systw *= insyst.GetSplineShift(name, shift, true_bin);
+                }
+                float finalw = systw * add_w;
+                myspectrum.Fill(inprop.bin_indices[i], finalw);
+            }
         }
         return myspectrum;
     }
