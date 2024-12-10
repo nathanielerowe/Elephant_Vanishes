@@ -27,7 +27,7 @@ namespace PROfit {
 
     }
 
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, std::vector<float> &inshifts, std::vector<float> &physparams, bool binned){
+    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, const std::vector<float> &inshifts, const std::vector<float> &physparams, bool binned){
 
         PROspec myspectrum(inconfig.m_num_bins_total);
 
@@ -72,7 +72,7 @@ namespace PROfit {
 
     }
 
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, std::map<std::string, float> &inshifts, std::vector<float> &physparams, bool binned){
+    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, const std::map<std::string, float> &inshifts, const std::vector<float> &physparams, bool binned){
 
         PROspec myspectrum(inconfig.m_num_bins_total);
 
@@ -105,7 +105,7 @@ namespace PROfit {
                 
                 float systw = 1;
                 for(const auto &[name, shift]: inshifts) {
-                    systw *= insyst.GetSplineShift(name, shift, i);
+                    systw *= insyst.GetSplineShift(name, shift, true_bin);
                 }
 
                 float finalw = oscw * systw * add_w;
@@ -117,7 +117,7 @@ namespace PROfit {
 
     }
 
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, std::map<std::string, float> &inshifts) {
+    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const std::map<std::string, float> &inshifts) {
 
         PROspec myspectrum(inconfig.m_num_bins_total);
 
@@ -128,7 +128,7 @@ namespace PROfit {
             
             float systw = 1;
             for(const auto &[name, shift]: inshifts) {
-                systw *= insyst.GetSplineShift(name, shift, i);
+                systw *= insyst.GetSplineShift(name, shift, true_bin);
             }
 
             float finalw = systw * add_w;
@@ -138,12 +138,12 @@ namespace PROfit {
         return myspectrum;
     }
 
-    float GetOscWeight(int rule, float le, const PROsc &inosc, std::vector<float> &inphysparams) {
+    float GetOscWeight(int rule, float le, const PROsc &inosc, const std::vector<float> &inphysparams) {
         // The model functions take L and E separately, so give E as 1 and L as L/E
         return inosc.model_functions[rule](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), 1, le);
     }
 
-    float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, std::vector<float> &inphysparams) {
+    float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, const std::vector<float> &inphysparams) {
 
         //get subchannel here from pdg. this will be added when we agree on convention.
         //for now everything is numu disappearance 3+1. 

@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     int maxevents;
     size_t  nthread;
     float xlo, xhi, ylo, yhi;
-    std::array<float, 2> xlims, ylims, injected_pt;
+    std::array<float, 2> xlims, ylims, injected_pt{0, 0};
     std::vector<int> grid_size;
     std::map<std::string, float> injected_systs;
     std::vector<std::string> syst_list, systs_excluded;
@@ -110,6 +110,9 @@ int main(int argc, char* argv[])
     PROsc osc(prop);
     
     std::vector<float> pparams = {std::log10(injected_pt[0]), std::log10(injected_pt[1])};
+    std::cout << "Injected point: sinsq2t = " << injected_pt[0] << " dmsq = " << injected_pt[1] << std::endl;
+    for(const auto& [name, shift]: injected_systs)
+      std::cout << "Injected syst: " << name << " shifted by " << shift << " sigma\n";
     //Grab Asimov Data
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams) :
                    injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs) :
