@@ -4,3 +4,4 @@ build
 /profit.egg-info/
 /dist/
 /install/
+__pycache__

@@ -8,14 +8,15 @@ def readme():
 
 ext_modules = [
     Pybind11Extension(
-        'profit',
+        '_profit',
         ['pylib/profit.cxx'],
         include_dirs=[
            # 'inc', 
            'install/include',
            'install/include/eigen3',
            '/opt/homebrew/include',
-           '/opt/homebrew/Cellar/root/6.32.06_1/include/root'
+           '/opt/homebrew/Cellar/root/6.32.06_1/include/root',
+           'build/_deps/sbnanaobj-src'
         ],
         library_dirs=["/opt/homebrew/opt/root/lib/root/", "build/src/", "install/lib"],
         libraries=["Core", "PROfitLib", "tinyxml2"],
@@ -34,7 +35,7 @@ setup(
     author='Gray Putnam',
     author_email='gputnam@fnal.gov',
     license='MIT',
-    packages=['pylib'],
+    packages=['profit'],
     cmdclass={'build_ext': build_ext},
     install_requires=[
         'numpy'
