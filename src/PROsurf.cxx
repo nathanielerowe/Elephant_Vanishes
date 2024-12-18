@@ -85,20 +85,26 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
         output.grid_val = physics_params;
         output.grid_index = multi_physics_params[i].grid_index;
 
+        int nparams = systs->GetNSplines();
+        PROchi chi("3plus1",config,prop,systs,osc,*data, nparams, systs->GetNSplines(), strat, physics_params);
+
+        if(nparams == 0) {
+            Eigen::VectorXd empty_vec;
+            output.chi = chi(empty_vec, empty_vec, false);
+            outs.push_back(output);
+            continue;
+        }
+
         LBFGSpp::LBFGSBParam<double> param;
         param.epsilon = 1e-6;
         param.max_iterations = 100;
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
-        int nparams = systs->GetNSplines();
         Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
         Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
 
         PROfitter fitter(ub, lb, param);
-
-        PROchi chi("3plus1",config,prop,systs,osc,*data, nparams, systs->GetNSplines(), strat, physics_params);
-
         output.chi = fitter.Fit(chi);
         outs.push_back(output);
 
