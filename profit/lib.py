@@ -1,10 +1,25 @@
 import _profit
+import numpy as np
 
 # re-export simple classes that we don't need to futz with
-from _profit import SystStruct
+from _profit import SystStruct, PROpeller, globals
 
+# Override PROpeller to access underlying Eigen objects with numpy interface
+class PROpellerblehhh(_profit.PROpeller):
+    def __init__(self, *args, **kwargs):
+        _profit.PROpeller.__init__(self, *args, **kwargs)
+        self._hist = self._e_hist
 
-# Override PROconfig to return our own branches
+    @property
+    def hist(self):
+        return self._hist
+
+    @hist.setter
+    def hist(self, v):
+        self._e_hist = v
+        self._hist = self._e_hist
+
+# Override PROconfig to return our own BranchVariable objects
 class PROconfig(_profit.PROconfig):
     def __init__(self, *args, **kwargs):
         _profit.PROconfig.__init__(self, *args, **kwargs)
@@ -17,7 +32,6 @@ class PROconfig(_profit.PROconfig):
 class BranchVariable(_profit.BranchVariable):
     def __init__(self, *args, **kwargs):
         _profit.BranchVariable.__init__(self, *args, **kwargs)
-
     
     @property
     def branch_formula(self):

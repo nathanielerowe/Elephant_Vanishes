@@ -19,7 +19,7 @@ ext_modules = [
            'build/_deps/sbnanaobj-src'
         ],
         library_dirs=["/opt/homebrew/opt/root/lib/root/", "build/src/", "install/lib"],
-        libraries=["Core", "PROfitLib", "tinyxml2"],
+        libraries=["Core", "PROfitLib", "tinyxml2", "TreePlayer"],
         language='c++',
         cxx_std=17
     ),

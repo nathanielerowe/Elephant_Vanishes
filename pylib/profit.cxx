@@ -1,17 +1,32 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <numpy/arrayobject.h>
+// STL includes
 #include <string>
 #include <format>
 #include <iostream>
+
+// pybind includes
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/eigen.h>
+
+// numpy includes
+#include <numpy/arrayobject.h>
+
+// PROfit includes
 #include "PROconfig.h"
 #include "PROcreate.h"
+
+// ROOT includes
 #include "TTreeFormula.h"
 
 namespace py = pybind11;
 
 // expected by PROfit for printing stuff
 log_level_t GLOBAL_LEVEL = LOG_DEBUG;
+
+// Dummy class to associate with global variables
+namespace PROfit {
+  class Globals {};
+}
 
 template <typename T>
 std::vector<T> buffer_to_vector(const py::buffer buf) {
@@ -57,7 +72,7 @@ std::string ttreeformula_getter(const TTreeFormula *f) {
   return std::string(f->PrintValue());
 }
 
-PROfit::SystStruct _init_SystStruct_np(
+PROfit::SystStruct init_SystStruct_np(
 	const std::string& name,
 	const int n_univ,
 	const std::string& mode,
@@ -84,6 +99,18 @@ PYBIND11_MODULE(_profit, m) {
     m.doc() =  "Python interface for core functionality of PROfit fitting library.";
     m.def("add", &_add, "Add two numbers");
 
+    // access to global variables inside PROfit
+    py::class_<PROfit::Globals>(m, "globals")
+        .def_property_static("GLOBAL_LEVEL",
+            [](py::object) { return (int)GLOBAL_LEVEL; }, 
+            [](py::object, int l) { GLOBAL_LEVEL = (log_level_t)l; })
+        .def_property_readonly_static("LOG_CRITICAL", [](py::object) { return (int)LOG_CRITICAL; })
+        .def_property_readonly_static("LOG_ERROR", [](py::object) { return (int)LOG_ERROR; })
+        .def_property_readonly_static("LOG_WARNING", [](py::object) { return (int)LOG_WARNING; })
+        .def_property_readonly_static("LOG_INFO", [](py::object) { return (int)LOG_INFO; })
+        .def_property_readonly_static("LOG_DEBUG", [](py::object) { return (int)LOG_DEBUG; }); 
+
+    // BranchVariable
     py::class_<PROfit::BranchVariable, std::shared_ptr<PROfit::BranchVariable>>(m, "BranchVariable")
         .def(py::init<PROfit::BranchVariable>())
         .def(py::init<std::string, std::string, std::string>())
@@ -109,9 +136,11 @@ PYBIND11_MODULE(_profit, m) {
         .def_readonly("model_rule", &PROfit::BranchVariable::model_rule)
         .def_readonly("include_systematics", &PROfit::BranchVariable::include_systematics);
 
+    // PROconfig
     py::class_<PROfit::PROconfig>(m, "PROconfig")
-        .def(py::init<const std::string&>())
         .def(py::init<>())
+        .def(py::init<PROfit::PROconfig>())
+        .def(py::init<const std::string&>())
         .def_readonly("m_xmlname", &PROfit::PROconfig::m_xmlname)
         .def_readonly("m_plot_pot", &PROfit::PROconfig::m_plot_pot)
         .def_readonly("m_fullnames",  &PROfit::PROconfig::m_fullnames)
@@ -181,9 +210,42 @@ PYBIND11_MODULE(_profit, m) {
         .def_readonly("m_model_rule_index",  &PROfit::PROconfig::m_model_rule_index)
         .def_readonly("m_model_rule_names",  &PROfit::PROconfig::m_model_rule_names);
 
+    py::class_<PROfit::PROpeller>(m, "PROpeller")
+        .def(py::init<>())
+        .def(py::init<PROfit::PROpeller>())
+        .def(py::init<const PROfit::PROconfig &, 
+             std::vector<float> &, 
+             std::vector<float> &, 
+             std::vector<float> &, 
+             std::vector<int> &, 
+             std::vector<float> &, 
+             std::vector<int> &, 
+             std::vector<int> &, 
+             std::vector<int> &>())
+        .def_property("hist",
+             [](PROfit::PROpeller &p) {return &p.hist;},
+             [](PROfit::PROpeller &p, const Eigen::MatrixXd &h) {p.hist = h;}, 
+             py::return_value_policy::reference_internal)
+        .def_property("histLE",
+             [](PROfit::PROpeller &p) {return &p.histLE;},
+             [](PROfit::PROpeller &p, const Eigen::VectorXd &v) {p.histLE = v;}, 
+             py::return_value_policy::reference_internal);
+
+    // SystStruct
     py::class_<PROfit::SystStruct>(m, "SystStruct")
         .def(py::init<const std::string&, const int>())
-        .def(py::init(&_init_SystStruct_np));
+        .def(py::init(&init_SystStruct_np))
+        .def("SetWeightFormula", &PROfit::SystStruct::SetWeightFormula)
+        .def("SetMode", &PROfit::SystStruct::SetMode)
+        .def("CreateSpecs", &PROfit::SystStruct::CreateSpecs)
+        .def("SanityCheck", &PROfit::SystStruct::SanityCheck)
+        .def_readonly("systname",  &PROfit::SystStruct::systname)
+        .def_readonly("n_univ",  &PROfit::SystStruct::n_univ)
+        .def_readonly("mode",  &PROfit::SystStruct::mode)
+        .def_readonly("weight_formula",  &PROfit::SystStruct::weight_formula)
+        .def_readwrite("knobval", &PROfit::SystStruct::knobval)
+        .def_readwrite("knob_index", &PROfit::SystStruct::knob_index)
+        .def_readonly("index",  &PROfit::SystStruct::index);
 
     // m.def("init_PROpeller", &_init_PROpeller, "Initialize PROpeller object");
 
