@@ -57,8 +57,7 @@ void fc_worker(fc_args args) {
         for(size_t i = 0; i < args.config.m_num_bins_total; i++)
             throwC(i) = d(rng);
         PROspec shifted = FillRecoSpectra(args.config, args.prop, args.systs, &osc, throws, args.phy_params, strat);
-        std::cout << "Num total bins " << args.config.m_num_bins_total << " Num spectrum bins " << shifted.Spec().size() << std::endl;
-        PROspec newSpec = PROspec::PoissonVariation(PROspec(shifted.Spec() + args.L * throwC, shifted.Error()));
+        PROspec newSpec = PROspec::PoissonVariation(PROspec(CollapseMatrix(args.config, shifted.Spec()) + args.L * throwC, CollapseMatrix(args.config, shifted.Error())));
 
         // No oscillations
         LBFGSpp::LBFGSBParam<double> param;  
@@ -155,7 +154,7 @@ int main(int argc, char* argv[])
 
     Eigen::MatrixXd diag = FillCVSpectrum(myConf, myprop, !eventbyevent).Spec().array().matrix().asDiagonal();
     Eigen::MatrixXd full_cov = diag * systs.fractional_covariance * diag;
-    Eigen::LLT<Eigen::MatrixXd> llt(full_cov);
+    Eigen::LLT<Eigen::MatrixXd> llt(CollapseMatrix(myConf, full_cov));
     
     std::vector<std::vector<double>> dchi2s;
     dchi2s.reserve(nthread);
