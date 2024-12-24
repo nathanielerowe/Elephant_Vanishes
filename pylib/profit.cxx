@@ -14,6 +14,9 @@
 // PROfit includes
 #include "PROconfig.h"
 #include "PROcreate.h"
+#include "PROtocall.h"
+#include "PROsyst.h"
+#include "PROsc.h"
 
 // ROOT includes
 #include "TTreeFormula.h"
@@ -37,31 +40,52 @@ std::vector<T> buffer_to_vector(const py::buffer buf) {
         throw std::runtime_error("Buffer must be one-dimensional!");
     }
 
-    // Special case: convert buffer of doubles to vector of floats
-    if (info.format == py::format_descriptor<double>::format() &&
-        py::format_descriptor<T>::format() == py::format_descriptor<float>::format()) {
+    std::vector<T> vec(info.size);
 
-      std::vector<float> vec(info.size);
+    std::string buf_format = info.format;
+    // Map l (long) -> whatever C++ says long should be
+    if (buf_format == "l") {
+        buf_format = py::format_descriptor<long>::format();
+    }
+
+    // Simple case: both types are equal
+    if (buf_format == py::format_descriptor<T>::format()) {
+        T* ptr = static_cast<T*>(info.ptr);
+
+        // Copy data from buffer to vector
+        std::copy(ptr, ptr + info.size, vec.begin());
+
+        return vec;
+    }
+
+    // Convertable cases: double -> float, long
+    if (buf_format == py::format_descriptor<double>::format() &&
+        (py::format_descriptor<T>::format() == py::format_descriptor<float>::format() ||
+         py::format_descriptor<T>::format() == py::format_descriptor<int>::format())) {
+
       double* ptr = static_cast<double*>(info.ptr);
 
       for (ssize_t i = 0; i < info.size; ++i) {
-          vec[i] = static_cast<float>(ptr[i]);
+          vec[i] = static_cast<T>(ptr[i]);
+      }
+    }
+    // long -> float, int
+    else if (buf_format == py::format_descriptor<long>::format() &&
+        (py::format_descriptor<T>::format() == py::format_descriptor<float>::format() ||
+         py::format_descriptor<T>::format() == py::format_descriptor<int>::format())) {
+      long* ptr = static_cast<long*>(info.ptr);
+
+      for (ssize_t i = 0; i < info.size; ++i) {
+          vec[i] = static_cast<T>(ptr[i]);
       }
 
-      return vec;
-
     }
-    if (info.format != py::format_descriptor<T>::format()) {
+    // Failure
+    else {
         std::stringstream err;
         err << "Incompatible buffer format! Expected (" << py::format_descriptor<T>::format() << "), received (" <<  info.format <<  ").";
         throw std::runtime_error(err.str());
     }
-
-    std::vector<T> vec(info.size);
-    T* ptr = static_cast<T*>(info.ptr);
-
-    // Copy data from buffer to vector
-    std::copy(ptr, ptr + info.size, vec.begin());
 
     return vec;
 }
@@ -94,10 +118,16 @@ int _add(int a, int b) {
   return a + b;
 }
 
-
 PYBIND11_MODULE(_profit, m) {
     m.doc() =  "Python interface for core functionality of PROfit fitting library.";
     m.def("add", &_add, "Add two numbers");
+
+    // helper functions
+    // m.def("FindGlobalBin", py::vectorize(py::overload_cast<const PROfit::PROconfig &, double, const std::string&>(&PROfit::FindGlobalBin)));
+    m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, double v, std::string &s) { return PROfit::FindGlobalBin(c, v, s);}));
+    m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalBin(c, v, i);}));
+    m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, std::string &s) { return PROfit::FindGlobalTrueBin(c, v, s);}));
+    m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalTrueBin(c, v, i);}));
 
     // access to global variables inside PROfit
     py::class_<PROfit::Globals>(m, "globals")
@@ -114,6 +144,9 @@ PYBIND11_MODULE(_profit, m) {
     py::class_<PROfit::BranchVariable, std::shared_ptr<PROfit::BranchVariable>>(m, "BranchVariable")
         .def(py::init<PROfit::BranchVariable>())
         .def(py::init<std::string, std::string, std::string>())
+        .def("SetModelRule", &PROfit::BranchVariable::SetModelRule)
+        .def("GetModelRule", &PROfit::BranchVariable::GetModelRule)
+        .def("GetIncludeSystematics", &PROfit::BranchVariable::GetIncludeSystematics)
         .def_readonly("name", &PROfit::BranchVariable::name)
         .def_readonly("type", &PROfit::BranchVariable::type)
         .def_readonly("associated_hist", &PROfit::BranchVariable::associated_hist)
@@ -141,6 +174,8 @@ PYBIND11_MODULE(_profit, m) {
         .def(py::init<>())
         .def(py::init<PROfit::PROconfig>())
         .def(py::init<const std::string&>())
+        .def("GetSubchannelIndex", &PROfit::PROconfig::GetSubchannelIndex)
+        .def("GetChannelBinEdges", &PROfit::PROconfig::GetChannelBinEdges)
         .def_readonly("m_xmlname", &PROfit::PROconfig::m_xmlname)
         .def_readonly("m_plot_pot", &PROfit::PROconfig::m_plot_pot)
         .def_readonly("m_fullnames",  &PROfit::PROconfig::m_fullnames)
@@ -210,6 +245,7 @@ PYBIND11_MODULE(_profit, m) {
         .def_readonly("m_model_rule_index",  &PROfit::PROconfig::m_model_rule_index)
         .def_readonly("m_model_rule_names",  &PROfit::PROconfig::m_model_rule_names);
 
+    // PROpeller
     py::class_<PROfit::PROpeller>(m, "PROpeller")
         .def(py::init<>())
         .def(py::init<PROfit::PROpeller>())
@@ -223,31 +259,90 @@ PYBIND11_MODULE(_profit, m) {
              std::vector<int> &, 
              std::vector<int> &>())
         .def_property("hist",
-             [](PROfit::PROpeller &p) {return &p.hist;},
+             [](PROfit::PROpeller &p) -> Eigen::MatrixXd& {return p.hist;},
              [](PROfit::PROpeller &p, const Eigen::MatrixXd &h) {p.hist = h;}, 
              py::return_value_policy::reference_internal)
         .def_property("histLE",
-             [](PROfit::PROpeller &p) {return &p.histLE;},
+             [](PROfit::PROpeller &p) -> Eigen::VectorXd& {return p.histLE;},
              [](PROfit::PROpeller &p, const Eigen::VectorXd &v) {p.histLE = v;}, 
+             py::return_value_policy::reference_internal)
+        .def_property("reco",
+             [](PROfit::PROpeller &p) {return py::array(p.reco.size(), p.reco.data(), py::capsule(&p.reco, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.reco = buffer_to_vector<float>(buf);}, 
+             py::return_value_policy::reference_internal)
+        .def_property("truth",
+             [](PROfit::PROpeller &p) {return py::array(p.truth.size(), p.truth.data(), py::capsule(&p.truth, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.truth = buffer_to_vector<float>(buf);}, 
+             py::return_value_policy::reference_internal)
+        .def_property("baseline",
+             [](PROfit::PROpeller &p) {return py::array(p.baseline.size(), p.baseline.data(), py::capsule(&p.baseline, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.baseline = buffer_to_vector<float>(buf);}, 
+             py::return_value_policy::reference_internal)
+        .def_property("pdg",
+             [](PROfit::PROpeller &p) {return py::array(p.pdg.size(), p.pdg.data(), py::capsule(&p.pdg, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.pdg = buffer_to_vector<int>(buf);}, 
+             py::return_value_policy::reference_internal)
+        .def_property("added_weights",
+             [](PROfit::PROpeller &p) {return py::array(p.added_weights.size(), p.added_weights.data(), py::capsule(&p.added_weights, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.added_weights = buffer_to_vector<float>(buf);}, 
+             py::return_value_policy::reference_internal)
+        .def_property("bin_indices",
+             [](PROfit::PROpeller &p) {return py::array(p.bin_indices.size(), p.bin_indices.data(), py::capsule(&p.bin_indices, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.bin_indices = buffer_to_vector<int>(buf);}, 
+             py::return_value_policy::reference_internal)
+        .def_property("model_rule",
+             [](PROfit::PROpeller &p) {return py::array(p.model_rule.size(), p.model_rule.data(), py::capsule(&p.model_rule, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.model_rule = buffer_to_vector<int>(buf);}, 
+             py::return_value_policy::reference_internal)
+        .def_property("true_bin_indices",
+             [](PROfit::PROpeller &p) {return py::array(p.true_bin_indices.size(), p.true_bin_indices.data(), py::capsule(&p.true_bin_indices, [](void *v) {}));},
+             [](PROfit::PROpeller &p, const py::buffer buf) {p.true_bin_indices = buffer_to_vector<int>(buf);}, 
              py::return_value_policy::reference_internal);
 
     // SystStruct
     py::class_<PROfit::SystStruct>(m, "SystStruct")
         .def(py::init<const std::string&, const int>())
+        .def(py::init<const PROfit::SystStruct&>(), py::return_value_policy::copy)
         .def(py::init(&init_SystStruct_np))
+        .def("GetSysName", &PROfit::SystStruct::GetSysName)
+        .def("GetNUniverse", &PROfit::SystStruct::GetNUniverse)
+        .def("HasWeightFormula", &PROfit::SystStruct::HasWeightFormula)
+        .def("GetWeightFormula", &PROfit::SystStruct::GetWeightFormula)
         .def("SetWeightFormula", &PROfit::SystStruct::SetWeightFormula)
         .def("SetMode", &PROfit::SystStruct::SetMode)
         .def("CreateSpecs", &PROfit::SystStruct::CreateSpecs)
         .def("SanityCheck", &PROfit::SystStruct::SanityCheck)
+        .def("FillCV", py::vectorize(&PROfit::SystStruct::FillCV))
+        .def("FillUniverse", py::vectorize(&PROfit::SystStruct::FillUniverse))
         .def_readonly("systname",  &PROfit::SystStruct::systname)
         .def_readonly("n_univ",  &PROfit::SystStruct::n_univ)
         .def_readonly("mode",  &PROfit::SystStruct::mode)
         .def_readonly("weight_formula",  &PROfit::SystStruct::weight_formula)
         .def_readwrite("knobval", &PROfit::SystStruct::knobval)
         .def_readwrite("knob_index", &PROfit::SystStruct::knob_index)
+        .def_readwrite("p_cv", &PROfit::SystStruct::p_cv)
+        .def_readwrite("p_multi_spec", &PROfit::SystStruct::p_multi_spec)
         .def_readonly("index",  &PROfit::SystStruct::index);
 
-    // m.def("init_PROpeller", &_init_PROpeller, "Initialize PROpeller object");
+    // PROsyst
+    py::class_<PROfit::PROsyst>(m, "PROsyst")
+        .def(py::init<>())
+        .def(py::init<PROfit::PROsyst>())
+        // PROsyst takes vector of systematics by reference. However, when passing a list from python,
+        // There is no way to get around constructing a vector from the list (and copying SystStructs).
+        // To make this explicit, we take the vector by value, and pass it to the class by reference.
+        .def(py::init([](std::vector<PROfit::SystStruct> s) {return PROfit::PROsyst(s);}));
+        // .def(py::init<const std::vector<PROfit::SystStruct>&>());
+
+    py::class_<PROfit::PROspec, std::shared_ptr<PROfit::PROspec>>(m, "PROspec")
+        .def(py::init<>())
+        .def(py::init<size_t>())
+        .def(py::init<const PROfit::PROspec&>());
+
+    // PROsc
+    py::class_<PROfit::PROsc>(m, "PROsc")
+        .def(py::init<const PROfit::PROpeller&>())
+        .def(py::init<PROfit::PROsc>());
 
     // instantiate numpy
     _import_array();

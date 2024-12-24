@@ -1,5 +1,3 @@
-import _profit
-
 try:
   import _profit
 except:
@@ -7,4 +5,6 @@ except:
 
 __all__ = ['profit']
 
+# Re-export everything
 from .lib import *
+from .pylib import *

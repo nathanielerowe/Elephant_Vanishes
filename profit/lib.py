@@ -1,37 +1,30 @@
-import _profit
+import profit
 import numpy as np
 
 # re-export simple classes that we don't need to futz with
-from _profit import SystStruct, PROpeller, globals
-
-# Override PROpeller to access underlying Eigen objects with numpy interface
-class PROpellerblehhh(_profit.PROpeller):
-    def __init__(self, *args, **kwargs):
-        _profit.PROpeller.__init__(self, *args, **kwargs)
-        self._hist = self._e_hist
-
-    @property
-    def hist(self):
-        return self._hist
-
-    @hist.setter
-    def hist(self, v):
-        self._e_hist = v
-        self._hist = self._e_hist
+from _profit import SystStruct, PROpeller, PROsyst, PROsc, PROspec, FindGlobalBin, FindGlobalTrueBin, globals
 
 # Override PROconfig to return our own BranchVariable objects
-class PROconfig(_profit.PROconfig):
+class PROconfig(profit._profit.PROconfig):
     def __init__(self, *args, **kwargs):
-        _profit.PROconfig.__init__(self, *args, **kwargs)
+        profit._profit.PROconfig.__init__(self, *args, **kwargs)
+        self._m_branch_variables = [[BranchVariable(b) for b in bs] for bs in super().m_branch_variables]
 
     @property
     def m_branch_variables(self):
-        return [[BranchVariable(b) for b in bs] for bs in super().m_branch_variables]
+        return self._m_branch_variables
 
-# Override _profit BranchVariable to provide pythonic TTreeFormula functionality
-class BranchVariable(_profit.BranchVariable):
+# Override _profit BranchVariable to provide pythonic TTreeFormula functionality through DataFrameFormula
+class BranchVariable(profit._profit.BranchVariable):
     def __init__(self, *args, **kwargs):
-        _profit.BranchVariable.__init__(self, *args, **kwargs)
+        profit._profit.BranchVariable.__init__(self, *args, **kwargs)
+
+        # These we will all replace with DataFrameFormula objects
+        self._branch_formula = None
+        self._branch_true_L_formula = None
+        self._branch_true_value_formula = None
+        self._branch_true_pdg_formula = None
+        self._branch_monte_carlo_weight_formula = None
     
     @property
     def branch_formula(self):
@@ -39,6 +32,82 @@ class BranchVariable(_profit.BranchVariable):
         
     @branch_formula.setter
     def branch_formula(self, v):
-        assert(len(v) == 3)
+        if not isinstance(v, profit.pylib.DataFrameFormula): 
+            raise ValueError("BranchVarible.branch_formula must be set to profit.DataFrameFormula")
         self._branch_formula = v
+
+    @property
+    def branch_true_L_formula(self):
+        return self._branch_true_L_formula
+
+    @branch_true_L_formula.setter
+    def branch_true_L_formula(self, v):
+        if not isinstance(v, profit.pylib.DataFrameFormula): 
+            raise ValueError("BranchVarible.branch_true_L_formula must be set to profit.DataFrameFormula")
+        self._branch_true_L_formula = v
+
+    @property
+    def branch_true_value_formula(self):
+        return self._branch_true_value_formula
+        
+    @branch_true_value_formula.setter
+    def branch_true_value_formula(self, v):
+        if not isinstance(v, profit.pylib.DataFrameFormula): 
+            raise ValueError("BranchVarible.branch_true_value_formula must be set to profit.DataFrameFormula")
+        self._branch_true_value_formula = v
+
+    @property
+    def branch_true_pdg_formula(self):
+        return self._branch_true_pdg_formula
+        
+    @branch_true_pdg_formula.setter
+    def branch_true_pdg_formula(self, v):
+        if not isinstance(v, profit.pylib.DataFrameFormula): 
+            raise ValueError("BranchVarible.branch_true_pdg_formula must be set to profit.DataFrameFormula")
+        self._branch_true_pdg_formula = v
+
+    @property
+    def branch_monte_carlo_weight_formula(self):
+        return self._branch_monte_carlo_weight_formula
+        
+    @branch_monte_carlo_weight_formula.setter
+    def branch_monte_carlo_weight_formula(self, v):
+        if not isinstance(v, profit.pylib.DataFrameFormula): 
+            raise ValueError("BranchVarible.branch_monte_carlo_weight_formula must be set to profit.DataFrameFormula")
+        self._branch_monte_carlo_weight_formula = v
+
+    # Override BranchVariable::GetValue to use local DataFrameFormula
+    def GetValue(self):
+        if self.branch_formula is None:
+            return 0
+
+        return self.branch_formula.EvalInstance()
+
+    # Override BranchVariable::GetTrueValue to use local DataFrameFormula
+    def GetTrueValue(self):
+        if self.branch_true_value_formula is None:
+            return 0
+
+        return self.branch_true_value_formula.EvalInstance()
+
+    # Override BranchVariable::GetTrueL to use local DataFrameFormula
+    def GetTrueL(self):
+        if self.branch_true_L_formula is None:
+            return 0
+
+        return self.branch_true_L_formula.EvalInstance()
+    
+    # Override BranchVariable::GetTruePDG to use local DataFrameFormula
+    def GetTruePDG(self):
+        if self.branch_true_pdg_formula is None:
+            return 0
+
+        return self.branch_true_pdg_formula.EvalInstance()
+
+    # Override BranchVariable::GetMonteCarloWeight to use local DataFrameFormula
+    def GetMonteCarloWeight(self):
+        if self.branch_monte_carlo_weight_formula is None:
+            return 0
+
+        return self.branch_monte_carlo_weight_formula.EvalInstance()
 
