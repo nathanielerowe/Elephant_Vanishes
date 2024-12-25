@@ -16,6 +16,7 @@
 #include "PROcreate.h"
 #include "PROtocall.h"
 #include "PROsyst.h"
+#include "PROlog.h"
 #include "PROsc.h"
 
 // ROOT includes
@@ -128,6 +129,21 @@ PYBIND11_MODULE(_profit, m) {
     m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalBin(c, v, i);}));
     m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, std::string &s) { return PROfit::FindGlobalTrueBin(c, v, s);}));
     m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalTrueBin(c, v, i);}));
+
+    m.def("PROcess_CAFAna", [](const PROfit::PROconfig &config) -> std::pair<std::vector<PROfit::SystStruct>, PROfit::PROpeller> {
+      //Inititilize PROpeller to keep MC
+      PROfit::PROpeller prop;
+
+      //Initilize objects for systematics storage
+      std::vector<PROfit::SystStruct> systsstructs;
+      PROcess_CAFAna(config, systsstructs, prop);  
+      return {systsstructs, prop};
+    });
+
+    // Logging
+    m.def("PROlog", [](int level, std::wstring s) {
+      log_impl::formatted_log_t((log_level_t)level, s.c_str());
+    });
 
     // access to global variables inside PROfit
     py::class_<PROfit::Globals>(m, "globals")
