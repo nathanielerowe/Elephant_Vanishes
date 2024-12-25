@@ -351,7 +351,6 @@ PYBIND11_MODULE(_profit, m) {
         // There is no way to get around constructing a vector from the list (and copying SystStructs).
         // To make this explicit, we take the vector by value, and pass it to the class by reference.
         .def(py::init([](std::vector<PROfit::SystStruct> s) {return PROfit::PROsyst(s);}));
-        // .def(py::init<const std::vector<PROfit::SystStruct>&>());
 
     // PROspec
     py::class_<PROfit::PROspec, std::shared_ptr<PROfit::PROspec>>(m, "PROspec")

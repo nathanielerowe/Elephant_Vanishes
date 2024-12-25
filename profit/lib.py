@@ -2,7 +2,11 @@ import profit
 import numpy as np
 
 # re-export simple classes that we don't need to futz with
-from _profit import SystStruct, PROpeller, PROsyst, PROsc, PROspec, FindGlobalBin, FindGlobalTrueBin, globals
+from _profit import SystStruct, PROpeller, PROsyst, PROsc, PROspec, PROlog
+# re-export helper functions
+from _profit import PROcess_CAFAna, FindGlobalBin, FindGlobalTrueBin 
+# make globals available
+from _profit import globals
 
 # Override PROconfig to return our own BranchVariable objects
 class PROconfig(profit._profit.PROconfig):
