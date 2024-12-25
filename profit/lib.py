@@ -105,9 +105,10 @@ class BranchVariable(profit._profit.BranchVariable):
         return self.branch_true_pdg_formula.EvalInstance()
 
     # Override BranchVariable::GetMonteCarloWeight to use local DataFrameFormula
+    # Default to 1 instead of 0 if empty
     def GetMonteCarloWeight(self):
         if self.branch_monte_carlo_weight_formula is None:
-            return 0
+            return 1
 
         return self.branch_monte_carlo_weight_formula.EvalInstance()
 

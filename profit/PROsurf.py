@@ -17,12 +17,30 @@ def main(xml="", inject=None):
         ttree_dfs.append(load_df(fname, tree))
 
     # load systematic weights
-    syst_structs = []
     eventweights = []
     for i_f, (f, ttree) in enumerate(zip(c.m_mcgen_file_name, ttree_dfs)):
-         syst_struct, evw = loadsysts(f, i_f, ttree, c)
-         syst_structs += syst_struct
+         evw = loadsysts(f, i_f, ttree, c)
          eventweights.append(evw)
+
+    # map_systematic_num_universe <- number of universes for each systematic
+    map_systematic_num_universe = {}
+    for col in eventweights[0].columns.get_level_values(0).unique():
+         map_systematic_num_universe[col] = len(eventweights[0][col].columns)
+
+    # List of systematics
+    syst_structs = []
+
+    total_num_systematics = len(map_systematic_num_universe)
+    for syst, nuniv in map_systematic_num_universe.items():
+        mode = c.m_mcgen_variation_type_map[syst]
+
+        syst_structs.append(profit.SystStruct(syst, nuniv))
+        syst_structs[-1].SetWeightFormula("1")
+        syst_structs[-1].SetMode(mode)
+
+        if mode == "spline":
+            syst_structs[-1].knobval = np.array([-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0], dtype=np.float32)
+            syst_structs[-1].knob_index = np.array([-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0], dtype=np.float32)
 
     print("DONE LOADING SYSTEMATICS")
 
@@ -47,8 +65,6 @@ def main(xml="", inject=None):
         process_events(tdf, idf, syst_structs, eventweights[idf], prop, c)
 
     print("DONE PROCESSING EVENTS")
-
-    return syst_structs
 
     # Load systematic weights into PROsyst
     systs = profit.PROsyst(syst_structs)
@@ -76,7 +92,7 @@ def make_array(ttree, branches=None):
     if branches is None:
         branches = ttree.keys()
 
-    return ak.to_dataframe(ttree.arrays(branches, library="ak"))
+    return ak.to_dataframe(ttree.arrays(branches, library="ak"), how="outer")
 
 def systematics_df(df, c):
     # Restrict to the configured systematics
@@ -98,6 +114,9 @@ def systematics_df(df, c):
 
     # TODO: handle other dataframe formats
 
+    # trim columns with nans
+    df = df.dropna(axis=1, how='all')
+
     return df
 
 def loadsysts(fname, fid, ttree_df, c):
@@ -118,11 +137,6 @@ def loadsysts(fname, fid, ttree_df, c):
     event_weights_pertree = [systematics_df(df, c) for df in [ttree_df] + friends]
     event_weights_pertree = pd.concat([df for df in event_weights_pertree if not df.empty], axis=1)
 
-    # map_systematic_num_universe <- number of universes for each systematic
-    map_systematic_num_universe = {}
-    for col in event_weights_pertree.columns.get_level_values(0).unique():
-         map_systematic_num_universe[col] = len(event_weights_pertree[col].columns)
-
     for ib in range(len(c.m_branch_variables[fid])):
         branch = c.m_branch_variables[fid][ib]
         c.m_branch_variables[fid][ib].branch_formula = profit.DataFrameFormula("branch_form_%i_%i" % (fid, ib), branch.name, ttree_df)
@@ -133,22 +147,7 @@ def loadsysts(fname, fid, ttree_df, c):
         if c.m_mcgen_additional_weight_bool[fid][ib]:
             c.m_branch_variables[fid][ib].branch_monte_carlo_weight_formula = profit.DataFrameFormula("branch_add_weight_%i_%i" % (fid, ib), c.m_mcgen_additional_weight_name[fid][ib], ttree_df)
 
-    # List of systematics
-    syst_structs = []
-
-    total_num_systematics = len(map_systematic_num_universe) 
-    for syst, nuniv in map_systematic_num_universe.items():
-        mode = c.m_mcgen_variation_type_map[syst]
-
-        syst_structs.append(profit.SystStruct(syst, nuniv))
-        syst_structs[-1].SetWeightFormula("1")
-        syst_structs[-1].SetMode(mode)
-
-        if mode == "spline":
-            syst_structs[-1].knobval = np.array([-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0], dtype=np.float32)
-            syst_structs[-1].knob_index = np.array([-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0], dtype=np.float32)
-
-    return syst_structs, event_weights_pertree
+    return event_weights_pertree
 
 def process_branch(c, branch, evws, mcpot, subchannel_index, syst_vector, syst_additional_weight, inprop):
     # Load values
@@ -160,7 +159,6 @@ def process_branch(c, branch, evws, mcpot, subchannel_index, syst_vector, syst_a
     true_value = baseline / true_param
     pdg_id = branch.GetTruePDG()
     run_syst = branch.GetIncludeSystematics()
-    # TODO: WHY IS MC WEIGHT 0 FOR COSMICS???
     mc_weight = branch.GetMonteCarloWeight()
     mc_weight *= c.m_plot_pot / mcpot
 
@@ -209,7 +207,6 @@ def process_branch(c, branch, evws, mcpot, subchannel_index, syst_vector, syst_a
 
 def process_events(df, fid, syst_structs, evw, prop, c):
     sys_weight_formula = []
-    # TODO: DOESNT THIS REPEAT PER FILE????
     for s in syst_structs:
         if s.HasWeightFormula():
             sys_weight_formula.append(profit.DataFrameFormula("weightMapsFormulas_%i_%s" % (fid, s.GetSysName()), s.GetWeightFormula(), df))

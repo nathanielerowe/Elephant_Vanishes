@@ -314,6 +314,9 @@ PYBIND11_MODULE(_profit, m) {
         .def("SanityCheck", &PROfit::SystStruct::SanityCheck)
         .def("FillCV", py::vectorize(&PROfit::SystStruct::FillCV))
         .def("FillUniverse", py::vectorize(&PROfit::SystStruct::FillUniverse))
+        // CV and Variation must return the shared pointer since we manage ProSpec with the shared_ptr class
+        .def("CV", [](PROfit::SystStruct& s) {return s.p_cv;})
+        .def("Variation", [](PROfit::SystStruct& s, int universe) {return s.p_multi_spec.at(universe);})
         .def_readonly("systname",  &PROfit::SystStruct::systname)
         .def_readonly("n_univ",  &PROfit::SystStruct::n_univ)
         .def_readonly("mode",  &PROfit::SystStruct::mode)
@@ -334,10 +337,13 @@ PYBIND11_MODULE(_profit, m) {
         .def(py::init([](std::vector<PROfit::SystStruct> s) {return PROfit::PROsyst(s);}));
         // .def(py::init<const std::vector<PROfit::SystStruct>&>());
 
+    // PROspec
     py::class_<PROfit::PROspec, std::shared_ptr<PROfit::PROspec>>(m, "PROspec")
         .def(py::init<>())
         .def(py::init<size_t>())
-        .def(py::init<const PROfit::PROspec&>());
+        .def(py::init<const PROfit::PROspec&>())
+        .def("Spec", &PROfit::PROspec::Spec, py::return_value_policy::reference_internal) 
+        .def("Error", &PROfit::PROspec::Error, py::return_value_policy::reference_internal);
 
     // PROsc
     py::class_<PROfit::PROsc>(m, "PROsc")
