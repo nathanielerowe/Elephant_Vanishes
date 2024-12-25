@@ -86,23 +86,29 @@ def init_propeller(c):
 
     return prop
 
-def load_df(fname, treename, branches=None):
+def load_df(fname, treename, branches=None, concat="outer"):
     if fname.endswith(".root"):
         tf = uproot.open(fname)
-        return make_array(tf[treename], branches)
+        df = make_array(tf[treename], branches, concat=concat)
     elif fname.endswith(".df"):
         df = pd.read_df(fname, key=treename)
         if branches is not None:
-            return df[branches]
+            df = df[branches]
     else: 
         print(fname)
         assert(False)
 
-def make_array(ttree, branches=None):
+    # if concat is None, we should return a list
+    if concat is None and not isinstance(df, list):
+        return [df]
+
+    return df
+
+def make_array(ttree, branches=None, concat="outer"):
     if branches is None:
         branches = ttree.keys()
 
-    return ak.to_dataframe(ttree.arrays(branches, library="ak"), how="outer")
+    return ak.to_dataframe(ttree.arrays(branches, library="ak"), how=concat)
 
 def systematics_df(df, c):
     # Restrict to the configured systematics
@@ -117,7 +123,8 @@ def loadsysts(fname, fid, ttree_df, c):
         if friend in friend_names: continue
 
         friend_names.append(friend)
-        friends.append(load_df(friend_f, friend))
+        for df in load_df(friend_f, friend, concat=None):
+            friends.append(df)
 
     # get the event weights
     event_weights_pertree = [systematics_df(df, c) for df in [ttree_df] + friends]
