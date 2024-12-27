@@ -146,7 +146,7 @@ PYBIND11_MODULE(_profit, m) {
     });
 
     // access to global variables inside PROfit
-    py::class_<PROfit::Globals>(m, "globals")
+    py::class_<PROfit::Globals>(m, "Globals")
         .def_property_static("GLOBAL_LEVEL",
             [](py::object) { return (int)GLOBAL_LEVEL; }, 
             [](py::object, int l) { GLOBAL_LEVEL = (log_level_t)l; })

@@ -19,16 +19,16 @@ def pyPROlog(level, s):
     profit.PROlog(level, "%s::%s || %s" % (script_name, caller_name, s))
 
 def PROlogINFO(s):
-    return pyPROlog(profit.globals.LOG_INFO, s)
+    return pyPROlog(profit.Globals.LOG_INFO, s)
 
 def PROlogDEBUG(s):
-    return pyPROlog(profit.globals.LOG_DEBUG, s)
+    return pyPROlog(profit.Globals.LOG_DEBUG, s)
 
 def PROlogWARNING(s):
-    return pyPROlog(profit.globals.LOG_WARNING, s)
+    return pyPROlog(profit.Globals.LOG_WARNING, s)
 
 def PROlogERROR(s):
-    return pyPROlog(profit.globals.LOG_ERROR, s)
+    return pyPROlog(profit.Globals.LOG_ERROR, s)
 
 def PROlogCRITICAL(s):
-    return pyPROlog(profit.globals.LOG_CRITICAL, s)
+    return pyPROlog(profit.Globals.LOG_CRITICAL, s)

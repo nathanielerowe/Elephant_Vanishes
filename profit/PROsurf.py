@@ -4,6 +4,8 @@ import profit
 # TODO: WHY DOES SYSTSTRUCT USE unique_ptr's TO CV + SYST UNIVERSES???
 
 def main(xml="", inject=None):
+    profit.Globals.GLOBAL_LEVEL = verbosity
+
     # Init the config object
     c = profit.PROconfig(xml)
     profit.PROlogINFO("DONE PARSING")
