@@ -18,9 +18,12 @@
 #include "PROsyst.h"
 #include "PROlog.h"
 #include "PROsc.h"
+#include "PROcess.h"
+#include "PROsurf.h"
 
 // ROOT includes
 #include "TTreeFormula.h"
+#include "TH2D.h"
 
 namespace py = pybind11;
 
@@ -115,13 +118,55 @@ PROfit::SystStruct init_SystStruct_np(
   return PROfit::SystStruct(name, n_univ, mode, formula, knobvals, knobinds, index);
 }
 
+PROfit::PROsyst init_PROsyst_empty(unsigned N) {
+  PROfit::PROsyst ret;
+  ret.fractional_covariance = Eigen::MatrixXd::Constant(N, N, 0);
+  return ret;
+}
+
 int _add(int a, int b) {
   return a + b;
+}
+
+// Save a PROsurf to a TH2D
+void savePROsurf(const PROfit::PROsurf &surface, 
+    bool logx=false, bool logy=false, const std::string &xlabel="", const std::string &ylabel="", 
+    const std::string &rootfile="", const std::string &pdffile="") {
+
+  std::vector<double> binedges_x, binedges_y;
+  for(size_t i = 0; i < surface.nbinsx+1; i++)
+    binedges_x.push_back(logx ? std::pow(10, surface.edges_x(i)) : surface.edges_x(i));
+  for(size_t i = 0; i < surface.nbinsy+1; i++)
+    binedges_y.push_back(logy ? std::pow(10, surface.edges_y(i)) : surface.edges_y(i));
+  
+  TH2D surf("surf", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+
+  for(size_t i = 0; i < surface.nbinsx; i++) {
+    for(size_t j = 0; j < surface.nbinsy; j++) {
+      surf.SetBinContent(i+1, j+1, surface.surface(i, j));
+    }
+  }
+
+  if (rootfile.length()) {
+    TFile fout(rootfile.c_str(), "RECREATE");
+    surf.Write();
+  }
+
+  if (pdffile.length()) {
+    TCanvas c;
+    if(logy) c.SetLogy();
+    if(logx) c.SetLogx();
+    c.SetLogz();
+    
+    surf.Draw("colz");
+    c.Print(pdffile.c_str());
+  }
 }
 
 PYBIND11_MODULE(_profit, m) {
     m.doc() =  "Python interface for core functionality of PROfit fitting library.";
     m.def("add", &_add, "Add two numbers");
+    m.def("savePROsurf", &savePROsurf);
 
     // helper functions
     // m.def("FindGlobalBin", py::vectorize(py::overload_cast<const PROfit::PROconfig &, double, const std::string&>(&PROfit::FindGlobalBin)));
@@ -129,6 +174,20 @@ PYBIND11_MODULE(_profit, m) {
     m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalBin(c, v, i);}));
     m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, std::string &s) { return PROfit::FindGlobalTrueBin(c, v, s);}));
     m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalTrueBin(c, v, i);}));
+
+    m.def("FillRecoSpectra", py::overload_cast<const PROfit::PROconfig &, 
+                                               const PROfit::PROpeller &, 
+                                               const PROfit::PROsyst &, 
+                                               const std::map<std::string, float> &, 
+                                               bool>(&PROfit::FillRecoSpectra));
+    m.def("FillRecoSpectra", py::overload_cast<const PROfit::PROconfig &, 
+                                               const PROfit::PROpeller &, 
+                                               const PROfit::PROsyst &, 
+                                               const PROfit::PROsc *, 
+                                               const std::vector<float> &,
+                                               const std::vector<float> &, 
+                                               bool>(&PROfit::FillRecoSpectra));
+    m.def("FillCVSpectrum", &PROfit::FillCVSpectrum);
 
     m.def("PROcess_CAFAna", [](const PROfit::PROconfig &config) -> std::pair<std::vector<PROfit::SystStruct>, PROfit::PROpeller> {
       //Inititilize PROpeller to keep MC
@@ -350,7 +409,19 @@ PYBIND11_MODULE(_profit, m) {
         // PROsyst takes vector of systematics by reference. However, when passing a list from python,
         // There is no way to get around constructing a vector from the list (and copying SystStructs).
         // To make this explicit, we take the vector by value, and pass it to the class by reference.
-        .def(py::init([](std::vector<PROfit::SystStruct> s) {return PROfit::PROsyst(s);}));
+        .def(py::init([](std::vector<PROfit::SystStruct> s) {return PROfit::PROsyst(s);}))
+        // Empty PROsyst of size N
+        .def(py::init(&init_PROsyst_empty))
+        // Empty PROsyst of size determined by config
+        .def(py::init([](const PROfit::PROconfig &c) {return init_PROsyst_empty(c.m_num_bins_total);}))
+        .def("GrabMatrix", &PROfit::PROsyst::GrabMatrix)
+        .def("GrabSpline", &PROfit::PROsyst::GrabSpline)
+        .def("GetNSplines", py::overload_cast<>(&PROfit::PROsyst::GetNSplines, py::const_))
+        .def("CreateMatrix", &PROfit::PROsyst::CreateMatrix)
+        .def("subset", &PROfit::PROsyst::subset)
+        .def("excluding", &PROfit::PROsyst::excluding)
+        .def_readwrite("fractional_covariance", &PROfit::PROsyst::fractional_covariance);
+       
 
     // PROspec
     py::class_<PROfit::PROspec, std::shared_ptr<PROfit::PROspec>>(m, "PROspec")
@@ -363,7 +434,50 @@ PYBIND11_MODULE(_profit, m) {
     // PROsc
     py::class_<PROfit::PROsc>(m, "PROsc")
         .def(py::init<const PROfit::PROpeller&>())
-        .def(py::init<PROfit::PROsc>());
+        .def(py::init<const PROfit::PROsc&>());
+
+    // PROsurf
+    py::class_<PROfit::PROsurf>(m, "PROsurf")
+        .def(py::init<size_t, const Eigen::VectorXd &, size_t, const Eigen::VectorXd &>())
+        .def(py::init<size_t, PROfit::PROsurf::LogLin, double, double, size_t, PROfit::PROsurf::LogLin, double, double>())
+        .def(py::init<const PROfit::PROsurf &>())
+        .def(py::init([](const Eigen::VectorXd &xe, const Eigen::VectorXd &ye) {return PROfit::PROsurf(xe.size()-1, xe, ye.size()-1, ye);}))
+        .def("FillSurfaceStat", &PROfit::PROsurf::FillSurfaceStat)
+        .def("FillSurface", &PROfit::PROsurf::FillSurface)
+        .def_readonly("edges_x",  &PROfit::PROsurf::edges_x)
+        .def_readonly("edges_y",  &PROfit::PROsurf::edges_y)
+        .def_readonly("surface",  &PROfit::PROsurf::surface);
+
+    py::enum_<PROfit::PROsurf::LogLin>(m, "LogLin")
+        .value("LinAxis", PROfit::PROsurf::LogLin::LinAxis)
+        .value("LogAxis", PROfit::PROsurf::LogLin::LogAxis);
+
+    // PROchi
+    py::class_<PROfit::PROchi>(m, "PROchi")
+        .def(py::init<const std::string, const PROfit::PROconfig *, const PROfit::PROpeller *, 
+                      const PROfit::PROsyst *, const PROfit::PROsc *, const PROfit::PROspec &,
+                      int, int, PROfit::PROchi::EvalStrategy, std::vector<float>>(), 
+             // Keep alive's for all of the objects that PROchi holds by reference
+             py::keep_alive<0, 2>(), py::keep_alive<0, 3>(), py::keep_alive<0, 4>(), py::keep_alive<0, 5>())
+        .def("__call__", [](PROfit::PROchi &chi, const Eigen::VectorXd &param, bool rungradient=true) -> std::variant<double, std::pair<double, Eigen::VectorXd>> {
+            if (rungradient) {
+              Eigen::VectorXd gradient(chi.nParams());
+              double v = chi(param, gradient, true);
+              return {std::pair<double, Eigen::VectorXd>(v, gradient)};
+            }
+            else {
+              Eigen::VectorXd dummy;
+              double v = chi(param, dummy, false);
+              return {v};
+            }
+
+        }, py::arg("param"), py::arg("rungradient") = true);
+
+    py::enum_<PROfit::PROchi::EvalStrategy>(m, "EvalStrategy")
+        .value("EventByEvent", PROfit::PROchi::EvalStrategy::EventByEvent)
+        .value("BinnedGrad", PROfit::PROchi::EvalStrategy::BinnedGrad)
+        .value("BinnedChi2", PROfit::PROchi::EvalStrategy::BinnedChi2);
+      
 
     // instantiate numpy
     _import_array();

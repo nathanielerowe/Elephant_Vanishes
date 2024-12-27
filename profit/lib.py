@@ -2,9 +2,9 @@ import profit
 import numpy as np
 
 # re-export simple classes that we don't need to futz with
-from _profit import SystStruct, PROpeller, PROsyst, PROsc, PROspec, PROlog
+from _profit import SystStruct, PROpeller, PROsyst, PROsc, PROspec, PROlog, PROsurf, LogLin, PROchi, EvalStrategy
 # re-export helper functions
-from _profit import PROcess_CAFAna, FindGlobalBin, FindGlobalTrueBin 
+from _profit import PROcess_CAFAna, FindGlobalBin, FindGlobalTrueBin, FillRecoSpectra, FillCVSpectrum, savePROsurf
 # make Globals available
 from _profit import Globals
 
