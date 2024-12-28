@@ -142,8 +142,22 @@ target_include_directories(PROfit_dict PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROfit_dict PRIVATE ${ROOT_LIBRARIES})
 
+# Install the SBNANAOBJ headers 
+install(
+  DIRECTORY ${SBNANAOBJ_INCLUDE_DIR}/sbnanaobj/StandardRecord/
+  DESTINATION  ${CMAKE_INSTALL_PREFIX}/include/sbnanaobj
+  FILES_MATCHING PATTERN "*.h"
+)
+
 # The compiled library code lives inside here
 add_subdirectory(src)
+
+# Install headers
+install(
+  DIRECTORY ${CMAKE_SOURCE_DIR}/inc/
+  DESTINATION  ${CMAKE_INSTALL_PREFIX}/include
+  FILES_MATCHING PATTERN "*.h"
+)
 
 # The executable code will be placed here
 add_subdirectory(bin)
