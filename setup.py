@@ -1,6 +1,5 @@
 from setuptools import setup, Extension
 from pybind11.setup_helpers import Pybind11Extension, build_ext
-import numpy
 import subprocess
 import os
 import pathlib
@@ -19,6 +18,7 @@ def rootlib():
     return rootcmd("--libdir")
 
 def numpyinc():
+    import numpy
     return [numpy.get_include()]
 
 def usrinc(): 
@@ -113,6 +113,7 @@ setup(
     packages=['profit'],
     cmdclass={'build_ext': build_ext_wcmake},
     install_requires=[
-        'numpy'
+        'pandas',
+        'uproot'
     ],
     zip_safe=False)
