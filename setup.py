@@ -102,6 +102,7 @@ class build_ext_wcmake(build_ext):
         os.chdir(str(cwd))
 
 ext_modules = [
+    CMakeExtension('profit/PROfit'),
     Pybind11Extension(
         '_profit',
         ['pylib/profit.cxx'],
@@ -110,9 +111,7 @@ ext_modules = [
         libraries=["Core", "PROfitLib", "tinyxml2", "TreePlayer"],
         language='c++',
         cxx_std=17
-    ),
-
-    CMakeExtension('profit/PROfit')
+    )
 ]
 
 setup(
