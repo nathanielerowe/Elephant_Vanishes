@@ -54,3 +54,6 @@ target_include_directories(PROtest PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
 target_compile_features(PROtest PRIVATE cxx_std_17)
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROtest PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict ${libraries})
+
+install(TARGETS PROfit PROfit_CAFAna PROfc PROsurf PROmock PROplot PROtest
+    LIBRARY DESTINATION ${CMAKE_BINARY_DIR})
