@@ -3,6 +3,7 @@ from pybind11.setup_helpers import Pybind11Extension, build_ext
 import subprocess
 import os
 import pathlib
+import time
 
 def readme():
     with open('README.md') as f:
@@ -30,14 +31,14 @@ def usrinc():
 
 def localinc():
     dirs = [
-	'install/include',
-	'install/include/eigen3',
+	'{CMAKE_INSTALL}include',
+	'{CMAKE_INSTALL}include/eigen3',
     ]
-    return dirs
+    return dirs 
 
 def locallib():
     dirs = [
-        "install/lib"
+        "{CMAKE_INSTALL}lib"
     ]
     return dirs
 
@@ -50,9 +51,17 @@ class CMakeExtension(Extension):
 
 class build_ext_wcmake(build_ext):
     def run(self):
+        self.cmake_install = ""
+
         for ext in self.extensions:
             if isinstance(ext, CMakeExtension):
                 self.build_cmake(ext)
+
+        # Set CMake install location in extensions
+        for ext in self.extensions:
+            ext.include_dirs = [s.replace("{CMAKE_INSTALL}", self.cmake_install) for s in ext.include_dirs]
+            ext.library_dirs = [s.replace("{CMAKE_INSTALL}", self.cmake_install) for s in ext.library_dirs]
+
         super().run()
 
     def build_cmake(self, ext):
@@ -73,6 +82,9 @@ class build_ext_wcmake(build_ext):
             '-DCMAKE_BUILD_TYPE=' + config
         ]
 
+        # Tell pybind where we are installing everything
+        self.cmake_install = str(extdir.parent.absolute()) + "/"
+
         # example of build args
         build_args = [
             '--config', config,
@@ -84,6 +96,7 @@ class build_ext_wcmake(build_ext):
         if not self.dry_run:
             self.spawn(['cmake', '--build', '.'] + build_args)
             self.spawn(['cmake', '--install', '.'] + build_args)
+
         # Troubleshooting: if fail on line above then delete all possible 
         # temporary CMake files including "CMakeCache.txt" in top level dir.
         os.chdir(str(cwd))
