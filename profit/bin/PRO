@@ -9,5 +9,8 @@ if len(sys.argv) < 2:
 
 path = profit.__path__[0]
 command = path + "/bin/" + sys.argv[1]
-sp.call([command] + sys.argv[2:])
 
+try:
+    sp.call([command] + sys.argv[2:])
+except FileNotFoundError:
+    print("ERROR: Executable %s is not installed at %s" % (sys.argv[1],  path + "/bin/"))
