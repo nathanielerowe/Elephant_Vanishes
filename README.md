@@ -1,8 +1,47 @@
 ![Alt text](/other/profit.png "Minimizing PROfit")
 
 
+## Installing through Python Interface
 
+Start from an environment with ROOT already installed or setup, and create a python environment:
+```
+python -m venv env
+. env/bin/activate
+```
+Install the build dependencies for profit:
+```
+pip install --upgrade pip
+pip install wheel setuptools pybind11 numpy==2.2.1
+```
+Install profit:
+```
+pip install git+https://github.com/gputnam/Elephant_Vanishes
+```
 
+Then you're done! You can now ``import profit`` in a python shell, run the python executables (``PROsurf.py``, e.g.), or run the PRO* binary executables with the ``PRO`` helper (``PRO PROsurf``, e.g.).
+
+### Installing for Development
+
+If you want to develop PROfit, then it is useful to clone down a local copy of the repository and then install it. Start with the same steps to initialize your python virtual environment:
+```
+python -m venv env
+. env/bin/activate
+pip install --upgrade pip
+pip install wheel setuptools pybind11 numpy==2.2.1
+```
+
+Then pull down the profit repository:
+```
+git clone https://github.com/gputnam/Elephant_Vanishes.git
+```
+Then enter the repsoitory and install it:
+```
+cd Elephant_Vanishes
+pip install .
+```
+If you make some changes, you can update the installation by re-running ``pip install .``
+
+## Usage
 
 ### Basic Description of main classes and use cases
 
