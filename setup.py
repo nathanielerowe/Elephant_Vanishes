@@ -3,7 +3,6 @@ from pybind11.setup_helpers import Pybind11Extension, build_ext
 import subprocess
 import os
 import pathlib
-import time
 
 def readme():
     with open('README.md') as f:
