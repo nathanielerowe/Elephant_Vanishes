@@ -22,11 +22,21 @@ class DataFrameFormula(object):
         # inject dataframe columns into namespace
         namespace = dict([(c, self.df[c]) for c in self.df.columns])
 
-        # also inject helper functions -- TODO: add more
+        # also inject helper functions
         namespace["abs"] = np.abs
         namespace["sin"] = np.sin
         namespace["cos"] = np.cos
         namespace["tan"] = np.tan
+        namespace["ln"] = np.log
+        namespace["ln10"] = np.log10
+        namespace["sqrt"] = np.sqrt
+        namespace["exp"] = np.exp
+        namespace["pow"] = np.power
+
+        # and constants
+        namespace["pi"] = np.pi
+        namespace["e"] = np.e
+        namespace["infinity"] = np.inf
 
         ret = eval(self.formula, namespace)
 
@@ -56,7 +66,7 @@ class SystematicsDF(pd.DataFrame):
     @staticmethod
     def build(df, modes):
         # Reformat to the structure we want -- a hierarchical index on the columns, flat index on the rows
-        if isinstance(df.index, pd.MultiIndex):
+        if isinstance(df.index, pd.MultiIndex) and not df.empty:
             assert(df.index.nlevels == 2)
             df = df.unstack()
             df.columns = pd.MultiIndex.from_tuples([(col[0], syst_index_name(col[1], modes[col[0]])) for col in df.columns])
