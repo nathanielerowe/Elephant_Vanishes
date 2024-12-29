@@ -134,7 +134,8 @@ setup(
     scripts=scripts(),
     cmdclass={'build_ext': build_ext_wcmake},
     install_requires=[
-        'pandas',
-        'uproot'
+        'pandas==2.2.3',
+        'uproot==5.5.1',
+        'awkward==2.7.2'
     ],
     zip_safe=False)
