@@ -41,6 +41,14 @@ def locallib():
     ]
     return dirs
 
+def scripts():
+    thisdir = pathlib.Path(__file__).parent.resolve()
+    return ["profit/bin/" + f for f in os.listdir(thisdir/"profit"/"bin") if str(f).endswith(".py")]
+
+# Set number of workers to half number of available cores
+def njob():
+    cores = os.cpu_count()
+    return cores // 2
 
 # From: https://stackoverflow.com/questions/42585210/extending-setuptools-extension-to-use-cmake-in-setup-py
 class CMakeExtension(Extension):
@@ -87,7 +95,7 @@ class build_ext_wcmake(build_ext):
         # example of build args
         build_args = [
             '--config', config,
-            '-j', '4'
+            '-j', '%i' % njob()
         ]
 
         os.chdir(str(build_temp))
@@ -123,6 +131,7 @@ setup(
     author_email='gputnam@fnal.gov',
     license='MIT',
     packages=['profit'],
+    scripts=scripts(),
     cmdclass={'build_ext': build_ext_wcmake},
     install_requires=[
         'pandas',

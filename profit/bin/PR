@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+import profit
+import subprocess as sp
+import sys
+
+if len(sys.argv) < 2:
+    print("ERROR: must specify executable to run")
+    exit(1)
+
+path = profit.__path__[0]
+command = path + "/bin/" + sys.argv[1]
+sp.call([command] + sys.argv[2:])
+
