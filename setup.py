@@ -43,7 +43,7 @@ def locallib():
 
 def scripts():
     thisdir = pathlib.Path(__file__).parent.resolve()
-    return ["profit/bin/" + f for f in os.listdir(thisdir/"profit"/"bin") if str(f).endswith(".py")]
+    return ["profit/bin/" + f for f in os.listdir(thisdir/"profit"/"bin") if str(f).endswith(".py") or str(f).startswith("PRO")]
 
 # Set number of workers to half number of available cores
 def njob():
