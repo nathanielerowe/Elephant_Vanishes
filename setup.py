@@ -121,6 +121,23 @@ ext_modules = [
     )
 ]
 
+# Dependencies for different python versions
+deps_py3_9 =[
+        'pandas==2.2.3',
+        'uproot==5.5.1',
+        'awkward==2.7.2',
+	'tables==3.9.2'
+]
+    
+deps_py3_10=[
+        'pandas==2.2.3',
+        'uproot==5.5.1',
+        'awkward==2.7.2',
+	'tables==3.10.1'
+]
+
+deps = deps_py3_10 if sys.version_info[1] >= 10 else deps_py3_9
+
 setup(
     name='profit',
     ext_modules=ext_modules,
@@ -133,10 +150,6 @@ setup(
     packages=['profit'],
     scripts=scripts(),
     cmdclass={'build_ext': build_ext_wcmake},
-    install_requires=[
-        'pandas==2.2.3',
-        'uproot==5.5.1',
-        'awkward==2.7.2',
-	'tables==3.10.1'
-    ],
+    python_requires='>=3.9.15',
+    install_requires=deps,
     zip_safe=False)
