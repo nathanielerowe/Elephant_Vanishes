@@ -98,21 +98,18 @@ class SystematicsDF(pd.DataFrame):
     def systematic(self, s):
         return SystematicSeries(self[s])
 
-    def nuniverse(self, s):
-        return self.systematic(s).nuniverse()
-
-    def variation(self, s, i):
-        return self.systematic(s).universe(i)
+    def nvariation(self, s):
+        return len([c for c in self.columns if c[0] == s])
 
 class SystematicSeries(pd.DataFrame):
     def __init__(self, df):
         super().__init__(df)
 
-    def nuniverse(self):
+    def nvariation(self):
         return len(self.columns)
 
     def universe(self, i):
-        return self[self.columns[i]]
+        return self["univ_%i" % i]
 
     def shift(self, s):
         if s not in SPLINE_SHIFTS: 

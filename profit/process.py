@@ -51,8 +51,10 @@ def init_syst_structs(c, ew):
 
     # map_systematic_num_universe <- number of universes for each systematic
     map_systematic_num_universe = {}
-    for s in ew.systematics():
-         map_systematic_num_universe[s] = ew.nuniverse(s)
+    systematics = ew.systematics()
+    for s in c.m_mcgen_variation_allowlist:
+         if s in systematics:
+             map_systematic_num_universe[s] = ew.nvariation(s)
 
     total_num_systematics = len(map_systematic_num_universe)
     for syst, nuniv in map_systematic_num_universe.items():
