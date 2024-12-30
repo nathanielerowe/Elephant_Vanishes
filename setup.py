@@ -136,6 +136,7 @@ setup(
     install_requires=[
         'pandas==2.2.3',
         'uproot==5.5.1',
-        'awkward==2.7.2'
+        'awkward==2.7.2',
+	'tables==3.10.1'
     ],
     zip_safe=False)
