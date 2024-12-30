@@ -87,9 +87,12 @@ def init_propeller(c):
 
     return prop
 
-def load_df(fname, treename, branches=None, concat="outer"):
+def load_df(fname, treename, branches=None, allowed_branches=None, concat="outer"):
     if fname.endswith(".root"):
         tf = uproot.open(fname)
+        if allowed_branches is not None and branches is None:
+            branches = [b for b in tf[treename].keys() if b in allowed_branches]
+
         df = make_array(tf[treename], branches, concat=concat)
     elif fname.endswith(".df"):
         df = pd.read_df(fname, key=treename)
@@ -135,7 +138,7 @@ def loadsysts(fname, ttree_df, c):
         if friend in friend_names: continue
 
         friend_names.append(friend)
-        for df in load_df(friend_f, friend, concat=None):
+        for df in load_df(friend_f, friend, concat=None, allowed_branches=c.m_mcgen_variation_allowlist):
             friends.append(df)
 
     # get the event weights

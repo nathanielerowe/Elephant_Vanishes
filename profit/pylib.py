@@ -78,9 +78,14 @@ class SystematicsDF(pd.DataFrame):
 
     @staticmethod
     def concat(dfs, **kwargs):
+        if len(dfs) == 0:
+            return SystematicsDF(pd.DataFrame())
         return SystematicsDF(pd.concat(dfs, **kwargs))
 
     def systematics(self):
+        if self.empty:
+            return []
+
         return self.columns.get_level_values(0).unique()
 
     def systematic(self, s):
