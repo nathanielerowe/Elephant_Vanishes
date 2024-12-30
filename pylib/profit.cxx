@@ -20,6 +20,8 @@
 #include "PROsc.h"
 #include "PROcess.h"
 #include "PROsurf.h"
+#include "PROfitter.h"
+#include "LBFGSB.h"
 
 // ROOT includes
 #include "TTreeFormula.h"
@@ -452,8 +454,11 @@ PYBIND11_MODULE(_profit, m) {
         .value("LinAxis", PROfit::PROsurf::LogLin::LinAxis)
         .value("LogAxis", PROfit::PROsurf::LogLin::LogAxis);
 
+    // PROmetric
+    py::class_<PROfit::PROmetric>(m, "PROmetric");
+
     // PROchi
-    py::class_<PROfit::PROchi>(m, "PROchi")
+    py::class_<PROfit::PROchi, PROfit::PROmetric>(m, "PROchi")
         .def(py::init<const std::string, const PROfit::PROconfig *, const PROfit::PROpeller *, 
                       const PROfit::PROsyst *, const PROfit::PROsc *, const PROfit::PROspec &,
                       int, int, PROfit::PROchi::EvalStrategy, std::vector<float>>(), 
@@ -477,7 +482,37 @@ PYBIND11_MODULE(_profit, m) {
         .value("EventByEvent", PROfit::PROchi::EvalStrategy::EventByEvent)
         .value("BinnedGrad", PROfit::PROchi::EvalStrategy::BinnedGrad)
         .value("BinnedChi2", PROfit::PROchi::EvalStrategy::BinnedChi2);
-      
+
+    // PROfitter
+    py::class_<PROfit::PROfitter>(m, "PROfitter")
+        .def(py::init<const Eigen::VectorXd, const Eigen::VectorXd, const LBFGSpp::LBFGSBParam<double>&>(), py::keep_alive<0, 3>())
+        .def(py::init<const PROfit::PROfitter&>())
+        .def("Fit", &PROfit::PROfitter::Fit)
+        .def("FinalGradient", &PROfit::PROfitter::FinalGradient)
+        .def("FinalGradientNorm", &PROfit::PROfitter::FinalGradientNorm)
+        .def("Hessian", &PROfit::PROfitter::Hessian)
+        .def("InverseHessian", &PROfit::PROfitter::InverseHessian)
+        .def("Covariance", &PROfit::PROfitter::Covariance)
+        .def("BestFit", &PROfit::PROfitter::BestFit)
+        .def_readwrite("n_multistart", &PROfit::PROfitter::n_multistart)
+        .def_readwrite("n_localfit", &PROfit::PROfitter::n_localfit)
+        .def_readonly("ub",  &PROfit::PROfitter::ub)
+        .def_readonly("lb",  &PROfit::PROfitter::lb)
+        .def_readonly("param",  &PROfit::PROfitter::param)
+        .def_readonly("best_fit",  &PROfit::PROfitter::best_fit);
+
+    // LBFGSBParam for PROfitter
+    py::class_<LBFGSpp::LBFGSBParam<double>>(m, "LBFGSBParam")
+        .def(py::init<>())
+        .def(py::init<const LBFGSpp::LBFGSBParam<double>&>())
+        .def("check_param", &LBFGSpp::LBFGSBParam<double>::check_param)
+        .def_readwrite("epsilon", &LBFGSpp::LBFGSBParam<double>::epsilon)
+        .def_readwrite("max_iterations", &LBFGSpp::LBFGSBParam<double>::max_iterations)
+        .def_readwrite("max_linesearch", &LBFGSpp::LBFGSBParam<double>::max_linesearch)
+        .def_readwrite("m", &LBFGSpp::LBFGSBParam<double>::m)
+        .def_readwrite("past", &LBFGSpp::LBFGSBParam<double>::past)
+        .def_readwrite("delta", &LBFGSpp::LBFGSBParam<double>::delta);
+    
 
     // instantiate numpy
     _import_array();
