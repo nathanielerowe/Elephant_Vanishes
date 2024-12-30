@@ -27,7 +27,7 @@ If you want to develop PROfit, then it is useful to clone down a local copy of t
 python -m venv env
 . env/bin/activate
 pip install --upgrade pip
-pip install wheel setuptools pybind11 numpy==2.2.1
+pip install wheel setuptools pybind11 numpy===2.0.2
 ```
 
 Then pull down the profit repository:
