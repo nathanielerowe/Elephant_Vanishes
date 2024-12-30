@@ -11,7 +11,7 @@ python -m venv env
 Install the build dependencies for profit:
 ```
 pip install --upgrade pip
-pip install wheel setuptools pybind11 numpy==2.2.1
+pip install wheel setuptools pybind11 numpy==2.0.2
 ```
 Install profit:
 ```
