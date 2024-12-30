@@ -51,9 +51,12 @@ class DataFrameFormula(object):
     def PrintValue(self):
         return self.formula
 
+SPLINE_COLUMNS = ["ms3", "ms2", "ms1", "cv", "ps1", "ps2", "ps3"]
+SPLINE_SHIFTS = [-3, -2, -1, 0, 1, 2, 3]
+
 def syst_index_name(index, mode):
     if mode == "spline": # Multisigma
-        return ["ms3", "ms2", "ms1", "cv", "ps1", "ps2", "ps3"][index]
+        return SPLINE_COLUMNS[index]
     else: # Multisim
         return "univ_%i" % index
     # TODO: morph
@@ -62,6 +65,13 @@ def syst_index_name(index, mode):
 class SystematicsDF(pd.DataFrame):
     def __init__(self, df):
         super().__init__(df)
+        if self.empty: return
+
+        # Fill in cv if we need to
+        for s in self.systematics():
+            syst = self.systematic(s)
+            if syst.mode() == "spline" and "cv" not in syst.columns:
+                self[s, "cv"] = 1.
 
     @staticmethod
     def build(df, modes):
@@ -71,9 +81,6 @@ class SystematicsDF(pd.DataFrame):
             df = df.unstack()
             df.columns = pd.MultiIndex.from_tuples([(col[0], syst_index_name(col[1], modes[col[0]])) for col in df.columns])
 
-        # TODO: handle other dataframe formats
-
-        # trim columns with nans
         return SystematicsDF(df.dropna(axis=1, how='all'))
 
     @staticmethod
@@ -89,11 +96,29 @@ class SystematicsDF(pd.DataFrame):
         return self.columns.get_level_values(0).unique()
 
     def systematic(self, s):
-        return self[s]
+        return SystematicSeries(self[s])
 
     def nuniverse(self, s):
-        return len(self.systematic(s).columns)
+        return self.systematic(s).nuniverse()
 
     def variation(self, s, i):
-        syst = self.systematic(s)
-        return syst[syst.columns[i]]
+        return self.systematic(s).universe(i)
+
+class SystematicSeries(pd.DataFrame):
+    def __init__(self, df):
+        super().__init__(df)
+
+    def nuniverse(self):
+        return len(self.columns)
+
+    def universe(self, i):
+        return self[self.columns[i]]
+
+    def shift(self, s):
+        if s not in SPLINE_SHIFTS: 
+            raise ValueError("SHIFT %f IS NOT AVAILABLE" % s)
+        return self[SPLINE_COLUMNS[SPLINE_SHIFTS.index(s)]]
+
+    def mode(self):
+        return "multisim" if self.columns[0].startswith("univ") else "spline"
+

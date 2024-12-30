@@ -95,7 +95,7 @@ def load_df(fname, treename, branches=None, allowed_branches=None, concat="outer
 
         df = make_array(tf[treename], branches, concat=concat)
     elif fname.endswith(".df"):
-        df = pd.read_df(fname, key=treename)
+        df = pd.read_hdf(fname, key=treename)
         if branches is not None:
             df = df[branches]
     else: 
@@ -114,9 +114,14 @@ def make_array(ttree, branches=None, concat="outer"):
 
     return ak.to_dataframe(ttree.arrays(branches, library="ak"), how=concat)
 
+def wgtname(c):
+    if isinstance(c, tuple):
+        return c[0]
+    return c
+
 def systematics_df(df, c):
     # Restrict to the configured systematics
-    df = df[[k for k in df.columns if k in c.m_mcgen_variation_allowlist and k not in c.m_mcgen_variation_denylist]]
+    df = df[[k for k in df.columns if wgtname(k) in c.m_mcgen_variation_allowlist and wgtname(k) not in c.m_mcgen_variation_denylist]]
     return profit.SystematicsDF.build(df, c.m_mcgen_variation_type_map) 
 
 def compute_branches(fname, fid, ttree_df, c):
@@ -198,15 +203,13 @@ def process_branch(c, branch, evws, mcpot, subchannel_index, syst_vector, syst_a
 
         if s.mode == "spline":
             s.FillCV(global_true_bin[valid], mc_weight[valid])
-            for i_univ in range(s.GetNUniverse()):
-                col = evw.columns[i_univ]
-                s.FillUniverse(i_univ, global_true_bin[valid], (mc_weight*additional_weight*evw[col])[valid])
+            for i_univ, shift in enumerate(s.knobval):
+                s.FillUniverse(i_univ, global_true_bin[valid], (mc_weight*additional_weight*evw.shift(shift))[valid])
         # TODO: WHY DO NON-SPLINE SYSTEMATICS USE RECO VARIABLE???
         else:
             s.FillCV(global_bin[valid], mc_weight[valid])
             for i_univ in range(s.GetNUniverse()):
-                col = evw.columns[i_univ]
-                s.FillUniverse(i_univ, global_bin[valid], (mc_weight*additional_weight*evw[col])[valid])
+                s.FillUniverse(i_univ, global_bin[valid], (mc_weight*additional_weight*evw.universe(i_univ))[valid])
     # Done!
     return
 
