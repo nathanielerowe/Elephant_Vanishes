@@ -112,7 +112,7 @@ ext_modules = [
     CMakeExtension('profit/PROfit'),
     Pybind11Extension(
         '_profit',
-        ['pylib/profit.cxx'],
+        ['pybind/profit.cxx'],
         include_dirs=usrinc() + localinc() + rootinc() + numpyinc(),
         library_dirs=locallib() + rootlib(),
         libraries=["Core", "PROfitLib", "tinyxml2", "TreePlayer"],
