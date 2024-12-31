@@ -99,7 +99,7 @@ class build_ext_wcmake(build_ext):
 
         # example of build args
         build_args = [
-            '--config', config,
+            '--config', config, '-fPIC',
             '-j', '%i' % njob()
         ]
 
