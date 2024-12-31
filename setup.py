@@ -23,8 +23,9 @@ def numpyinc():
 
 def usrinc(): 
     dirs = [
+	"/usr/include/"
         "/usr/local/include/",
-        "/opt/homebrew/include"
+        "/opt/homebrew/include/"
     ]
     return [d for d in dirs if os.path.exists(d)]
 
