@@ -27,6 +27,9 @@ def usrinc():
         "/usr/local/include/",
         "/opt/homebrew/include/"
     ]
+    if "BOOST_INC" in os.environ:
+        dirs.append(os.environ["BOOST_INC"])
+	
     return [d for d in dirs if os.path.exists(d)]
 
 def localinc():
