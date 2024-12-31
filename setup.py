@@ -102,7 +102,7 @@ class build_ext_wcmake(build_ext):
         self.spawn(['cmake', str(cwd)] + cmake_args)
         if not self.dry_run:
             self.spawn(['cmake', '--build', '.'] + build_args)
-            self.spawn(['cmake', '--install', '.'] + build_args)
+            self.spawn(['cmake', '--install', '.'] + build_args[:-2])
 
         # Troubleshooting: if fail on line above then delete all possible 
         # temporary CMake files including "CMakeCache.txt" in top level dir.
