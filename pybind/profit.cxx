@@ -1,6 +1,5 @@
 // STL includes
 #include <string>
-#include <format>
 #include <iostream>
 
 // pybind includes
