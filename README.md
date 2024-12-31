@@ -3,7 +3,16 @@
 
 ## Installing through Python Interface
 
-Start from an environment with ROOT already installed or setup, and create a python environment:
+You should start from an environment with ROOT, HDF5, and BOOST already installed or setup. These can be installed on linux with apt-get, or on mac with homebrew. On the FNAL servers, you can get these setup by running:
+```
+source /cvmfs/larsoft.opensciencegrid.org/setup_larsoft.sh
+setup root v6_28_12 -q e26:p3915:prof
+setup cmake v3_27_4
+setup hdf5 v1_12_2b -q e26:prof
+setup boost v1_82_0 -q e26:prof
+```
+
+With these packages avialble, setup a python environment:
 ```
 python -m venv env
 . env/bin/activate
