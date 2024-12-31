@@ -19,6 +19,8 @@ set(CMAKE_CXX_FLAGS "-g -O3 -Wall -Wextra")
 #Allow for nice support folders in IDEs like VScode
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Enable PIC for linking to shared libraries
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(Doxygen)
 if(Doxygen_FOUND)
