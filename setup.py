@@ -41,7 +41,8 @@ def localinc():
 
 def locallib():
     dirs = [
-        "{CMAKE_INSTALL}lib"
+        "{CMAKE_INSTALL}lib",
+	"{CMAKE_INSTALL}lib64"
     ]
     return dirs
 
