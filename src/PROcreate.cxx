@@ -331,7 +331,9 @@ namespace PROfit {
         std::vector<std::unique_ptr<TFile>> files(num_files);
         std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
         std::vector<std::vector<std::map<std::string, std::vector<eweight_type>*>>> f_event_weights(num_files);
+        std::vector<std::vector<std::map<std::string, std::vector<float>*>>> f_knob_vals(num_files);
         std::map<std::string, int> map_systematic_num_universe;
+        std::map<std::string, std::vector<float>> map_systematic_knob_vals;
         std::map<std::string, std::string> map_systematic_type;
 
         //open files, and link trees and branches
@@ -374,6 +376,7 @@ namespace PROfit {
             // grab branches 
             int num_branch = inconfig.m_branch_variables[fid].size();
             f_event_weights[fid].resize(num_branch);
+            f_knob_vals[fid].resize(num_branch);
             for(int ib = 0; ib != num_branch; ++ib) {
 
                 std::shared_ptr<BranchVariable> branch_variable = inconfig.m_branch_variables[fid][ib];
@@ -422,24 +425,29 @@ namespace PROfit {
                     if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
                         log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                         trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                    } else if(strlen(branch->GetName()) > 6 && strcmp(branch->GetName() + strlen(branch->GetName()) - 6, "_sigma") == 0) {
+                        log<LOG_INFO>(L"%1% || Setting up knob val list using branch %2%") % __func__ % branch->GetName();
+                        trees[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
                     }
                 }
                 if(inconfig.m_mcgen_numfriends[fid]>0){
-                for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
-                    for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
-                        log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
+                    for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
+                        for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
+                            log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
 
-                        if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
-                        //if(inconfig.m_mcgen_variation_allowlist.find(branch->GetName()) != std::end(inconfig.m_mcgen_variation_allowlist)) {
-                          if(branch_variable->GetIncludeSystematics()){
+                            if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
+                                if(branch_variable->GetIncludeSystematics()){
                                     log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                                     trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
                                 }else{
                                     log<LOG_INFO>(L"%1% || EXPLICITLY NOT Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                                 }
+                            } else if(strlen(branch->GetName()) > 6 && strcmp(branch->GetName() + strlen(branch->GetName()) - 6, "_sigma") == 0) {
+                                log<LOG_INFO>(L"%1% || Setting up knob val list using branch %2%") % __func__ % branch->GetName();
+                                trees[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
+                            }
+                        }
                     }
-                }
-                }
                 }
                 log<LOG_INFO>(L"%1% || This mcgen file has %2% friends.") % __func__ %  inconfig.m_mcgen_numfriends[fid];
 
@@ -453,6 +461,7 @@ namespace PROfit {
             for(int ib = 0; ib != num_branch; ++ib) {
                 const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
                 auto& f_weight = f_event_weights[fid][ib];
+                auto& f_knob = f_knob_vals[fid][ib];
 
                 if(branch_variable->GetIncludeSystematics()){
                     for(const auto& it : f_weight){
@@ -473,6 +482,9 @@ namespace PROfit {
                         log<LOG_INFO>(L"%1% || %2% has %3% montecarlo variations in branch %4%") % __func__ % it.first.c_str() % it.second->size() % branch_variable->associated_hist.c_str();
 
                         map_systematic_num_universe[it.first] = std::max((int)map_systematic_num_universe[it.first], (int)it.second->size());
+                        if(f_knob.find(it.first+"_sigma") != std::end(f_knob)) {
+                            map_systematic_knob_vals[it.first] = *f_knob[it.first+"_sigma"];
+                        }
                     }
                 }
             }
@@ -502,9 +514,13 @@ namespace PROfit {
                 syst_vector.back().SetMode(sys_mode);
             }
             if(sys_mode == "spline") {
-                // Hard code -3, 3 sigma for now
-                syst_vector.back().knobval = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
-                syst_vector.back().knob_index = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
+                if(map_systematic_knob_vals.find(sys_name) == map_systematic_knob_vals.end()) {
+                  log<LOG_ERROR>(L"%1% || Expected %2% to have knob vals associated with it, but couldn't find any. Will use -3 to +3 as default.") % __func__ % sys_name.c_str();
+                  map_systematic_knob_vals[sys_name] = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
+                }
+                syst_vector.back().knob_index = map_systematic_knob_vals[sys_name];
+                syst_vector.back().knobval = syst_vector.back().knob_index;
+                std::sort(syst_vector.back().knobval.begin(), syst_vector.back().knobval.end());
             }
            
             for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
@@ -1130,7 +1146,10 @@ namespace PROfit {
             if(syst_obj.mode == "spline") {
                 syst_obj.FillCV(global_true_bin, mc_weight);
                 for(int i = 0; i < syst_obj.GetNUniverse(); ++i){
-                    syst_obj.FillUniverse(i, global_true_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(i)));
+                    size_t u = 0;
+                    for(; u < syst_obj.knobval.size(); ++u)
+                        if(syst_obj.knobval[u] == syst_obj.knob_index[i]) break;
+                    syst_obj.FillUniverse(u, global_true_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(i)));
                 }
                 continue;
             }else{
