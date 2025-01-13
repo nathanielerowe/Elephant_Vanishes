@@ -13,7 +13,8 @@ namespace PROfit {
                 log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
                 spline_names.push_back(syst.systname); 
-
+                spline_lo.push_back(syst.knobval[0]);
+                spline_hi.push_back(syst.knobval.back());
                 //anyspline=true;
             } else if(syst.mode == "covariance") {
                 log<LOG_INFO>(L"%1% || Entering covariance syst world?") % __func__;
@@ -37,11 +38,16 @@ namespace PROfit {
                 ret.syst_map[name] = std::make_pair(ret.splines.size(), SystType::Spline);
                 ret.spline_names.push_back(name);
                 ret.splines.push_back(splines[idx]);
+                ret.spline_hi.push_back(spline_hi[idx]);
+                ret.spline_lo.push_back(spline_lo[idx]);
                 break;
             case SystType::Covariance:
                 ret.syst_map[name] = std::make_pair(ret.covmat.size(), SystType::Covariance);
                 ret.covmat.push_back(covmat[idx]);
                 ret.corrmat.push_back(corrmat[idx]);
+                break;
+            default:
+                log<LOG_ERROR>(L"%1% || Unrecognized syst type %2% for syst %3%.") % __func__ % static_cast<int>(stype) % name.c_str();
                 break;
             }
         }
@@ -59,11 +65,16 @@ namespace PROfit {
                 ret.syst_map[name] = std::make_pair(ret.splines.size(), SystType::Spline);
                 ret.spline_names.push_back(name);
                 ret.splines.push_back(splines[idx]);
+                ret.spline_hi.push_back(spline_hi[idx]);
+                ret.spline_lo.push_back(spline_lo[idx]);
                 break;
             case SystType::Covariance:
                 ret.syst_map[name] = std::make_pair(ret.covmat.size(), SystType::Covariance);
                 ret.covmat.push_back(covmat[idx]);
                 ret.corrmat.push_back(corrmat[idx]);
+                break;
+            default:
+                log<LOG_ERROR>(L"%1% || Unrecognized syst type %2% for syst %3%.") % __func__ % static_cast<int>(stype) % name.c_str();
                 break;
             }
         }
