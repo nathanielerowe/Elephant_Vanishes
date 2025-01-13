@@ -111,6 +111,7 @@ namespace PROfit {
 
             /* names of all systs*/
             std::vector<std::string> spline_names;
+            std::vector<double> spline_lo, spline_hi;
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
             std::vector<Spline> splines;

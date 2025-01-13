@@ -13,7 +13,8 @@ namespace PROfit {
                 log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
                 spline_names.push_back(syst.systname); 
-
+                spline_lo.push_back(syst.knobval[0]);
+                spline_hi.push_back(syst.knobval.back());
                 //anyspline=true;
             } else if(syst.mode == "covariance") {
                 log<LOG_INFO>(L"%1% || Entering covariance syst world?") % __func__;
@@ -37,11 +38,16 @@ namespace PROfit {
                 ret.syst_map[name] = std::make_pair(ret.splines.size(), SystType::Spline);
                 ret.spline_names.push_back(name);
                 ret.splines.push_back(splines[idx]);
+                ret.spline_hi.push_back(spline_hi[idx]);
+                ret.spline_lo.push_back(spline_lo[idx]);
                 break;
             case SystType::Covariance:
                 ret.syst_map[name] = std::make_pair(ret.covmat.size(), SystType::Covariance);
                 ret.covmat.push_back(covmat[idx]);
                 ret.corrmat.push_back(corrmat[idx]);
+                break;
+            default:
+                log<LOG_ERROR>(L"%1% || Unrecognized syst type %2% for syst %3%.") % __func__ % static_cast<int>(stype) % name.c_str();
                 break;
             }
         }
@@ -59,11 +65,16 @@ namespace PROfit {
                 ret.syst_map[name] = std::make_pair(ret.splines.size(), SystType::Spline);
                 ret.spline_names.push_back(name);
                 ret.splines.push_back(splines[idx]);
+                ret.spline_hi.push_back(spline_hi[idx]);
+                ret.spline_lo.push_back(spline_lo[idx]);
                 break;
             case SystType::Covariance:
                 ret.syst_map[name] = std::make_pair(ret.covmat.size(), SystType::Covariance);
                 ret.covmat.push_back(covmat[idx]);
                 ret.corrmat.push_back(corrmat[idx]);
+                break;
+            default:
+                log<LOG_ERROR>(L"%1% || Unrecognized syst type %2% for syst %3%.") % __func__ % static_cast<int>(stype) % name.c_str();
                 break;
             }
         }
@@ -282,15 +293,29 @@ namespace PROfit {
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
             //log<LOG_ERROR>(L"%1% || p_multi_spec, knobval, i, cv (%2%): %3%") % __func__ % tolerance % val;
 
-            if(syst.knobval[i] > 0 && !found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
+            if(syst.knobval[i] > 0 && !found0) {
+                ratios.push_back(*syst.p_cv / *syst.p_cv);
+                found0 = true;
+            }
             if(syst.knobval[i] == 0) found0 = true;
             ratios.push_back(*syst.p_multi_spec[i] / *syst.p_cv);
         }
+        if(!found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
         Spline spline_coeffs;
         spline_coeffs.reserve(syst.p_cv->GetNbins());
         for(size_t i = 0; i < syst.p_cv->GetNbins(); ++i) {
             std::vector<std::pair<float, std::array<float, 4>>> spline;
             spline.reserve(syst.knobval.size());
+
+            // If only 2 points do a linear fit
+            if(ratios.size() < 3) {
+                const float y1 = ratios[0].GetBinContent(i);
+                const float y2 = ratios[1].GetBinContent(i);
+                const float slope = (y2 - y1)/(syst.knobval[1] - syst.knobval[0]);
+                spline.push_back({syst.knobval[0], {slope * syst.knobval[0] + y1, slope, 0, 0}});
+                spline_coeffs.push_back(spline);
+                continue;
+            }
 
             // This comment is copy-pasted from CAFAna:
             // This is cubic interpolation. For each adjacent set of four points we

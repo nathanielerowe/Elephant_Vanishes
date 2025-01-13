@@ -101,6 +101,7 @@
     <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_ZExpA2CCQE</allowlist>
     <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_ZExpA3CCQE</allowlist>
     <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_ZExpA4CCQE</allowlist>
+    <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_DecayAngMEC</allowlist>
 </variation_list>
 
 <model tag="numudis">
