@@ -293,15 +293,29 @@ namespace PROfit {
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
             //log<LOG_ERROR>(L"%1% || p_multi_spec, knobval, i, cv (%2%): %3%") % __func__ % tolerance % val;
 
-            if(syst.knobval[i] > 0 && !found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
+            if(syst.knobval[i] > 0 && !found0) {
+                ratios.push_back(*syst.p_cv / *syst.p_cv);
+                found0 = true;
+            }
             if(syst.knobval[i] == 0) found0 = true;
             ratios.push_back(*syst.p_multi_spec[i] / *syst.p_cv);
         }
+        if(!found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
         Spline spline_coeffs;
         spline_coeffs.reserve(syst.p_cv->GetNbins());
         for(size_t i = 0; i < syst.p_cv->GetNbins(); ++i) {
             std::vector<std::pair<float, std::array<float, 4>>> spline;
             spline.reserve(syst.knobval.size());
+
+            // If only 2 points do a linear fit
+            if(ratios.size() < 3) {
+                const float y1 = ratios[0].GetBinContent(i);
+                const float y2 = ratios[1].GetBinContent(i);
+                const float slope = (y2 - y1)/(syst.knobval[1] - syst.knobval[0]);
+                spline.push_back({syst.knobval[0], {slope * syst.knobval[0] + y1, slope, 0, 0}});
+                spline_coeffs.push_back(spline);
+                continue;
+            }
 
             // This comment is copy-pasted from CAFAna:
             // This is cubic interpolation. For each adjacent set of four points we
