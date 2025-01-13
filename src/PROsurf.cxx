@@ -101,8 +101,10 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
-        Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-        Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+        //Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+        //Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+        Eigen::VectorXd lb = Eigen::VectorXd::Map(systs->spline_lo.data(), systs->spline_lo.size());
+        Eigen::VectorXd ub = Eigen::VectorXd::Map(systs->spline_hi.data(), systs->spline_hi.size());
 
         PROfitter fitter(ub, lb, param);
         output.chi = fitter.Fit(chi);
@@ -261,8 +263,10 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
         for(int i=0; i<=30;i++){
 
-            Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-            Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+            //Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+            //Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+            Eigen::VectorXd ub = Eigen::VectorXd::Map(systs.spline_hi.data(), systs.spline_hi.size());
+            Eigen::VectorXd lb = Eigen::VectorXd::Map(systs.spline_lo.data(), systs.spline_lo.size());
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
