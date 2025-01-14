@@ -56,6 +56,10 @@ namespace PROfit{
             //Save last values for gradient calculation
             Eigen::VectorXd last_param;
             float last_value;
+
+            bool correlated_systematics;
+            Eigen::MatrixXd prior_covariance;
+
         public:
 
             /*Function: Constructor bringing all objects together*/
@@ -64,6 +68,7 @@ namespace PROfit{
             /*Function: operator() is what is passed to minimizer.*/
             virtual double operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient);
             virtual double operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient, bool nograd);
+            float Pull(const Eigen::VectorXd &systs);
 
             void fixSpline(int fix, double valin);
 
