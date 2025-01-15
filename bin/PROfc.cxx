@@ -67,8 +67,8 @@ void fc_worker(fc_args args) {
         param.delta = 1e-6;
 
         size_t nparams = args.systs.GetNSplines();
-        Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-        Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+        Eigen::VectorXd lb = Eigen::VectorXd::Map(args.systs.spline_lo.data(), args.systs.spline_lo.size());
+        Eigen::VectorXd ub = Eigen::VectorXd::Map(args.systs.spline_hi.data(), args.systs.spline_hi.size());
         PROfitter fitter(ub, lb, param);
 
         PROchi chi("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, nparams, args.systs.GetNSplines(), strat);
@@ -86,6 +86,10 @@ void fc_worker(fc_args args) {
         lb_osc(0) = -2; lb_osc(1) = -std::numeric_limits<double>::infinity();
         Eigen::VectorXd ub_osc = Eigen::VectorXd::Constant(nparams, 3.0);
         ub_osc(0) = 2; ub_osc(1) = 0;
+        for(size_t i = 2; i < nparams; ++i) {
+            lb_osc(i) = lb(i-2);
+            ub_osc(i) = ub(i-2);
+        }
         PROfitter fitter_osc(ub_osc, lb_osc, param);
 
         PROchi chi_osc("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, nparams, args.systs.GetNSplines(), strat);
