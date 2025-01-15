@@ -134,7 +134,7 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
         chi_file.open(filename);
     }
 
-    data.plotSpectrum(config,"TTCV");
+    //data.plotSpectrum(config,"TTCV");
 
     std::vector<surfOut> grid;
     for(size_t i = 0; i < nbinsx; i++) {
