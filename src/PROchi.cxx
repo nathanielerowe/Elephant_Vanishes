@@ -79,9 +79,7 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
       //std::cout<<inverted_collapsed_full_covariance<<std::endl;
 
     // Calculate Chi^2  value
-    Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
-    //Collapse
-    delta = CollapseMatrix(*config, delta);  
+    Eigen::VectorXd delta  = CollapseMatrix(*config,result.Spec()) - data.Spec(); 
 
     if(!(fixed_index<0)){
         //subvector2[fixed_index]=0;   
@@ -130,8 +128,7 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
                 }
            
             // Calculate Chi^2  value
-            Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
-            delta = CollapseMatrix(*config, delta);  
+            Eigen::VectorXd delta  = CollapseMatrix(*config,result.Spec()) - data.Spec(); 
 
             if(!(fixed_index<0)){
                 //subvector2[fixed_index]=0;   
