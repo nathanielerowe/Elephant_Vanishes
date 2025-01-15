@@ -362,10 +362,11 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
 
     //Now onto mcgen, for CV specs or for covariance generation
-    tinyxml2::XMLElement *pMC, *pWeiMaps, *pList, *pSpec, *pShapeOnlyMap;
+    tinyxml2::XMLElement *pMC, *pWeiMaps, *pList, *pCorrelations, *pSpec, *pShapeOnlyMap;
     pMC   = doc.FirstChildElement("MCFile");
     pWeiMaps = doc.FirstChildElement("WeightMaps");
     pList = doc.FirstChildElement("variation_list");
+    pCorrelations = doc.FirstChildElement("correlation");
     pSpec = doc.FirstChildElement("varied_spectrum");
     pShapeOnlyMap = doc.FirstChildElement("ShapeOnlyUncertainty");
 
@@ -607,6 +608,24 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 pList = pList->NextSiblingElement("variation_list");
             }
         }
+
+        // Correlations between systematics
+        while (pCorrelations) {
+            std::stringstream tup(pCorrelations->GetText());
+            std::string s;
+            std::vector<std::string> split;
+            while (getline(tup, s, ' ')) split.push_back(s);
+
+            if (split.size() != 3) {
+              throw std::invalid_argument(std::string("Correlations should be formed as <Systematic A> <Systematic B> <Correlation>. Could not parse: ") + std::string(pCorrelations->GetText()));
+            }
+
+            m_mcgen_correlations.push_back(std::make_tuple(split[0], split[1], std::stof(split[2])));
+
+            pCorrelations = pCorrelations->NextSiblingElement("correlation");
+        }
+        
+
         //weightMaps
         if(!pWeiMaps){
             log<LOG_DEBUG>(L"%1% || WeightMaps not set, all weights for all variations are 1 (individual branch weights still apply)") % __func__  ;

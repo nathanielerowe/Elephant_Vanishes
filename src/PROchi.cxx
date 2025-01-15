@@ -4,9 +4,43 @@
 using namespace PROfit;
 
 
-PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat, std::vector<float> physics_param_fixed) : PROmetric(), model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), strat(strat), physics_param_fixed(physics_param_fixed) {
+PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat, std::vector<float> physics_param_fixed) : PROmetric(), model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), strat(strat), physics_param_fixed(physics_param_fixed), correlated_systematics(false) {
     last_value = 0.0; last_param = Eigen::VectorXd::Zero(nparams); 
     fixed_index = -999;
+
+    // Build the correlation matrix between priors if configured to
+    if (conin->m_mcgen_correlations.size()) {
+        correlated_systematics = true;
+        prior_covariance = Eigen::MatrixXd::Identity(nsyst, nsyst);
+        for (auto const &t: conin->m_mcgen_correlations) {
+          auto itA = std::find(systin->spline_names.begin(), systin->spline_names.end(), std::get<0>(t));
+          if (itA == systin->spline_names.end()) {
+            log<LOG_WARNING>(L"%1% || Systematic correlation %2% not in list. Skipping.") % __func__ % std::get<0>(t).c_str();
+            continue;
+          }
+
+          auto itB = std::find(systin->spline_names.begin(), systin->spline_names.end(), std::get<1>(t));
+          if (itB == systin->spline_names.end()) {
+            log<LOG_WARNING>(L"%1% || Systematic correlation %2% not in list. Skipping.") % __func__ % std::get<1>(t).c_str();
+            continue;
+          }
+         
+          int iA = std::distance(systin->spline_names.begin(), itA);
+          int iB = std::distance(systin->spline_names.begin(), itB);
+
+          // set correlations
+          prior_covariance(iA, iB) = std::get<2>(t);
+          prior_covariance(iB, iA) = std::get<2>(t);
+        }
+    }
+}
+
+float PROchi::Pull(const Eigen::VectorXd &systs) {
+    // No correlations: sum of squares
+    if (!correlated_systematics) return systs.array().square().sum();
+
+    // Otherwise dot onto covariance
+    return systs.dot(prior_covariance.inverse() * systs);
 }
 
 void PROchi::fixSpline(int fix, double valin){
@@ -86,7 +120,7 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
         //Dont do this anymore
     }
 
-    float pull = subvector2.array().square().sum(); 
+    float pull = Pull(subvector2);
     float dmsq_penalty = 0;
     float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
     float value = covar_portion + dmsq_penalty + pull;
@@ -134,7 +168,7 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
                 //subvector2[fixed_index]=0;   
                 //dont do this, cinlude it
             }
-            float pull = subvector2.array().square().sum(); 
+            float pull = Pull(subvector2);
             float dmsq_penalty = 0;
             float value_grad = (delta.transpose())*inverted_collapsed_full_covariance*(delta) + dmsq_penalty + pull;
             
