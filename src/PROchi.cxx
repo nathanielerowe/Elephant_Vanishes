@@ -40,10 +40,11 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
 
     Eigen::MatrixXd inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
     
-    Eigen::MatrixXd stat_covariance = data.Spec().array().matrix().asDiagonal();
-    log<LOG_DEBUG>(L"%1% || stat %2% x %3% ") % __func__% stat_covariance.cols() % stat_covariance.rows();
-    Eigen::MatrixXd collapsed_stat_covariance = CollapseMatrix(*config, stat_covariance); 
-    log<LOG_DEBUG>(L"%1% || Collapsed the first matrix") % __func__;
+    //Eigen::MatrixXd stat_covariance = data.Spec().array().matrix().asDiagonal();
+    Eigen::MatrixXd collapsed_stat_covariance = data.Spec().array().matrix().asDiagonal();
+    //log<LOG_DEBUG>(L"%1% || stat %2% x %3% ") % __func__% stat_covariance.cols() % stat_covariance.rows();
+    //Eigen::MatrixXd collapsed_stat_covariance = CollapseMatrix(*config, stat_covariance); 
+    //log<LOG_DEBUG>(L"%1% || Collapsed the first matrix") % __func__;
 
     //std::cout<<"cStat: "<<collapsed_stat_covariance.size()<<std::endl;
     //std::cout<<collapsed_stat_covariance<<std::endl;
@@ -78,9 +79,7 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
       //std::cout<<inverted_collapsed_full_covariance<<std::endl;
 
     // Calculate Chi^2  value
-    Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
-    //Collapse
-    delta = CollapseMatrix(*config, delta);  
+    Eigen::VectorXd delta  = CollapseMatrix(*config,result.Spec()) - data.Spec(); 
 
     if(!(fixed_index<0)){
         //subvector2[fixed_index]=0;   
@@ -113,8 +112,6 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
             std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
             PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams, strat != EventByEvent);
             // Calcuate Full Covariance matrix
-            Eigen::MatrixXd stat_covariance = data.Spec().array().matrix().asDiagonal();
-            Eigen::MatrixXd collapsed_stat_covariance = CollapseMatrix(*config, stat_covariance); 
             Eigen::MatrixXd inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
 
             if(syst->GetNCovar()){
@@ -131,8 +128,7 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
                 }
            
             // Calculate Chi^2  value
-            Eigen::VectorXd delta  = result.Spec() - data.Spec(); 
-            delta = CollapseMatrix(*config, delta);  
+            Eigen::VectorXd delta  = CollapseMatrix(*config,result.Spec()) - data.Spec(); 
 
             if(!(fixed_index<0)){
                 //subvector2[fixed_index]=0;   

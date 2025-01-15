@@ -119,6 +119,10 @@ int main(int argc, char* argv[])
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams, !eventbyevent) :
                    injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs, !eventbyevent) :
                    FillCVSpectrum(config, prop, !eventbyevent);
+    Eigen::VectorXd data_vec = CollapseMatrix(config, data.Spec());
+    Eigen::VectorXd err_vec_sq = data.Error().array().square();
+    Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+    data = PROspec(data_vec, err_vec);
 
     if(syst_list.size()) {
       systs = systs.subset(syst_list);
