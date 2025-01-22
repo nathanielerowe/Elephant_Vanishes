@@ -45,10 +45,10 @@ void PROspec::Print() const {
 
 void PROspec::Fill(int bin_index, double weight){
     //Removed to help speed up filling
-    //log<LOG_DEBUG>(L"%1% || Fill in weight: %2% to bin: %3%") % __func__ % weight % bin_index;
     spec(bin_index) += weight;
     float tmp_err = error(bin_index);
     error(bin_index) = std::sqrt(tmp_err*tmp_err + weight*weight);
+
     return;
 }
 

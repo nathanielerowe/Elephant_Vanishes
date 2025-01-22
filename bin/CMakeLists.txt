@@ -1,38 +1,38 @@
 add_executable(PROfit PROfit.cxx ${CMAKE_BINARY_DIR}/PROfit_dict.cxx )
 target_include_directories(PROfit PRIVATE ${SBNANAOBJ_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROfit PRIVATE cxx_std_14)
+target_compile_features(PROfit PRIVATE cxx_std_17)
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROfit PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict ${libraries})
 
 add_executable(PROfit_CAFAna PROfit_CAFAna.cxx )
 target_include_directories(PROfit_CAFAna PRIVATE ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROfit_CAFAna PRIVATE cxx_std_14)
+target_compile_features(PROfit_CAFAna PRIVATE cxx_std_17)
 target_link_libraries(PROfit_CAFAna PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
 add_executable(PROfc PROfc.cxx )
 target_include_directories(PROfc PRIVATE ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROfc PRIVATE cxx_std_14)
+target_compile_features(PROfc PRIVATE cxx_std_17)
 target_link_libraries(PROfc PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
 add_executable(PROsurf PROsurf.cxx )
 target_include_directories(PROsurf PRIVATE ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROsurf PRIVATE cxx_std_14)
+target_compile_features(PROsurf PRIVATE cxx_std_17)
 target_link_libraries(PROsurf PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
 add_executable(PROmock PROmock.cxx )
 target_include_directories(PROmock PRIVATE ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROmock PRIVATE cxx_std_14)
+target_compile_features(PROmock PRIVATE cxx_std_17)
 target_link_libraries(PROmock PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
 add_executable(PROplot PROplot.cxx )
 target_include_directories(PROplot PRIVATE ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROplot PRIVATE cxx_std_14)
+target_compile_features(PROplot PRIVATE cxx_std_17)
 target_link_libraries(PROplot PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
 
 
 if(MPI_ENABLE)
     add_executable(PROmfa4u PROmfa4u.cxx)
-    target_compile_features(PROmfa4u PRIVATE cxx_std_14)
+    target_compile_features(PROmfa4u PRIVATE cxx_std_17)
     target_link_libraries(PROmfa4u PRIVATE PROfitLib tinyxml2 eigen lbfgspp )
 endif(MPI_ENABLE)
 
@@ -51,6 +51,6 @@ endif(MPI_ENABLE)
 
 add_executable(PROtest PROtest.cxx ${CMAKE_BINARY_DIR}/PROfit_dict.cxx )
 target_include_directories(PROtest PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
-target_compile_features(PROtest PRIVATE cxx_std_14)
+target_compile_features(PROtest PRIVATE cxx_std_17)
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROtest PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict ${libraries})

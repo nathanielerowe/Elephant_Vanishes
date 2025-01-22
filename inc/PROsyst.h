@@ -29,6 +29,8 @@ namespace PROfit {
             /*Function: Primary constructor from a vector of SystStructs  */
             PROsyst(const std::vector<SystStruct>& systs);
 
+            PROsyst subset(const std::vector<std::string> &systs);
+            PROsyst excluding(const std::vector<std::string> &systs);
 
             /* Function: given the systematic name, return corresponding fractional covariance matrix */
             Eigen::MatrixXd GrabMatrix(const std::string& sys) const;
@@ -42,6 +44,8 @@ namespace PROfit {
             size_t GetNSplines() const { return splines.size(); }
 
             size_t GetNSplines() { return splines.size(); }
+
+            size_t GetNCovar() const { return covmat.size(); }
 
             //----- Spline and Covariance matrix related ---
             //----- Spline and Covariance matrix related ---
@@ -107,13 +111,16 @@ namespace PROfit {
 
             /* names of all systs*/
             std::vector<std::string> spline_names;
+            std::vector<double> spline_lo, spline_hi;
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
             std::vector<Spline> splines;
-            size_t n_splines;
+            [[maybe_unused]] size_t n_splines;
             std::vector<Eigen::MatrixXd> covmat;
             std::vector<Eigen::MatrixXd> corrmat;
             //std::vector<MFA> mfa;
+            bool anyspline = false;
+            bool anycovar  = true;
     };
 
 };

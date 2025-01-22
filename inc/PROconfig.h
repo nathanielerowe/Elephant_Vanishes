@@ -73,13 +73,13 @@ namespace PROfit{
       std::string pdg_name;
       int model_rule;
 
-      bool reweight;
+      bool hist_reweight;
       std::string true_proton_mom_name;
       std::string true_proton_costh_name;
 
       //constructor
-    BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), reweight(false){}
-    BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9), reweight(false){}
+    BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), hist_reweight(false){}
+    BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9), hist_reweight(false){}
 
       /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
       std::shared_ptr<TTreeFormula> GetFormula(){
@@ -93,8 +93,8 @@ namespace PROfit{
       void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
       void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;} 
       
-      void SetReweight(bool inbool){ reweight = inbool; return;}
-      bool GetReweight() const {return reweight;}
+      void SetReweight(bool inbool){ hist_reweight = inbool; return;}
+      bool GetReweight() const {return hist_reweight;}
       void SetTrueLeadingProtonP(const std::string& true_protonp_def){ true_proton_mom_name = true_protonp_def; return;}
       void SetTrueLeadingProtonCosth(const std::string& true_protoncosth_def){ true_proton_costh_name = true_protoncosth_def; return;}
 
@@ -287,7 +287,8 @@ namespace PROfit{
             std::vector<std::string> m_mcgen_file_name;	
             std::vector<long int> m_mcgen_maxevents;	
             std::vector<double> m_mcgen_pot;	
-            std::vector<double> m_mcgen_scale;	
+            std::vector<double> m_mcgen_scale;
+            std::vector<int> m_mcgen_numfriends;
             std::vector<bool> m_mcgen_fake;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_map;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_treename_map;
@@ -313,9 +314,6 @@ namespace PROfit{
             std::string m_model_tag;
             std::vector<int> m_model_rule_index;
             std::vector<std::string> m_model_rule_names;
-
-            //Boolean for histogram-based reweighting
-            bool m_hist_rewgt;
 
 
             //----- PUBLIC FUNCTIONS ------
