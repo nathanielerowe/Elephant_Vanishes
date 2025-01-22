@@ -33,7 +33,6 @@ namespace PROfit{
   
     float GetOscWeight(int rule, float le, const PROsc &inosc, const std::vector<float> &inphysparams);
     float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, const std::vector<float> &inphysparams);
->>>>>>> 9e04488d6090de26e0b6b79e8beb86e224a9e50d
     float GetSystWeight(int ev_idx, const PROpeller &inprop, const PROsyst &insyst, float inshift, std::string insystname);
 
 

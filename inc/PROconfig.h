@@ -72,15 +72,16 @@ namespace PROfit{
       std::string true_L_name;
       std::string pdg_name;
       int model_rule;
+      int include_systematics;
 
       bool hist_reweight;
       std::string true_proton_mom_name;
       std::string true_proton_costh_name;
 
       //constructor
-    BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), hist_reweight(false){}
-    BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9), hist_reweight(false){}
-
+      BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), include_systematics(1), hist_reweight(false){}
+      BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9), include_systematics(1), hist_reweight(false){}
+ 
       /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
       std::shared_ptr<TTreeFormula> GetFormula(){
 	return branch_formula;
@@ -91,7 +92,8 @@ namespace PROfit{
       void SetTrueParam(const std::string& true_parameter_def){ true_param_name = true_parameter_def; return;}
       void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
       void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
-      void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;} 
+      void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;}
+      void SetIncludeSystematics(int insyst){include_systematics = insyst; return;} 
       
       void SetReweight(bool inbool){ hist_reweight = inbool; return;}
       bool GetReweight() const {return hist_reweight;}
@@ -106,6 +108,11 @@ namespace PROfit{
       int GetModelRule() const{
 	return model_rule;
       };
+
+      int GetIncludeSystematics() const{
+	return include_systematics;
+      };
+
 
       // Function: evaluate additional weight setup in the branch and return in floating precision 
       // Note: if no additional weight is set, value of 1.0 will be returned.
@@ -280,7 +287,8 @@ namespace PROfit{
             bool m_write_out_variation;
             bool m_form_covariance;
             std::string m_write_out_tag;
-
+            int m_num_variation_type_covariance = 0;
+            int m_num_variation_type_spline = 0;
 
             int m_num_mcgen_files;
             std::vector<std::string> m_mcgen_tree_name;	
@@ -296,17 +304,20 @@ namespace PROfit{
             std::vector<std::vector<bool>> m_mcgen_additional_weight_bool;
             std::vector<std::vector<std::shared_ptr<BranchVariable>>> m_branch_variables;
             std::vector<std::vector<std::string>> m_mcgen_eventweight_branch_names;
-
+            std::vector<std::vector<int>> m_mcgen_eventweight_branch_syst;
 
             //specific bits for covariancegeneration
             std::vector<std::string> m_mcgen_weightmaps_formulas;
             std::vector<bool> m_mcgen_weightmaps_uses;
             std::vector<std::string> m_mcgen_weightmaps_patterns;
             std::vector<std::string> m_mcgen_weightmaps_mode;
-            std::unordered_set<std::string> m_mcgen_variation_allowlist;
-            std::unordered_set<std::string> m_mcgen_variation_denylist;
+            std::vector<std::string> m_mcgen_variation_allowlist;
+            std::vector<std::string> m_mcgen_variation_denylist;
+            std::vector<std::string> m_mcgen_variation_type;
+            std::map<std::string, std::string> m_mcgen_variation_type_map;
             std::map<std::string, std::vector<std::string>> m_mcgen_shapeonly_listmap; //a map of shape-only systematic and corresponding subchannels
-
+            std::vector<std::tuple<std::string, std::string, float>> m_mcgen_correlations;
+      
             //FIX skepic
             std::vector<std::string> systematic_name;
 

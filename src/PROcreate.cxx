@@ -1127,8 +1127,6 @@ namespace PROfit {
 
 	double pmom = branch->GetTrueLeadProtonMom<double>();
 	double pcosth = branch->GetTrueLeadProtonCosth<double>();
-        double pdg_id = branch->GetTruePDG();
-    	double mc_weight = branch->GetMonteCarloWeight();
 
         double pdg_id = branch->GetTruePDG();//No need, depreciated
         int run_syst = branch->GetIncludeSystematics();
