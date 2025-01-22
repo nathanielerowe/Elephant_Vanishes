@@ -85,19 +85,25 @@ namespace PROfit {
 	float oscw  = physparams.size() != 0 ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
 	float add_w = inprop.added_weights[i];
 	float hist_w = 1.0 ;
-	double pmom = static_cast<double>(inprop.pmom[i]);
-	double pcosth = static_cast<double>(inprop.pcosth[i]);
-	double pdg = static_cast<double>(inprop.pdg[i]);
 
-	for (size_t j = 0; j<inweighthists.size(); ++j){
-	  TH2D h = *inweighthists[j];
-	  int bin = h.FindBin(pmom,pcosth);
-	  hist_w *= h.GetBinContent(bin);
+	//Figure out what subchannel the event is in
+	size_t subchan = inconfig.GetSubchannelIndexFromGlobalTrueBin(inprop.true_bin_indices[i]);
+	std::string name = inconfig.m_fullnames[subchan];
+	  
+	//Put name for ICARUS study here. How to handle more generically?
+	if (name == "nu_ICARUS_numu_numucc") {
+	  double pmom = static_cast<double>(inprop.pmom[i]);
+	  double pcosth = static_cast<double>(inprop.pcosth[i]);
+
+	  for (size_t j = 0; j<inweighthists.size(); ++j){
+	    TH2D h = *inweighthists[j];
+	    int bin = h.FindBin(pmom,pcosth);
+	    hist_w *= h.GetBinContent(bin);
+	  }
 	}
-	
+
 	float finalw = oscw * add_w * hist_w;
-	log<LOG_DEBUG>(L"%1% || PDG: %2% Mom: %3% Costh %3% Hist_w %5% ") % __func__ % pdg % pmom % pcosth % hist_w;	
-	log<LOG_DEBUG>(L"%1% || Oscw: %2% Add_w %3% Hist_w %4% Finalw %5%") % __func__ % oscw % add_w % hist_w % finalw;	
+	log<LOG_DEBUG>(L"%1% || name %2% oscw %3% addw %4% histw %5%" ) % __func__ % name.c_str() %  oscw % add_w % hist_w;
 	myspectrum.Fill(inprop.bin_indices[i], finalw);
       }
     }

@@ -493,7 +493,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     log<LOG_DEBUG>(L"%1% ||Apply systemtics to this file (default) ' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
                     TEMP_eventweight_branch_syst.push_back(1);
                 }else{
-                    log<LOG_DEBUG>(L"%1% || DO NOT systemtics to this file (e.g for cosmics) ' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                    log<LOG_DEBUG>(L"%1% || DO NOT apply systemtics to this file (e.g for cosmics) ' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
                     TEMP_eventweight_branch_syst.push_back(0);
                 }
 
