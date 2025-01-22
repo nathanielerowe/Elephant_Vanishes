@@ -26,13 +26,13 @@
 #include "TCanvas.h"
 #include "TGraph.h"
 #include "TStyle.h"
+#include "TFile.h"
 #include "TRatioPlot.h"
 #include "TGraphAsymmErrors.h"
 
 using namespace PROfit;
 
 //Run a single fit at a given point in parameter space (nominally no osc) with mock data
-//log_level_t GLOBAL_LEVEL = LOG_DEBUG;
 log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 int main(int argc, char* argv[])
@@ -50,6 +50,9 @@ int main(int argc, char* argv[])
   std::vector<int> grid_size;
   std::vector<std::string> mockparams;
   std::vector<float> mockshifts;
+  std::string reweights_file;
+  std::vector<std::string> mockreweights;
+  std::vector<TH2D*> weighthists;
   std::vector<float> physics_params;
   
   app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.");
@@ -57,8 +60,10 @@ int main(int argc, char* argv[])
   app.add_option("-v, --verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
   app.add_option("-t, --nthread",   nthread, "Number of fits.");
   app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name");
-  app.add_option("-s, --mocksys",   mockparams, "Vector of systematics parameter names to vary for mock data")->expected(-1);
+  app.add_option("-s, --mocksys",   mockparams, "Vector of systematics parameter names to vary for mock data")->expected(-1);  
   app.add_option("-u, --mockvals",  mockshifts, "Vector of size of shifts. Default +1")->expected(-1);
+  app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting")->expected(-1);
+  app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data")->expected(-1);
   app.add_option("-p, --pparams",   physics_params, "deltam^2, sin^22thetamumu, default no osc")->expected(-1);
 
   app.add_flag(  "-b, --binned",    binned, "Do you want to weight event-by-event?");
@@ -84,11 +89,32 @@ int main(int argc, char* argv[])
   for (size_t i = 0; i < mockparams.size(); ++i) {
     log<LOG_INFO>(L"%1% || Mock data parameters %2%") % __func__  % mockparams[i].c_str();
   }
+  for (size_t i = 0; i < mockreweights.size(); ++i) {
+    log<LOG_INFO>(L"%1% || Mock reweight %2%") % __func__  % mockreweights[i].c_str();
+  }
+  
   PROspec data, cv;
+  //Define the model (currently 3+1 SBL)
+  PROsc osc(prop);
+
   cv = systsstructs.back().CV();
-  if (mockparams.empty()) {
+  if (mockparams.empty() && mockreweights.empty()) {
     log<LOG_INFO>(L"%1% || Will use CV MC as data for this study") % __func__  ;
     data = systsstructs.back().CV();
+  }
+  else if (!mockreweights.empty()) {
+    log<LOG_INFO>(L"%1% || Will use reweighted MC  as data for this study") % __func__  ;
+        log<LOG_INFO>(L"%1% || Any parameter shifts requested will be ignored (fix later?)") % __func__  ;
+    auto file = std::make_unique<TFile>(reweights_file.c_str());
+    log<LOG_DEBUG>(L"%1% || Set file to : %2% ") % __func__ % reweights_file.c_str();
+    log<LOG_DEBUG>(L"%1% || Size of reweights vector : %2% ") % __func__ % mockreweights.size() ;
+    for (size_t i=0; i < mockreweights.size(); ++i) {
+      log<LOG_DEBUG>(L"%1% || Mock reweight i : %2% ") % __func__ % mockreweights[i].c_str() ;
+      TH2D* rwhist = (TH2D*)file->Get(mockreweights[i].c_str());
+      weighthists.push_back(rwhist);
+      log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
+    }
+    data = FillWeightedSpectrumFromHist(config,prop,&osc,weighthists,physics_params,false);
   }
   else{
     if (mockshifts.size() != mockparams.size()) {
@@ -97,6 +123,7 @@ int main(int argc, char* argv[])
 	mockshifts.push_back(1.0);
       }
     }
+    log<LOG_INFO>(L"%1% || Will use systematic shifted MC  as data for this study") % __func__  ;    
     data = systs.GetSplineShiftedSpectrum(config,prop,mockparams,mockshifts);
   }
 
@@ -141,17 +168,13 @@ int main(int argc, char* argv[])
     leg->AddEntry(null, (m+": "+ns+ " sigma").c_str(),"");
     i++;
   }
+  for (const auto& m : mockreweights) {
+      leg->AddEntry(null, m.c_str(),"");
+    i++;
+  }
+  
   leg->Draw();
   c->SaveAs((filename+"_spec.pdf").c_str());
-
-  //I think setting these here is not doing anything - want to be able to define them...
-  if (physics_params.empty()) {
-    physics_params.push_back(0.0);
-    physics_params.push_back(0.0);
-  }
-
-  //Define the model (currently 3+1 SBL)
-  PROsc osc(prop);
 
   PROfile(config,prop,systs,osc,data,filename+"_PROfile");
 

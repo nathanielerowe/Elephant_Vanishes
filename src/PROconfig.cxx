@@ -61,6 +61,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
     tinyxml2::XMLDocument doc;
     doc.LoadFile(filename.c_str());
     bool loadOkay = !doc.ErrorID();
+    std::cout << "DOC ERROR IS " << doc.ErrorID() << std::endl;
 
     bool use_universe = 1; //FIX
     try{
@@ -455,6 +456,10 @@ int PROconfig::LoadFromXML(const std::string &filename){
             std::vector<bool> TEMP_additional_weight_bool;
             std::vector<std::string> TEMP_additional_weight_name;
             std::vector<std::string> TEMP_eventweight_branch_names;
+
+            std::vector<bool> TEMP_hist_weight_bool;
+            std::vector<std::string> TEMP_hist_weight_name;
+
             std::vector<std::shared_ptr<BranchVariable>> TEMP_branch_variables;
             while(pBranch){
 
@@ -479,6 +484,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     log<LOG_ERROR>(L"Terminating.");
                     exit(EXIT_FAILURE);
                 }
+		log<LOG_DEBUG>(L"%1% || Branch name %2%") %__func__ % bnam;		
 
 
                 if(bhist == NULL){
@@ -487,6 +493,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     log<LOG_ERROR>(L"Terminating.");
                     exit(EXIT_FAILURE);
                 }
+		log<LOG_DEBUG>(L"%1% || Branch subchannel %2%") %__func__ % bhist;				
 
 
                 if(bsyst == NULL){
@@ -501,6 +508,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     systematic_name.push_back(bsyst);	
 
                 }
+		log<LOG_DEBUG>(L"%1% || Branch syst %2%") %__func__ % bsyst;						
 
                 //std::string chk_wei = badditional_weight;
                 if(badditional_weight == NULL || strcmp(badditional_weight, "") == 0){ //|| (chk_wei.find_first_not_of(' ') != std::string::npos) ){
@@ -513,7 +521,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     log<LOG_DEBUG>(L"%1% || Setting an additional weight for branch %2% using the branch %3% as a reweighting.") % __func__ % bnam %badditional_weight;
 
                 }
-
 
 
                     if(use_universe){
@@ -554,6 +561,24 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     log<LOG_DEBUG>(L"%1% || Do Not Oscillate  ") % __func__  ;
                     TEMP_branch_variables.back()->SetOscillate(false);
                 }
+
+		std::string reweight = "false";
+		if(pBranch->Attribute("reweight")!=NULL){
+		    reweight=pBranch->Attribute("reweight");
+		}
+
+		if(reweight == "false"){
+		  log<LOG_DEBUG>(L"%1% || Histogram reweighting is OFF ") % __func__ ;
+		  TEMP_branch_variables.back()->SetReweight(false);
+		}
+		else if (reweight=="true"){
+                    log<LOG_DEBUG>(L"%1% || Histogram reweighting is ON ") % __func__;
+                    TEMP_branch_variables.back()->SetReweight(true);
+		    log<LOG_DEBUG>(L"%1% || Successfully setreweight ") % __func__;
+                    TEMP_branch_variables.back()->SetTrueLeadingProtonP(pBranch->Attribute("true_proton_mom_name"));
+		    log<LOG_DEBUG>(L"%1% || Successfully set trueleadingp: %2% ") % __func__ % pBranch->Attribute("true_proton_mom_name");				 TEMP_branch_variables.back()->SetTrueLeadingProtonCosth(pBranch->Attribute("true_proton_costh_name"));
+		    log<LOG_DEBUG>(L"%1% || Successfully set trueleadingcosth: %2% ") % __func__ % pBranch->Attribute("true_proton_costh_name");				  				   
+		}
 
                 log<LOG_DEBUG>(L"%1% || Associated subchannel: %2% ") % __func__ % bhist;
 

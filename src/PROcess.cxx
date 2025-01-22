@@ -52,6 +52,42 @@ namespace PROfit {
 
     }
 
+  PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, const PROsc *inosc, std::vector<TH2D*> inweighthists, std::vector<float> &physparams, bool binned){
+    PROspec myspectrum(inconfig.m_num_bins_total);
+
+    if (binned) {
+      log<LOG_WARNING>(L"%1% || WARNING: Binned fit is requested but not supported for histogram reweights. Returning empty spectrum so things will likely fail ") % __func__ ;
+      // ETW Can't handle binned for now - will just return an empty spec
+    }
+    else {
+      for(size_t i = 0; i<inprop.truth.size(); ++i){
+	
+	float oscw  = physparams.size() != 0 ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
+	float add_w = inprop.added_weights[i];
+	float hist_w = 1.0 ;
+	double pmom = static_cast<double>(inprop.pmom[i]);
+	double pcosth = static_cast<double>(inprop.pcosth[i]);
+	int pdg = static_cast<int>(inprop.pdg[i]);
+
+	if (pdg==14) {
+	  for (size_t j = 0; j<inweighthists.size(); ++j){
+	    TH2D h = *inweighthists[j];
+	    int bin = h.FindBin(pmom,pcosth);
+	    hist_w *= h.GetBinContent(bin);
+	  }
+	}
+	
+	float finalw = oscw * add_w * hist_w;
+	log<LOG_DEBUG>(L"%1% || PDG: %2% Mom: %3% Costh %3% Hist_w %5% ") % __func__ % pdg % pmom % pcosth % hist_w;	
+	log<LOG_DEBUG>(L"%1% || Oscw: %2% Add_w %3% Hist_w %4% Finalw %5%") % __func__ % oscw % add_w % hist_w % finalw;	
+	myspectrum.Fill(inprop.bin_indices[i], finalw);
+      }
+    }
+    return myspectrum;
+  }
+
+    
+
     float GetOscWeight(int rule, float le, const PROsc &inosc, std::vector<float> &inphysparams) {
         // The model functions take L and E separately, so give E as 1 and L as L/E
         return inosc.model_functions[rule](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), 1, le);
