@@ -574,16 +574,16 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     TEMP_branch_variables.back()->SetOscillate(false);
                 }
 
-		std::string reweight = "false";
-		if(pBranch->Attribute("reweight")!=NULL){
-		    reweight=pBranch->Attribute("reweight");
+		std::string hist_reweight = "false";
+		if(pBranch->Attribute("hist_reweight")!=NULL){
+		    hist_reweight=pBranch->Attribute("hist_reweight");
 		}
 
-		if(reweight == "false"){
+		if(hist_reweight == "false"){
 		  log<LOG_DEBUG>(L"%1% || Histogram reweighting is OFF ") % __func__ ;
 		  TEMP_branch_variables.back()->SetReweight(false);
 		}
-		else if (reweight=="true"){
+		else if (hist_reweight=="true"){
                     log<LOG_DEBUG>(L"%1% || Histogram reweighting is ON ") % __func__;
                     TEMP_branch_variables.back()->SetReweight(true);
 		    log<LOG_DEBUG>(L"%1% || Successfully setreweight ") % __func__;
