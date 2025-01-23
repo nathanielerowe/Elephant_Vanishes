@@ -176,6 +176,10 @@ int main(int argc, char* argv[])
   leg->Draw();
   c->SaveAs((filename+"_spec.pdf").c_str());
 
+  Eigen::VectorXd data_vec = CollapseMatrix(config, data.Spec());
+  Eigen::VectorXd err_vec_sq = data.Error().array().square();
+  Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+  data = PROspec(data_vec, err_vec);
   PROfile(config,prop,systs,osc,data,filename+"_PROfile");
 
   return 0;
