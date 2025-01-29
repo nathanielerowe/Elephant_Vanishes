@@ -1,5 +1,4 @@
 #include "PROcess.h"
-#include "Eigen/src/Core/Matrix.h"
 #include "PROlog.h"
 #include "PROspec.h"
 #include "PROsyst.h"
