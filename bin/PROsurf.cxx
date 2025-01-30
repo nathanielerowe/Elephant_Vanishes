@@ -1,5 +1,6 @@
 #include "PROconfig.h"
 #include "PROlog.h"
+#include "PROmetric.h"
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROtocall.h"
@@ -130,15 +131,17 @@ int main(int argc, char* argv[])
       systs = systs.excluding(systs_excluded);
     }
 
+    PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+
     //Define grid and Surface
     size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
-    PROsurf surface(nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+    PROsurf surface(chi, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
                     nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
     
     if(statonly)
-        surface.FillSurfaceStat(config, prop, osc, data, !savetoroot ? filename : "", !eventbyevent);
+        surface.FillSurfaceStat(config, !savetoroot ? filename : "");
     else
-        surface.FillSurface(config, prop, systs, osc, data, !savetoroot ? filename : "", !eventbyevent, nthread);
+        surface.FillSurface(systs, !savetoroot ? filename : "", nthread);
 
     //And do a PROfile of pulls at the data also
     //PROfile(config,prop,systs,osc,data,filename+"_PROfile");

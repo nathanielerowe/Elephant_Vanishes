@@ -32,6 +32,7 @@ int PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs
 
 class PROsurf {
 public:
+    PROmetric &metric;
     size_t nbinsx, nbinsy;
     Eigen::VectorXd edges_x, edges_y;
     Eigen::MatrixXd surface;
@@ -41,14 +42,14 @@ public:
         LogAxis,
     };
 
-    PROsurf(size_t nbinsx, const Eigen::VectorXd &edges_x, size_t nbinsy, const Eigen::VectorXd &edges_y) : nbinsx(nbinsx), nbinsy(nbinsy), edges_x(edges_x), edges_y(edges_y), surface(nbinsx, nbinsy) { }
+    PROsurf(PROmetric &metric, size_t nbinsx, const Eigen::VectorXd &edges_x, size_t nbinsy, const Eigen::VectorXd &edges_y) : metric(metric), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(edges_x), edges_y(edges_y), surface(nbinsx, nbinsy) { }
 
-    PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbinsy, LogLin lly, double y_lo, double y_hi);
+    PROsurf(PROmetric &metric, size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbinsy, LogLin lly, double y_lo, double y_hi);
 
-    std::vector<surfOut> PointHelper(const PROconfig *config, const PROpeller *prop, const PROsyst *systs, const PROsc *osc, const PROspec *data, std::vector<surfOut> multi_physics_params, PROchi::EvalStrategy strat, bool binned_weighting, int start, int end);
+    std::vector<surfOut> PointHelper(const PROsyst *systs, std::vector<surfOut> multi_physics_params, int start, int end);
 
-    void FillSurfaceStat(const PROconfig &config, const PROpeller &prop, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting);
-    void FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nthreads = 1);
+    void FillSurfaceStat(const PROconfig &config, std::string filename);
+    void FillSurface(const PROsyst &systs, std::string filename, int nthreads = 1);
 
 };
 
