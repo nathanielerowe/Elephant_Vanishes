@@ -42,7 +42,6 @@ namespace PROfit{
 
             bool correlated_systematics;
             Eigen::MatrixXd prior_covariance;
-            Eigen::MatrixXd collapsed_stat_covariance;
 
         public:
 
@@ -57,17 +56,17 @@ namespace PROfit{
                 return new PROCNP(*this);
             }
 
-            virtual void reset() {
+            void reset() {
                 physics_param_fixed.clear();
                 last_value = 0;
                 last_param = Eigen::VectorXd::Constant(last_param.size(), 0);
             }
 
-            virtual void set_physics_param_fixed(const std::vector<float> &physics_param) {
+            void set_physics_param_fixed(const std::vector<float> &physics_param) {
                 physics_param_fixed = physics_param;
             }
 
-            virtual void override_systs(const PROsyst &new_syst) {
+            void override_systs(const PROsyst &new_syst) {
                 nparams -= nsyst;
                 syst = &new_syst;
                 nsyst = syst->GetNSplines();
@@ -77,6 +76,8 @@ namespace PROfit{
             float Pull(const Eigen::VectorXd &systs);
 
             void fixSpline(int fix, double valin);
+
+            int nParams() const {return nparams;}
 
     };
 

@@ -1,4 +1,5 @@
 #include "PROCNP.h"
+#include "Eigen/src/Core/Matrix.h"
 #include "PROcess.h"
 #include "PROlog.h"
 #include "PROmetric.h"
@@ -39,12 +40,14 @@ PROCNP::PROCNP(const std::string tag, const PROconfig *conin, const PROpeller *p
         }
     }
 
-    PROspec cv = FillCVSpectrum(*config, *pin, strat != EventByEvent);
+    PROspec cv = physics_param_fixed.size() > 0 ? 
+        FillRecoSpectra(*config, *pin, osc, physics_param_fixed, strat != EventByEvent) :
+        FillCVSpectrum(*config, *pin);
     Eigen::MatrixXd collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
     Eigen::MatrixXd mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
     Eigen::MatrixXd collapsed_mc_stat_covariance = CollapseMatrix(*config, mc_stat_covariance);
     
-    collapsed_stat_covariance = 3 * (collapsed_data_stat_covariance.inverse() + 2 * collapsed_mc_stat_covariance.inverse()).inverse();
+    Eigen::MatrixXd collapsed_stat_covariance = 3 * (collapsed_data_stat_covariance.inverse() + 2 * collapsed_mc_stat_covariance.inverse()).inverse();
 }
 
 float PROCNP::Pull(const Eigen::VectorXd &systs) {
@@ -82,6 +85,12 @@ double PROCNP::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
     PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams, strat == BinnedChi2);
     Eigen::MatrixXd inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
     
+    PROspec cv = FillRecoSpectra(*config, *peller, osc, fitparams, strat != EventByEvent);
+    Eigen::MatrixXd collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
+    Eigen::MatrixXd mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
+    Eigen::MatrixXd collapsed_mc_stat_covariance = CollapseMatrix(*config, mc_stat_covariance);
+    
+    Eigen::MatrixXd collapsed_stat_covariance = 3 * (collapsed_data_stat_covariance.inverse() + 2 * collapsed_mc_stat_covariance.inverse()).inverse();
     //only calculate a syst covariance if we have any covariance parameters as defined in the xml
     if(syst->GetNCovar()){
 
@@ -147,6 +156,15 @@ double PROCNP::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
             // Calcuate Full Covariance matrix
             Eigen::MatrixXd inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
 
+            Eigen::MatrixXd new_collapsed_stat_covariance = collapsed_stat_covariance;
+            if(i < nparams - nsyst) {
+                PROspec cv = FillRecoSpectra(*config, *peller, osc, fitparams, strat != EventByEvent);
+                Eigen::MatrixXd collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
+                Eigen::MatrixXd mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
+                Eigen::MatrixXd collapsed_mc_stat_covariance = CollapseMatrix(*config, mc_stat_covariance);
+                new_collapsed_stat_covariance = 3 * (collapsed_data_stat_covariance.inverse() + 2 * collapsed_mc_stat_covariance.inverse()).inverse();
+            }
+
             if(syst->GetNCovar()){
 
                 Eigen::MatrixXd diag = result.Spec().array().matrix().asDiagonal(); 
@@ -154,10 +172,10 @@ double PROCNP::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
                 // Collapse Covariance and Spectra 
                 Eigen::MatrixXd collapsed_full_covariance =  CollapseMatrix(*config,full_covariance);  
                 // Invert Collaped Matrix Matrix 
-                inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
+                inverted_collapsed_full_covariance = (collapsed_full_covariance+new_collapsed_stat_covariance).inverse();
             }
             else{
-    	        inverted_collapsed_full_covariance = (collapsed_stat_covariance).inverse();
+    	        inverted_collapsed_full_covariance = (new_collapsed_stat_covariance).inverse();
                 }
            
             // Calculate Chi^2  value
