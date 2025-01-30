@@ -12,6 +12,10 @@ else ()
     target_compile_features(PROfitLib PUBLIC cxx_std_17)
 endif(MPI_ENABLE) 
 
+# Install PROfit
+install(TARGETS PROfitLib
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
 # IDEs should put the headers in a nice place
 source_group(
     TREE "${PROJECT_SOURCE_DIR}/inc"
