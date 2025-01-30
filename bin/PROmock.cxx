@@ -47,6 +47,7 @@ int main(int argc, char* argv[])
   //Define a filename to save chisq values in
   std::string filename;
   bool binned=false;
+  bool plotonly=false;
   std::vector<int> grid_size;
   std::vector<std::string> mockparams;
   std::vector<float> mockshifts;
@@ -65,6 +66,7 @@ int main(int argc, char* argv[])
   app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting")->expected(-1);
   app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data")->expected(-1);
   app.add_option("-p, --pparams",   physics_params, "deltam^2, sin^22thetamumu, default no osc")->expected(-1);
+  app.add_option("-q, --plotonly", plotonly, "Skip the fit and just produce the plots")->expected(false);
 
   app.add_flag(  "-b, --binned",    binned, "Do you want to weight event-by-event?");
 
@@ -127,10 +129,27 @@ int main(int argc, char* argv[])
     data = systs.GetSplineShiftedSpectrum(config,prop,mockparams,mockshifts);
   }
 
-  //cv.plotSpectrum(config, filename+"_spec_cv");
-  //cv.Print();
-  //data.plotSpectrum(config, filename+"_spec_mockdata");
-  //data.Print();
+  //stupid hack, must be a better way to do this
+  //Set up options:
+  std::vector<const char*> xlabel(4);
+  xlabel[0] = "Reconstructed Neutrino Energy";
+  xlabel[1] = "True Leading Proton Momentum";
+  xlabel[2] = "True Leading Proton Cos(Theta)";
+  xlabel[3] = "Check what variable you are plotting!";
+  int xi;
+  if (xmlname.find("standard") != std::string::npos) {
+    xi = 0;
+  }
+  else if (xmlname.find("pmom") != std::string::npos) {
+    xi = 1;
+  }
+  else if (xmlname.find("costh") != std::string::npos) {  
+    xi = 2;
+  }
+  else {
+    xi = 3;
+  }
+   
 
   TH1D hcv = cv.toTH1D(config,0);
   TH1D hmock = data.toTH1D(config,0);
@@ -138,6 +157,8 @@ int main(int argc, char* argv[])
   hmock.Scale(1, "width");
   hcv.GetYaxis()->SetTitle("Events/GeV");
   hmock.GetYaxis()->SetTitle("Events/GeV");
+  hcv.GetXaxis()->SetTitle(xlabel[xi]);
+  hmock.GetXaxis()->SetTitle(xlabel[xi]);
   hcv.SetTitle("");
   hmock.SetTitle("");
 
@@ -176,11 +197,13 @@ int main(int argc, char* argv[])
   leg->Draw();
   c->SaveAs((filename+"_spec.pdf").c_str());
 
-  Eigen::VectorXd data_vec = CollapseMatrix(config, data.Spec());
-  Eigen::VectorXd err_vec_sq = data.Error().array().square();
-  Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
-  data = PROspec(data_vec, err_vec);
-  PROfile(config,prop,systs,osc,data,filename+"_PROfile");
+  if (!plotonly) {
+    Eigen::VectorXd data_vec = CollapseMatrix(config, data.Spec());
+    Eigen::VectorXd err_vec_sq = data.Error().array().square();
+    Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+    data = PROspec(data_vec, err_vec);
+    PROfile(config,prop,systs,osc,data,filename+"_PROfile");
+  }
 
   return 0;
 }
