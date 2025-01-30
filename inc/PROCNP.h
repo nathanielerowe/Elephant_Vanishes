@@ -68,7 +68,10 @@ namespace PROfit{
             }
 
             virtual void override_systs(const PROsyst &new_syst) {
+                nparams -= nsyst;
                 syst = &new_syst;
+                nsyst = syst->GetNSplines();
+                nparams += nsyst;
             }
 
             float Pull(const Eigen::VectorXd &systs);

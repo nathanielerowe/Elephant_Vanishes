@@ -64,7 +64,7 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
         for(size_t j = 0; j < nbinsy; j++) {
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
             local_metric->set_physics_param_fixed(physics_params);
-            double fx = metric(empty_vec, empty_vec, false);
+            double fx = (*local_metric)(empty_vec, empty_vec, false);
             surface(i, j) = fx;
             if(!filename.empty()){
                 chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx<<std::flush;

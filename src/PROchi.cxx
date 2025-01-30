@@ -56,7 +56,6 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
 
 
 double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient, bool rungradient){
-
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXd subvector1 = param.segment(0, nparams - nsyst);
     std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());

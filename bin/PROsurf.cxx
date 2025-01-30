@@ -113,9 +113,9 @@ int main(int argc, char* argv[])
     PROsc osc(prop);
     
     std::vector<float> pparams = {std::log10(injected_pt[0]), std::log10(injected_pt[1])};
-    std::cout << "Injected point: sinsq2t = " << injected_pt[0] << " dmsq = " << injected_pt[1] << std::endl;
+    log<LOG_INFO>(L"%1% || Injected point: sinsq2t = %2%, dmsq = %3%") % __func__ % injected_pt[0] % injected_pt[1];
     for(const auto& [name, shift]: injected_systs)
-      std::cout << "Injected syst: " << name << " shifted by " << shift << " sigma\n";
+      log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
     //Grab Asimov Data
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams, !eventbyevent) :
                    injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs, !eventbyevent) :
@@ -146,8 +146,6 @@ int main(int argc, char* argv[])
     //And do a PROfile of pulls at the data also
     //PROfile(config,prop,systs,osc,data,filename+"_PROfile");
 
-    //Fit is done here. Below is
-    //root plotting code
     std::vector<double> binedges_x, binedges_y;
     for(size_t i = 0; i < surface.nbinsx+1; i++)
         binedges_x.push_back(logx ? std::pow(10, surface.edges_x(i)) : surface.edges_x(i));
@@ -163,6 +161,7 @@ int main(int argc, char* argv[])
     }
 
     if(savetoroot) {
+      log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % filename.c_str();
       TFile fout(filename.c_str(), "RECREATE");
       surf.Write();
     }
