@@ -7,21 +7,13 @@
 #include "PROcreate.h"
 #include "PROpeller.h"
 #include "PROchi.h"
+#include "PROCNP.h"
 #include "PROcess.h"
 #include "PROsurf.h"
 
 #include "CLI11.h"
-#include "LBFGSB.h"
 
-#include <Eigen/Dense>
 #include <Eigen/Eigen>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
-#include <Eigen/Core>
-#include <algorithm>
-#include <numeric>
-#include <random>
-#include <thread>
 
 #include "TH2D.h"
 #include "TCanvas.h"
@@ -34,7 +26,6 @@ log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 int main(int argc, char* argv[])
 {
-
     gStyle->SetOptStat(0);
     CLI::App app{"Test for PROfit"}; 
 
@@ -48,6 +39,7 @@ int main(int argc, char* argv[])
     std::map<std::string, float> injected_systs;
     std::vector<std::string> syst_list, systs_excluded;
     bool eventbyevent=false, statonly = false, logx=true, logy=true;
+    std::string chi2;
 
     app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.")->required();
     app.add_option("-m, --max",       maxevents, "Max number of events to run over.")->default_val(50000);
@@ -55,6 +47,7 @@ int main(int argc, char* argv[])
     app.add_option("-t, --nthread",   nthread, "Number of fits.")->default_val(1);
     app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name")->default_val("");
     app.add_option("-g, --grid", grid_size, "Set grid size. If one dimension passed, grid assumed to be square, else rectangular")->expected(0, 2)->default_val(40);
+    app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
     CLI::Option *xlim_opt = app.add_option("--xlims", xlims, "Limits for x-axis");
     CLI::Option *ylim_opt = app.add_option("--ylims", ylims, "Limits for y-axis");
     app.add_option("--xlo", xlo, "Lower limit for x-axis")->excludes(xlim_opt)->default_val(1e-4);
@@ -131,11 +124,19 @@ int main(int argc, char* argv[])
       systs = systs.excluding(systs_excluded);
     }
 
-    PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+    PROmetric *metric;
+    if(chi2 == "PROchi") {
+        metric = new PROchi("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+    } else if(chi2 == "PROCNP") {
+        metric = new PROCNP("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+    } else {
+        log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
+        abort();
+    }
 
     //Define grid and Surface
     size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
-    PROsurf surface(chi, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+    PROsurf surface(*metric, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
                     nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
     
     if(statonly)
@@ -174,6 +175,8 @@ int main(int argc, char* argv[])
     c.SetLogz();
     surf.Draw("colz");
     c.Print("PROfit_surface.pdf");
+
+    delete metric;
 
     return 0;
 }
