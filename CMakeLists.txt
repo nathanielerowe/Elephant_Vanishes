@@ -19,6 +19,8 @@ set(CMAKE_CXX_FLAGS "-g -O3 -Wall -Wextra")
 #Allow for nice support folders in IDEs like VScode
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Enable PIC for linking to shared libraries
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(Doxygen)
 if(Doxygen_FOUND)
@@ -38,8 +40,8 @@ FetchContent_MakeAvailable(eigen)
 
 FetchContent_Declare(
     lbfgspp
-    GIT_REPOSITORY https://github.com/yixuan/LBFGSpp.git 
-    GIT_TAG        v0.3.0
+    GIT_REPOSITORY https://github.com/gputnam/LBFGSpp
+    GIT_TAG        d0149638e0f89b6c5b001d202f65273705ec7117
     )
 FetchContent_MakeAvailable(lbfgspp)
 
@@ -142,8 +144,22 @@ target_include_directories(PROfit_dict PRIVATE ${SBNANAOBJ_INCLUDE_DIR})
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROfit_dict PRIVATE ${ROOT_LIBRARIES})
 
+# Install the SBNANAOBJ headers 
+install(
+  DIRECTORY ${SBNANAOBJ_INCLUDE_DIR}/sbnanaobj/StandardRecord/
+  DESTINATION  ${CMAKE_INSTALL_PREFIX}/include/sbnanaobj/StandardRecord/
+  FILES_MATCHING PATTERN "*.h"
+)
+
 # The compiled library code lives inside here
 add_subdirectory(src)
+
+# Install headers
+install(
+  DIRECTORY ${CMAKE_SOURCE_DIR}/inc/
+  DESTINATION  ${CMAKE_INSTALL_PREFIX}/include
+  FILES_MATCHING PATTERN "*.h"
+)
 
 # The executable code will be placed here
 add_subdirectory(bin)

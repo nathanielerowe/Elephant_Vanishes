@@ -1,1 +1,7 @@
 build
+*.DS_Store
+*.swp
+/profit.egg-info/
+/dist/
+/install/
+__pycache__

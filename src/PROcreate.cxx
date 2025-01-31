@@ -11,7 +11,7 @@
 namespace PROfit {
 
     void SystStruct::CleanSpecs(){
-        if(p_cv)  p_cv.reset(nullptr);
+        if(p_cv)  p_cv.reset();
         p_multi_spec.clear();
         return;
     }
@@ -20,9 +20,9 @@ namespace PROfit {
         this->CleanSpecs();
         log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
 
-        p_cv = std::make_unique<PROspec>(num_bins);
+        p_cv = std::make_shared<PROspec>(num_bins);
         for(int i = 0; i != n_univ; ++i){
-            p_multi_spec.push_back(std::make_unique<PROspec>(num_bins));
+            p_multi_spec.push_back(std::make_shared<PROspec>(num_bins));
         }
         return;
     }

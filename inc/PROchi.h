@@ -72,6 +72,8 @@ namespace PROfit{
 
             void fixSpline(int fix, double valin);
 
+            virtual int nParams() const {return nparams;}
+
     };
 
 

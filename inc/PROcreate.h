@@ -53,8 +53,8 @@ namespace PROfit{
         //std::vector<PROspec> m_multi_spec;
 
         // pointer to cv spectrum and multi-universe spectrum from systematic variation
-        std::unique_ptr<PROspec> p_cv;	
-        std::vector<std::unique_ptr<PROspec>> p_multi_spec;
+        std::shared_ptr<PROspec> p_cv;	
+        std::vector<std::shared_ptr<PROspec>> p_multi_spec;
 
         /*Function: Constructor for a blank systematic*/
         SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},{},0){}

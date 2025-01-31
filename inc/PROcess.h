@@ -30,12 +30,12 @@ namespace PROfit{
 
   //ETW 1/22/2025 Add function to fill spectrum using weights from input histogram
   PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, const PROsc *inosc, std::vector<TH2D*> inweighthists, std::vector<float> &physparams, bool binned = false);
-  
-    float GetOscWeight(int rule, float le, const PROsc &inosc, const std::vector<float> &inphysparams);
-    float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, const std::vector<float> &inphysparams);
-    float GetSystWeight(int ev_idx, const PROpeller &inprop, const PROsyst &insyst, float inshift, std::string insystname);
 
+  PROspec FillSystRandomThrow(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst);
 
+  float GetOscWeight(int rule, float le, const PROsc &inosc, const std::vector<float> &inphysparams);
+  float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, const std::vector<float> &inphysparams);
+  float GetSystWeight(int ev_idx, const PROpeller &inprop, const PROsyst &insyst, float inshift, std::string insystname);
 
 };
 
