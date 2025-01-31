@@ -230,7 +230,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     LBFGSpp::LBFGSBSolver<double> solver(param);
     int nparams = systs.GetNSplines();
     std::vector<float> physics_params; 
-
+    Eigen::MatrixXd invH;
 
 
     int depth = std::ceil(nparams/4.0);
@@ -288,6 +288,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             try {
                 x = Eigen::VectorXd::Constant(nparams, 0.012);
                 solver.minimize(chi, x, fx, lb, ub);
+		invH = solver.final_approx_inverse_hessian();
             } catch(std::runtime_error &except) {
                 log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
             }
@@ -391,9 +392,6 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     h2down->SetBarOffset(off2);
     h2down->SetStats(0);
 
-
-
-
     // Fill the histogram with values from the vector
     for (int i = 0; i < nBins; ++i) {
         h1up->SetBinContent(i+1, values1_up[i]); 
@@ -449,6 +447,26 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     c2->SaveAs((filename+"_1sigma.pdf").c_str(),"pdf");
     delete c2;
 
+    //Plot correlations
+    TCanvas *c3 =  new TCanvas((filename+"invh").c_str(), (filename+"invh").c_str() , 40*nparams, 40*nparams);
+    c3->cd();
+    c3->SetBottomMargin(0.25);
+    c3->SetLeftMargin(0.35);    
+    int hsize = invH.rows();
+    TH2D *h_cov = new TH2D("h_cov", "Variance-Covariance Matrix;Parameter Index;Parameter Index", hsize, 0, hsize, hsize, 0, hsize);
+    for (int i = 0; i < hsize; ++i) {
+      for (int j = 0; j < hsize; ++j) {
+	h_cov->SetBinContent(i + 1, j + 1, invH(i, j));  // ROOT bins start from 1
+	h_cov->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
+	h_cov->GetYaxis()->SetBinLabel(j+1,systs.spline_names[j].c_str());	
+      }
+    }
+
+
+    h_cov->Draw("COLZ");
+    c3->SaveAs((filename+"_invh.pdf").c_str(),"pdf");
+    delete c3;
+    
     return 0;
 }
 
