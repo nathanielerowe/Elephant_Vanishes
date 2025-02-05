@@ -19,6 +19,7 @@
 #include "TFile.h"
 #include "TStyle.h"
 
+#include <exception>
 #include <map>
 #include <memory>
 #include <string>
@@ -31,6 +32,7 @@ log_level_t GLOBAL_LEVEL;
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig);
 std::unique_ptr<TH2D> covarianceTH2D(const PROsyst &syst, const PROconfig &config);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
+std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst);
 
 int main(int argc, char* argv[])
 {
@@ -101,6 +103,7 @@ int main(int argc, char* argv[])
     std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config);
     std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
     std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
+    std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
 
     if(savetopdf) {
         TCanvas c;
@@ -180,6 +183,12 @@ int main(int argc, char* argv[])
             fout.mkdir("Covariance");
             fout.cd("Covariance");
             covariance->Write("collapsed_frac_cov");
+        }
+
+        if(*all_flag || err_band_plot) {
+            fout.mkdir("ErrorBand");
+            fout.cd("ErrorBand");
+            err_band->Write("err_band");
         }
 
         if(*all_flag || spline_plots) {
@@ -276,5 +285,30 @@ getSplineGraphs(const PROsyst &systs, const PROconfig &config) {
     }
 
     return spline_graphs;
+}
+
+std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst) {
+    //TODO: Only works with 1 mode/detector/channel
+    Eigen::VectorXd cv = CollapseMatrix(config, FillCVSpectrum(config, prop, true).Spec());
+    std::vector<double> edges = config.GetChannelBinEdges(0);
+    std::vector<double> centers;
+    for(size_t i = 0; i < edges.size() - 1; ++i)
+        centers.push_back((edges[i+1] + edges[i])/2);
+    std::vector<Eigen::VectorXd> specs;
+    for(size_t i = 0; i < 1000; ++i)
+        specs.push_back(CollapseMatrix(config, FillSystRandomThrow(config, prop, syst).Spec()));
+    std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
+    for(size_t i = 0; i < cv.size(); ++i) {
+        std::array<double, 1000> binconts;
+        for(size_t j = 0; j < 1000; ++j) {
+            binconts[j] = specs[j](i);
+        }
+        std::sort(binconts.begin(), binconts.end());
+        double ehi = binconts[840] - cv(i);
+        double elo = cv(i) - binconts[160];
+        ret->SetPointEYhigh(i, ehi);
+        ret->SetPointEYlow(i, elo);
+    }
+    return ret;
 }
 
