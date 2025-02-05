@@ -157,8 +157,8 @@ namespace PROfit {
         Eigen::VectorXd cvspec = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
 
         // TODO: We should think about centralizing rng in a thread-safe/thread-aware way
-        std::random_device rd{};
-        std::mt19937 rng{rd()};
+        static std::random_device rd{};
+        static std::mt19937 rng{rd()};
         std::normal_distribution<float> d;
         std::vector<float> throws;
         Eigen::VectorXd throwC = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
@@ -174,8 +174,8 @@ namespace PROfit {
                 systw *= insyst.GetSplineShift(j, throws[j], i);
             }
             for(size_t k = 0; k < inconfig.m_num_bins_total; ++k) {
-                spec(k) = systw * inprop.hist(i, k);
-                cvspec(k) = inprop.hist(i, k);
+                spec(k) += systw * inprop.hist(i, k);
+                cvspec(k) += inprop.hist(i, k);
             }
         }
 
