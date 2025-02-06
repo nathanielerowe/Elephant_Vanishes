@@ -296,16 +296,21 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
         centers.push_back((edges[i+1] + edges[i])/2);
     std::vector<Eigen::VectorXd> specs;
     for(size_t i = 0; i < 1000; ++i)
-        specs.push_back(CollapseMatrix(config, FillSystRandomThrow(config, prop, syst).Spec()));
-    std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
+        specs.push_back(FillSystRandomThrow(config, prop, syst).Spec());
+        //specs.push_back(CollapseMatrix(config, FillSystRandomThrow(config, prop, syst).Spec()));
+    TH1D tmphist("th", "", cv.size(), edges.data());
+    for(size_t i = 0; i < cv.size(); ++i)
+        tmphist.SetBinContent(i+1, cv(i));
+    //std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
+    std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(&tmphist);
     for(size_t i = 0; i < cv.size(); ++i) {
         std::array<double, 1000> binconts;
         for(size_t j = 0; j < 1000; ++j) {
             binconts[j] = specs[j](i);
         }
         std::sort(binconts.begin(), binconts.end());
-        double ehi = binconts[840] - cv(i);
-        double elo = cv(i) - binconts[160];
+        double ehi = std::abs(binconts[840] - cv(i));
+        double elo = std::abs(cv(i) - binconts[160]);
         ret->SetPointEYhigh(i, ehi);
         ret->SetPointEYlow(i, elo);
     }
