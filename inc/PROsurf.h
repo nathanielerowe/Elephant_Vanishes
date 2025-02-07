@@ -28,7 +28,7 @@ struct surfOut{
     double chi;
 };
 
-int PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename);
+  int PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, const bool floatosc=false);
 
 class PROsurf {
 public:

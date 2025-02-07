@@ -218,7 +218,7 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
 }
 
 
-int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename) {
+int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, const bool floatosc) {
 
 
     LBFGSpp::LBFGSBParam<double> param;
@@ -228,7 +228,10 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     param.delta = 1e-6;
 
     LBFGSpp::LBFGSBSolver<double> solver(param);
-    int nparams = systs.GetNSplines();
+    size_t nparams = systs.GetNSplines();
+    if (floatosc) {
+      nparams += 2;
+    }
     std::vector<float> physics_params; 
     Eigen::MatrixXd invH;
 
@@ -254,25 +257,50 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
 
 
-    for(int w=0; w<nparams;w++){
+    for(size_t w=0; w<nparams;w++){
         int which_spline = w;
-
 
         std::vector<double> knob_vals;
         std::vector<double> knob_chis;
 
         for(int i=0; i<=30;i++){
 
-            //Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-            //Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-            Eigen::VectorXd ub = Eigen::VectorXd::Map(systs.spline_hi.data(), systs.spline_hi.size());
-            Eigen::VectorXd lb = Eigen::VectorXd::Map(systs.spline_lo.data(), systs.spline_lo.size());
+            Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+            Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+	    if (floatosc) {
+	      lb(0) = -2;
+	      lb(1) = -std::numeric_limits<double>::infinity();
+	      ub(0) = 2;
+	      ub(1) = 0;	      
+	      for (size_t i=2; i < nparams; ++i) {
+		lb(i) = systs.spline_lo[i-2];
+		ub(i) = systs.spline_hi[i-2];
+	      }
+	    }
+	    else {
+	      ub = Eigen::VectorXd::Map(systs.spline_hi.data(), systs.spline_hi.size());
+	      lb = Eigen::VectorXd::Map(systs.spline_lo.data(), systs.spline_lo.size());
+	    }
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
 
 
-            double which_value = -3.0+0.2*i;
+	    double which_value;
+	    if (floatosc) {
+	      if (w==0) {
+		which_value = -2. + i*0.133;
+	      }
+	      else if (w==1) { 
+		which_value = -1. + i*0.133;
+	      }
+	      else {
+		which_value = -3.0+0.2*i;
+	      }
+	    }
+	    else {
+	      which_value = -3.0+0.2*i;
+	    }
             double fx;
             knob_vals.push_back(which_value);
 
@@ -306,7 +334,21 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
         c->cd(w+1);
         std::unique_ptr<TGraph> g = std::make_unique<TGraph>(knob_vals.size(), knob_vals.data(), knob_chis.data());
-        std::string tit = systs.spline_names[which_spline]+ ";#sigma Shift; #Chi^{2}";
+	std::string tit;
+	if (floatosc) {
+	  if (which_spline == 0) {
+	    tit = "dmsq; #sigma Shift; #Chi^{2}";
+	  }
+	  else if (which_spline == 1) {
+	    tit = "sin22thmm; #sigma Shift; #Chi^{2}";
+	  }
+	  else {
+	    tit = systs.spline_names[which_spline-2]+ ";#sigma Shift; #Chi^{2}";
+	  }
+	}
+	else {
+	  tit = systs.spline_names[which_spline]+ ";#sigma Shift; #Chi^{2}";
+	}
         g->SetTitle(tit.c_str());
         graphs.push_back(std::move(g));
         graphs.back()->Draw("AL");
@@ -330,6 +372,9 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
     int nBins = systs.spline_names.size();
+    if (floatosc){
+      nBins += 2;
+    }
 
     std::vector<double> bfvalues;
     std::vector<double> values1_up;
@@ -403,8 +448,21 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             h2down->SetBinContent(i+1, values2_down[i]); 
         }
 
-        h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
-
+	if (floatosc) {
+	  if (i == 0) {
+	    h1up->GetXaxis()->SetBinLabel(i+1,"dmsq");	    
+	  }
+	  else if (i == 1) {
+	    h1up->GetXaxis()->SetBinLabel(i+1,"sin22thmm");	    	    
+	  }
+	  else {
+	    h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i-2].c_str());	    
+	  }
+	}
+	else {
+	  h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
+	}
+	
     }
     h1up->SetTitle("");
     h1up->Draw("b");
@@ -457,8 +515,30 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     for (int i = 0; i < hsize; ++i) {
       for (int j = 0; j < hsize; ++j) {
 	h_cov->SetBinContent(i + 1, j + 1, invH(i, j));  // ROOT bins start from 1
-	h_cov->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
-	h_cov->GetYaxis()->SetBinLabel(j+1,systs.spline_names[j].c_str());	
+	if (floatosc) {
+	  if (i==0) {
+	    h_cov->GetXaxis()->SetBinLabel(i+1,"dmsq");
+	  }
+	  else if (i==1) {
+	    h_cov->GetXaxis()->SetBinLabel(i+1,"sin22thmm");
+	  }
+	  else {
+	    h_cov->GetXaxis()->SetBinLabel(i-1,systs.spline_names[i].c_str());
+	  }
+	  if (j==0) {
+	    h_cov->GetYaxis()->SetBinLabel(j+1,"dmsq");
+	  }
+	  else if (j==1) {
+	    h_cov->GetYaxis()->SetBinLabel(j+1,"sin22thmm");
+	  }
+	  else {
+	    h_cov->GetYaxis()->SetBinLabel(j-1,systs.spline_names[j].c_str());
+	  }
+	}
+	else {
+	  h_cov->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
+	  h_cov->GetYaxis()->SetBinLabel(j+1,systs.spline_names[j].c_str());	  
+	}
       }
     }
 
