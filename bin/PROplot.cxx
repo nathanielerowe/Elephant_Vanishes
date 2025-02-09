@@ -267,16 +267,18 @@ getSplineGraphs(const PROsyst &systs, const PROconfig &config) {
             std::unique_ptr<TGraph> curve = std::make_unique<TGraph>();
             std::unique_ptr<TGraph> fixed_pts = std::make_unique<TGraph>();
             for(size_t k = 0; k < spline_for_bin.size(); ++k) {
-                const auto &[lo, coeffs] = spline_for_bin[k];
-                float hi = k < spline_for_bin.size() - 1 ? spline_for_bin[k].first : systs.spline_hi[i];
+                //const auto &[lo, coeffs] = spline_for_bin[k];
+                float lo = spline_for_bin[k].first;
+                std::array<float, 4> coeffs = spline_for_bin[k].second;
+                float hi = k < spline_for_bin.size() - 1 ? spline_for_bin[k+1].first : systs.spline_hi[i];
                 auto fn = [coeffs](float shift){
                     return coeffs[0] + coeffs[1]*shift + coeffs[2]*shift*shift + coeffs[3]*shift*shift*shift;
                 };
                 fixed_pts->SetPoint(fixed_pts->GetN(), lo, fn(0)); 
                 if(k == spline_for_bin.size() - 1)
                     fixed_pts->SetPoint(fixed_pts->GetN(), hi, fn(hi - lo));
-                float width = (hi - lo) / 10;
-                for(size_t l = 0; l < 10; ++l)
+                float width = (hi - lo) / 20;
+                for(size_t l = 0; l < 20; ++l)
                     curve->SetPoint(curve->GetN(), lo + l * width, fn(l * width));
             }
             bin_graphs.push_back(std::make_pair(std::move(fixed_pts), std::move(curve)));
