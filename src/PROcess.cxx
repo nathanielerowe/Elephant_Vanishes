@@ -181,6 +181,11 @@ namespace PROfit {
             }
         }
 
+        if(insyst.GetNCovar() == 0) {
+            Eigen::VectorXd final_spec = CollapseMatrix(inconfig, spec);
+            return PROspec(final_spec, final_spec.array().sqrt());
+        }
+
         // TODO: We probably just want to do this once and save it somewhere.
         // But where? PROpeller doesn't know about systs and PROsyst doesn't
         // know about cvspec.
