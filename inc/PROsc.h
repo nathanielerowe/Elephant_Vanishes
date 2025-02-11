@@ -2,6 +2,7 @@
 #define PROSC_H_
 
 // STANDARD
+#include <limits>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -89,6 +90,12 @@ namespace PROfit{
 
                 return prob;
             }
+
+        // TODO: Fix this to do more than numu disappearance
+        size_t nphysicsparams = 2;
+        Eigen::VectorXd lb{{-2, -std::numeric_limits<double>::infinity()}};
+        Eigen::VectorXd ub{{2, 0}};
+        std::vector<std::string> param_names{"dmsq", "sinsq2thmm"}; 
 
         std::vector<std::function<float(float,float,float,float)>> model_functions;
 

@@ -129,6 +129,7 @@ double PROchi::operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradien
     if(rungradient){
         float dval = 1e-4;
         for (int i = 0; i < nparams; i++) {
+            if(i == fixed_index) gradient(i) = 0;
             //Eigen::VectorXd tmpParams = last_param;
             Eigen::VectorXd tmpParams = param;
             int sgn = ((param(i) - last_param(i)) > 0) - ((param(i) - last_param(i)) < 0);

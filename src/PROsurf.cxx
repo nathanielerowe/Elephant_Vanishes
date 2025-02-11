@@ -1,4 +1,5 @@
 #include "PROsurf.h"
+#include "Eigen/src/Core/Matrix.h"
 #include "PROfitter.h"
 
 using namespace PROfit;
@@ -218,7 +219,7 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
 }
 
 
-int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename) {
+int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool with_osc) {
 
 
     LBFGSpp::LBFGSBParam<double> param;
@@ -228,15 +229,12 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     param.delta = 1e-6;
 
     LBFGSpp::LBFGSBSolver<double> solver(param);
-    int nparams = systs.GetNSplines();
+    int nparams = systs.GetNSplines() + 2 * with_osc;
     std::vector<float> physics_params; 
-
-
 
     int depth = std::ceil(nparams/4.0);
     TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
     c->Divide(4,depth);
-
 
     std::vector<std::unique_ptr<TGraph>> graphs; 
 
@@ -252,29 +250,37 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     }
     std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
 
-
-
     for(int w=0; w<nparams;w++){
         int which_spline = w;
-
 
         std::vector<double> knob_vals;
         std::vector<double> knob_chis;
 
         for(int i=0; i<=30;i++){
+            Eigen::VectorXd ub, lb;
 
-            //Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-            //Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-            Eigen::VectorXd ub = Eigen::VectorXd::Map(systs.spline_hi.data(), systs.spline_hi.size());
-            Eigen::VectorXd lb = Eigen::VectorXd::Map(systs.spline_lo.data(), systs.spline_lo.size());
+            if(with_osc) {
+                nparams = 2 + systs.GetNSplines();
+                lb = Eigen::VectorXd::Constant(nparams, -3.0);
+                lb(0) = osc.lb(0); lb(1) = osc.lb(1);
+                ub = Eigen::VectorXd::Constant(nparams, 3.0);
+                ub(0) = osc.ub(0); ub(1) = osc.ub(1);
+                for(int i = 2; i < nparams; ++i) {
+                    lb(i) = systs.spline_lo[i-2];
+                    ub(i) = systs.spline_hi[i-2];
+                }
+            } else {
+                ub = Eigen::VectorXd::Map(systs.spline_hi.data(), systs.spline_hi.size());
+                lb = Eigen::VectorXd::Map(systs.spline_lo.data(), systs.spline_lo.size());
+                nparams = systs.GetNSplines();
+            }
             Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
             Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
 
-
-            double which_value = -3.0+0.2*i;
+            double which_value = w == 1 ? -5.0 + i / 6.0 : lb(w) + (ub(w) - lb(w)) * i / 30.0;
             double fx;
-            knob_vals.push_back(which_value);
+            knob_vals.push_back(with_osc && w == 1 ? std::pow(10, which_value) : which_value);
 
             lb[which_spline] = which_value;
             ub[which_spline] = which_value;
@@ -339,8 +345,10 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
     log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two igma turned on? : %2% ") % __func__ % twosig;
 
+    int count = 0;
     for(auto &g:graphs){
-        std::vector<double> tmp = findMinAndBounds(g.get(),1.0,3.0);
+        double range = count == 0 ? 2.0 : count == 1 ? 1.0 : 3.0;
+        std::vector<double> tmp = findMinAndBounds(g.get(),1.0, range);
         bfvalues.push_back(tmp[0]);
         values1_down.push_back(tmp[1]);
         values1_up.push_back(tmp[2]);
@@ -350,6 +358,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             values2_down.push_back(tmp2[1]);
             values2_up.push_back(tmp2[2]);
         }
+        count++;
     }
 
     
@@ -405,7 +414,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             h2down->SetBinContent(i+1, values2_down[i]); 
         }
 
-        h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
+        //h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
 
     }
     h1up->SetTitle("");
