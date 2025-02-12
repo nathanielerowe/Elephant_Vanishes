@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
     p.Draw();
     c.Print((filename+"_pulls.pdf").c_str(), "pdf");
 
-    //PROfile(myConf, myprop, systs, osc, data, filename, true);
+    PROfile(myConf, myprop, systs, osc, data, filename, true);
 
     return 0;
 }
