@@ -76,8 +76,14 @@ namespace PROfit{
 
             /* Function: 3+1 numu->numue disapperance prob in SBL approx */
             float Pmumu(float dmsq, float sinsq2thmumu, float enu, float baseline) const{
-                if(sinsq2thmumu > 1) sinsq2thmumu = 1;
-                if(sinsq2thmumu < 0) sinsq2thmumu = 0;
+                if(sinsq2thmumu > 1) {
+                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is greater than 1") % __func__ % sinsq2thmumu;
+                    sinsq2thmumu = 1;
+                }
+                if(sinsq2thmumu < 0) {
+                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is less than 0") % __func__ % sinsq2thmumu;
+                    sinsq2thmumu = 0;
+                }
 
                 float sinterm = std::sin(1.27*dmsq*(baseline/enu));
                 float prob    = 1.0 - (sinsq2thmumu*sinterm*sinterm);

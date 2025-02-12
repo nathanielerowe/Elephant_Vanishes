@@ -250,6 +250,11 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     }
     std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
 
+    std::vector<std::string> names;
+    if(with_osc) for(const auto& name: osc.param_names) names.push_back(name);
+    for(const auto &name: systs.spline_names) names.push_back(name);
+    
+
     for(int w=0; w<nparams;w++){
         int which_spline = w;
 
@@ -286,17 +291,29 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             ub[which_spline] = which_value;
             x[which_spline] = which_value;
 
+            LBFGSpp::LBFGSBParam<double> param;
+            param.epsilon = 1e-6;
+            param.max_iterations = 100;
+            param.max_linesearch = 50;
+            param.delta = 1e-6;
 
-            PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
+            PROfitter fitter(ub, lb, param);
+
+            PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2);
             chi.fixSpline(which_spline,which_value);
 
-            log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
-            try {
-                x = Eigen::VectorXd::Constant(nparams, 0.012);
-                solver.minimize(chi, x, fx, lb, ub);
-            } catch(std::runtime_error &except) {
-                log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
-            }
+            fx = fitter.Fit(chi);
+
+           // log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
+           // try {
+           //     x = Eigen::VectorXd::Constant(nparams, 0.012);
+           //     if(w != 1) x(1) = -0.012;
+           //     solver.minimize(chi, x, fx, lb, ub);
+           // } catch(std::runtime_error &except) {
+           //     log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+           // }
+
+           // std::cout << "Best dmsq " << x(0) << " best sinsq2t " << x(1) << std::endl;
 
             std::string spec_string = "";
             for(auto &f : x) spec_string+=" "+std::to_string(f); 
@@ -311,7 +328,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
         c->cd(w+1);
         std::unique_ptr<TGraph> g = std::make_unique<TGraph>(knob_vals.size(), knob_vals.data(), knob_chis.data());
-        std::string tit = systs.spline_names[which_spline]+ ";#sigma Shift; #Chi^{2}";
+        std::string tit = names[w]+ ";#sigma Shift; #Chi^{2}";
         g->SetTitle(tit.c_str());
         graphs.push_back(std::move(g));
         graphs.back()->Draw("AL");
@@ -414,7 +431,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             h2down->SetBinContent(i+1, values2_down[i]); 
         }
 
-        //h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
+        h1up->GetXaxis()->SetBinLabel(i+1,names[i].c_str());
 
     }
     h1up->SetTitle("");
