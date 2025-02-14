@@ -46,22 +46,23 @@ int main(int argc, char* argv[])
     std::vector<std::string> syst_list, systs_excluded;
     bool eventbyevent = false;
 
-    bool covariance_plot = false, spline_plots = false, err_band_plot = false;
+    CLI::App *cv_command = app.add_subcommand("cv", "Make CV histograms");
+    CLI::App *cov_command = app.add_subcommand("covariance", "Make 2D histogram of covariance matrix");
+    CLI::App *spline_command = app.add_subcommand("splines", "Make graphs of the splines");
+    CLI::App *errband_command = app.add_subcommand("error-band", "Make error band");
 
+    // Options for whole application
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.")->required();
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].")->default_val(LOG_WARNING);
     app.add_option("-o,--output", filename, "Output Filename.")->default_val("PROplot.pdf");
-    app.add_option("--apply-osc", apply_osc, "Apply oscillations with these paramters to the CV spectrum.")->default_str("0 0");
-    app.add_option("--apply-shift", apply_shift, "Apply these shifts to the CV spectrum.");
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
 
     app.add_flag("--event-by-event",    eventbyevent, "Do you want to weight event-by-event?");
 
-    CLI::Option *all_flag = app.add_flag("-a,--all", "Make all plots");
-    app.add_flag("--covariance", covariance_plot, "Make TH2 representation of total fractional covariance matrix.")->excludes(all_flag);
-    app.add_flag("--splines", spline_plots, "Make TGraphs of the splines in each true bin")->excludes(all_flag);
-    app.add_flag("--error-band", err_band_plot, "Plot an error band on the CV. If saving to root file, will save as a TGraphAsymmErrors")->excludes(all_flag);
+
+    //app.add_option("--apply-osc", apply_osc, "Apply oscillations with these paramters to the CV spectrum.")->default_str("0 0");
+    //app.add_option("--apply-shift", apply_shift, "Apply these shifts to the CV spectrum.");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -100,49 +101,50 @@ int main(int argc, char* argv[])
       systs = systs.excluding(systs_excluded);
     }
    
-    std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config);
-    std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
-    std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
-    std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
 
     if(savetopdf) {
         TCanvas c;
         
         c.Print((filename + "[").c_str(), "pdf");
-        size_t global_subchannel_index = 0;
-        size_t global_channel_index = 0;
-        for(size_t im = 0; im < config.m_num_modes; im++){
-            for(size_t id =0; id < config.m_num_detectors; id++){
-                for(size_t ic = 0; ic < config.m_num_channels; ic++){
-                    std::unique_ptr<THStack> s = std::make_unique<THStack>((std::to_string(global_channel_index)).c_str(),(std::to_string(global_channel_index)).c_str());
-                    std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
-                    leg->SetFillStyle(0);
-                    leg->SetLineWidth(0);
-                    for(size_t sc = 0; sc < config.m_num_subchannels[ic]; sc++){
-                        const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
-                        s->Add(cv_hists[subchannel_name].get());
-                        leg->AddEntry(cv_hists[subchannel_name].get(), config.m_subchannel_plotnames[ic][sc].c_str() ,"f");
-                        ++global_subchannel_index;
+        if(*cv_command) {
+            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config);
+            size_t global_subchannel_index = 0;
+            size_t global_channel_index = 0;
+            for(size_t im = 0; im < config.m_num_modes; im++){
+                for(size_t id =0; id < config.m_num_detectors; id++){
+                    for(size_t ic = 0; ic < config.m_num_channels; ic++){
+                        std::unique_ptr<THStack> s = std::make_unique<THStack>((std::to_string(global_channel_index)).c_str(),(std::to_string(global_channel_index)).c_str());
+                        std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
+                        leg->SetFillStyle(0);
+                        leg->SetLineWidth(0);
+                        for(size_t sc = 0; sc < config.m_num_subchannels[ic]; sc++){
+                            const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
+                            s->Add(cv_hists[subchannel_name].get());
+                            leg->AddEntry(cv_hists[subchannel_name].get(), config.m_subchannel_plotnames[ic][sc].c_str() ,"f");
+                            ++global_subchannel_index;
+                        }
+
+                        s->Draw("hist");
+                        leg->Draw();
+
+                        s->SetTitle((config.m_mode_names[im]  +" "+ config.m_detector_names[id]+" "+ config.m_channel_names[ic]).c_str());
+                        s->GetXaxis()->SetTitle(config.m_channel_units[ic].c_str());
+                        s->GetYaxis()->SetTitle("Events/GeV");
+
+                        c.Print(filename.c_str(), "pdf");
                     }
-
-                    s->Draw("hist");
-                    leg->Draw();
-
-                    s->SetTitle((config.m_mode_names[im]  +" "+ config.m_detector_names[id]+" "+ config.m_channel_names[ic]).c_str());
-                    s->GetXaxis()->SetTitle(config.m_channel_units[ic].c_str());
-                    s->GetYaxis()->SetTitle("Events/GeV");
-
-                    c.Print(filename.c_str(), "pdf");
                 }
             }
         }
 
-        if(*all_flag || covariance_plot) {
+        if(*cov_command) {
+            std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
             covariance->Draw("colz");
             c.Print(filename.c_str(), "pdf");
         }
 
-        if(*all_flag || spline_plots) {
+        if(*spline_command) {
+            std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
             c.Clear();
             c.Divide(4,4);
             for(const auto &[syst_name, syst_bins]: spline_graphs) {
@@ -173,25 +175,31 @@ int main(int argc, char* argv[])
     } else {
         TFile fout(filename.c_str(), "RECREATE");
 
-        fout.mkdir("CV_hists");
-        fout.cd("CV_hists");
-        for(const auto &[name, hist]: cv_hists) {
-            hist->Write(name.c_str());
+        if(*cv_command) {
+            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config);
+            fout.mkdir("CV_hists");
+            fout.cd("CV_hists");
+            for(const auto &[name, hist]: cv_hists) {
+                hist->Write(name.c_str());
+            }
         }
 
-        if(*all_flag || covariance_plot) {
+        if(*cov_command) {
+            std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
             fout.mkdir("Covariance");
             fout.cd("Covariance");
             covariance->Write("collapsed_frac_cov");
         }
 
-        if(*all_flag || err_band_plot) {
+        if(*errband_command) {
+            std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
             fout.mkdir("ErrorBand");
             fout.cd("ErrorBand");
             err_band->Write("err_band");
         }
 
-        if(*all_flag || spline_plots) {
+        if(*spline_command) {
+            std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
             fout.mkdir("Splines");
             fout.cd("Splines");
             for(const auto &[name, syst_splines]: spline_graphs) {
