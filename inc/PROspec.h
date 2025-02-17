@@ -70,6 +70,8 @@ namespace PROfit{
             TH1D toTH1D(const PROconfig& inconfig, int subchannel_index) const;
             TH1D toTH1D(const PROconfig& inconfig, const std::string& subchannel_fullname) const;
 
+            TH1D toTH1D_Collapsed(const PROconfig& inconfig, int channel_index) const;
+
 
             /* Function: save TH1Ds of all subchannels into a root file */
             void toROOT(const PROconfig& inconfig, const std::string& output_name);

@@ -57,6 +57,25 @@ void PROspec::QuickFill(int bin_index, double weight){
     return;
 }
 
+TH1D PROspec::toTH1D_Collapsed(const PROconfig &inconfig, int channel_index) const {
+    int global_bin_start = inconfig.GetCollapsedGlobalBinStart(channel_index);
+    //set up hist specs
+    int nbins = inconfig.m_channel_num_bins[channel_index];
+    const std::vector<double>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
+    std::string hist_name = inconfig.m_channel_names[channel_index];
+    std::string xaxis_title = inconfig.m_channel_units[channel_index];
+
+    //fill 1D hist
+    TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
+    hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());
+    for(int i = 1; i <= nbins; ++i){
+        hSpec.SetBinContent(i, spec(global_bin_start + i -1));
+        hSpec.SetBinError(i, error(global_bin_start + i -1));
+    }
+
+    return hSpec;
+}
+
 
 TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index) const{
 
@@ -255,6 +274,7 @@ Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, co
 
 void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_name) const{
 
+    bool collapsed = spec.size() == inconfig.m_num_bins_total_collapsed;
     bool div_bin = true;
     int n_subplots = inconfig.m_num_channels*inconfig.m_num_modes*inconfig.m_num_detectors;
     log<LOG_DEBUG>(L"%1% || Creatign canvas with  %2% subplots") % __func__ % n_subplots;
@@ -280,53 +300,69 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
                 leg->SetFillStyle(0);
                 leg->SetLineWidth(0);
                 legs.push_back(std::move(leg));
-            
 
-                for(size_t sc = 0; sc < inconfig.m_num_subchannels[ic]; sc++){
-                    const std::string& subchannel_name  = inconfig.m_fullnames[global_subchannel_index];
-                    const std::string& color = inconfig.m_subchannel_colors[ic][sc];
-                    int rcolor = 0;
-                    if(color=="NONE"){
-                        rcolor = kRed-7; 
-                    }else{
-                        rcolor = inconfig.HexToROOTColor(color);
-                    }
-
-
-                    std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(toTH1D(inconfig, global_subchannel_index));
-                    htmp->SetLineWidth(1);
+                if(collapsed) {
+                    std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(toTH1D_Collapsed(inconfig, ic));
+                    htmp->SetLineWidth(3);
                     htmp->SetLineColor(kBlack);
-                    htmp->SetFillColor(rcolor);
-
-
                     hists.push_back(std::move(htmp));  // Move the unique_ptr into the vector
+                } else {
+                    for(size_t sc = 0; sc < inconfig.m_num_subchannels[ic]; sc++){
+                        const std::string& subchannel_name  = inconfig.m_fullnames[global_subchannel_index];
+                        const std::string& color = inconfig.m_subchannel_colors[ic][sc];
+                        int rcolor = 0;
+                        if(color=="NONE"){
+                            rcolor = kRed-7; 
+                        }else{
+                            rcolor = inconfig.HexToROOTColor(color);
+                        }
 
-                    log<LOG_DEBUG>(L"%1% || Printot %2% %3% %4% %5% %6% : Integral %7% ") % __func__ % global_channel_index % global_subchannel_index % subchannel_name.c_str() % sc % ic % hists.back()->Integral();
-            
-                    stacks.back()->Add(hists.back().get());
-                    legs.back()->AddEntry(hists.back().get(), inconfig.m_subchannel_plotnames[ic][sc].c_str() ,"f");
+
+                        std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(toTH1D(inconfig, global_subchannel_index));
+                        htmp->SetLineWidth(1);
+                        htmp->SetLineColor(kBlack);
+                        htmp->SetFillColor(rcolor);
 
 
-                    ++global_subchannel_index;
-                }//end subchan
+                        hists.push_back(std::move(htmp));  // Move the unique_ptr into the vector
 
+                        log<LOG_DEBUG>(L"%1% || Printot %2% %3% %4% %5% %6% : Integral %7% ") % __func__ % global_channel_index % global_subchannel_index % subchannel_name.c_str() % sc % ic % hists.back()->Integral();
+                
+                        stacks.back()->Add(hists.back().get());
+                        legs.back()->AddEntry(hists.back().get(), inconfig.m_subchannel_plotnames[ic][sc].c_str() ,"f");
+
+
+                        ++global_subchannel_index;
+                    }//end subchan
+                }
 
                 if(div_bin){
-                    TList *stlists = (TList*)stacks.back()->GetHists();
-                    for(const auto&& obj: *stlists){
-                        ((TH1*)obj)->Scale(1,"width");
-                        log<LOG_DEBUG>(L"%1% || Stack contains  %2% ") % __func__ % obj->GetName();
+                    if(collapsed) {
+                        hists.back()->Scale(1, "width");
+                    } else {
+                        TList *stlists = (TList*)stacks.back()->GetHists();
+                        for(const auto&& obj: *stlists){
+                            ((TH1*)obj)->Scale(1,"width");
+                            log<LOG_DEBUG>(L"%1% || Stack contains  %2% ") % __func__ % obj->GetName();
+                        }
                     }
                 }
 
-                log<LOG_DEBUG>(L"%1% || Stack Draw ") % __func__ ;
-                stacks.back()->Draw("hist");
-                log<LOG_DEBUG>(L"%1% || Legend Draw ") % __func__ ;
-                legs.back()->Draw();
+                if(collapsed) {
+                    hists.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
+                    hists.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
+                    hists.back()->GetYaxis()->SetTitle("Events");
+                    hists.back()->Draw("hist");
+                } else {
+                    log<LOG_DEBUG>(L"%1% || Stack Draw ") % __func__ ;
+                    stacks.back()->Draw("hist");
+                    log<LOG_DEBUG>(L"%1% || Legend Draw ") % __func__ ;
+                    legs.back()->Draw();
 
-                stacks.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
-                stacks.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
-                stacks.back()->GetYaxis()->SetTitle("Events/GeV");
+                    stacks.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
+                    stacks.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
+                    stacks.back()->GetYaxis()->SetTitle("Events/GeV");
+                }
 
                 ++global_channel_index;
             }//end chan

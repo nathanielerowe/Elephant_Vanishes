@@ -884,6 +884,18 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return m_vec_global_reco_index_start[index];
     }
 
+    size_t PROconfig::GetCollapsedGlobalBinStart(size_t channel_index) const{
+        if(channel_index >= m_num_channels) {
+            log<LOG_ERROR>(L"%1% || Requested bin start of channel %2%, but only %3% channels are known.")
+                % __func__ % channel_index % m_num_channels;
+            log<LOG_ERROR>(L"Terminating.");
+            exit(EXIT_FAILURE);
+        }
+        size_t index = 0;
+        for(size_t i = 0; i < channel_index; ++i) index += m_channel_num_bins[i];
+        return index;
+    }
+
     size_t PROconfig::GetGlobalTrueBinStart(size_t subchannel_index) const{
         size_t index = this->find_equal_index(m_vec_subchannel_index, subchannel_index);
         return m_vec_global_true_index_start[index];
