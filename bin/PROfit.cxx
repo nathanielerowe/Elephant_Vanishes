@@ -63,12 +63,12 @@ int main(int argc, char* argv[])
     std::cout << "Injected point: sinsq2t = " << injected_pt[0] << " dmsq = " << injected_pt[1] << std::endl;
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(myConf, myprop, systs, &osc, {0,0,0,0,0,0,0,0,0}, pparams, true) :
                    FillCVSpectrum(myConf, myprop, true);
-    Eigen::VectorXd data_vec = CollapseMatrix(myConf, data.Spec());
-    Eigen::VectorXd err_vec_sq = data.Error().array().square();
-    Eigen::VectorXd err_vec = CollapseMatrix(myConf, err_vec_sq).array().sqrt();
+    Eigen::VectorXf data_vec = CollapseMatrix(myConf, data.Spec());
+    Eigen::VectorXf err_vec_sq = data.Error().array().square();
+    Eigen::VectorXf err_vec = CollapseMatrix(myConf, err_vec_sq).array().sqrt();
     data = PROspec(data_vec, err_vec);
 
-    Eigen::VectorXd cv_spec = CollapseMatrix(myConf, FillCVSpectrum(myConf, myprop, true).Spec());
+    Eigen::VectorXf cv_spec = CollapseMatrix(myConf, FillCVSpectrum(myConf, myprop, true).Spec());
 
     TH1D cv_hist("cv", "CV", myConf.m_num_bins_total_collapsed, myConf.m_channel_bin_edges[0].data());
     TH1D data_hist("dh", "Data", myConf.m_num_bins_total_collapsed, myConf.m_channel_bin_edges[0].data());
@@ -83,16 +83,16 @@ int main(int argc, char* argv[])
     PROchi chi("", &myConf, &myprop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),
             PROfit::PROchi::BinnedChi2);
 
-    LBFGSpp::LBFGSBParam<double> param;  
+    LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
     param.max_linesearch = 250;
     param.delta = 1e-6;
 
     size_t nparams = 2 + systs.GetNSplines();
-    Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-    lb(0) = -2; lb(1) = -std::numeric_limits<double>::infinity();
-    Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+    Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
+    lb(0) = -2; lb(1) = -std::numeric_limits<float>::infinity();
+    Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
     ub(0) = 2; ub(1) = 0;
     for(size_t i = 2; i < nparams; ++i) {
         lb(i) = systs.spline_lo[i-2];
@@ -100,21 +100,21 @@ int main(int argc, char* argv[])
     }
     PROfitter fitter(ub, lb, param);
 
-    double chi2 = fitter.Fit(chi); 
-    Eigen::VectorXd best_fit = fitter.best_fit;
+    float chi2 = fitter.Fit(chi); 
+    Eigen::VectorXf best_fit = fitter.best_fit;
     //Eigen::MatrixXd post_covar = fitter.ScaledCovariance(chi2, myConf.m_num_bins_total_collapsed);
-    Eigen::MatrixXd post_covar = fitter.Covariance();
+    Eigen::MatrixXf post_covar = fitter.Covariance();
 
     //std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(myConf.m_num_bins_total_collapsed);
     std::string hname = "";
 
-    Eigen::VectorXd subvector1 = best_fit.segment(0, 2);
+    Eigen::VectorXf subvector1 = best_fit.segment(0, 2);
     std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
 
-    Eigen::VectorXd subvector2 = best_fit.segment(2, systs.GetNSplines());
+    Eigen::VectorXf subvector2 = best_fit.segment(2, systs.GetNSplines());
     std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
 
-    Eigen::VectorXd post_fit = CollapseMatrix(myConf, FillRecoSpectra(myConf, myprop, systs, &osc, shifts, fitparams, true).Spec());
+    Eigen::VectorXf post_fit = CollapseMatrix(myConf, FillRecoSpectra(myConf, myprop, systs, &osc, shifts, fitparams, true).Spec());
     TH1D post_hist("ph", hname.c_str(), myConf.m_num_bins_total_collapsed, myConf.m_channel_bin_edges[0].data());
     for(size_t i = 0; i < myConf.m_num_bins_total_collapsed; ++i) {
         post_hist.SetBinContent(i+1, post_fit(i));

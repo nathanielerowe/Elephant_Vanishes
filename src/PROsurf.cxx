@@ -254,9 +254,9 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
             if(with_osc) {
                 nparams = 2 + systs.GetNSplines();
-                lb = Eigen::VectorXd::Constant(nparams, -3.0);
+                lb = Eigen::VectorXf::Constant(nparams, -3.0);
                 lb(0) = osc.lb(0); lb(1) = osc.lb(1);
-                ub = Eigen::VectorXd::Constant(nparams, 3.0);
+                ub = Eigen::VectorXf::Constant(nparams, 3.0);
                 ub(0) = osc.ub(0); ub(1) = osc.ub(1);
                 for(int i = 2; i < nparams; ++i) {
                     lb(i) = systs.spline_lo[i-2];
