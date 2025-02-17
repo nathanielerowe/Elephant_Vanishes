@@ -29,10 +29,10 @@ using namespace PROfit;
 
 log_level_t GLOBAL_LEVEL;
 
-std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig);
+std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
 std::unique_ptr<TH2D> covarianceTH2D(const PROsyst &syst, const PROconfig &config);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
-std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst);
+std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false);
 
 int main(int argc, char* argv[])
 {
@@ -44,12 +44,13 @@ int main(int argc, char* argv[])
     std::array<float, 2> apply_osc{0, 0};
     std::map<std::string, float> apply_shift;
     std::vector<std::string> syst_list, systs_excluded;
-    bool eventbyevent = false;
+    bool eventbyevent = false, with_splines = false, all_scale = false, cv_scale = false, err_scale = false;
 
     CLI::App *cv_command = app.add_subcommand("cv", "Make CV histograms");
     CLI::App *cov_command = app.add_subcommand("covariance", "Make 2D histogram of covariance matrix");
     CLI::App *spline_command = app.add_subcommand("splines", "Make graphs of the splines");
     CLI::App *errband_command = app.add_subcommand("error-band", "Make error band");
+    CLI::App *all = app.add_subcommand("all", "Make all plots (splines optional) using default options.");
 
     // Options for whole application
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.")->required();
@@ -59,6 +60,11 @@ int main(int argc, char* argv[])
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
 
     app.add_flag("--event-by-event",    eventbyevent, "Do you want to weight event-by-event?");
+
+    cv_command->add_flag("--scale-by-width", cv_scale, "Scale histgrams by 1/(bin width).");
+    errband_command->add_flag("--scale-by-width", err_scale, "Scale histgrams by 1/(bin width).");
+    all->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
+    all->add_flag("--scale-by-width", all_scale, "Scale histgrams by 1/(bin width).");
 
 
     //app.add_option("--apply-osc", apply_osc, "Apply oscillations with these paramters to the CV spectrum.")->default_str("0 0");
@@ -106,8 +112,8 @@ int main(int argc, char* argv[])
         TCanvas c;
         
         c.Print((filename + "[").c_str(), "pdf");
-        if(*cv_command) {
-            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config);
+        if(*all || *cv_command) {
+            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, cv_scale || all_scale);
             size_t global_subchannel_index = 0;
             size_t global_channel_index = 0;
             for(size_t im = 0; im < config.m_num_modes; im++){
@@ -137,13 +143,13 @@ int main(int argc, char* argv[])
             }
         }
 
-        if(*cov_command) {
+        if(*all || *cov_command) {
             std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
             covariance->Draw("colz");
             c.Print(filename.c_str(), "pdf");
         }
 
-        if(*spline_command) {
+        if((*all && with_splines) || *spline_command) {
             std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
             c.Clear();
             c.Divide(4,4);
@@ -175,8 +181,8 @@ int main(int argc, char* argv[])
     } else {
         TFile fout(filename.c_str(), "RECREATE");
 
-        if(*cv_command) {
-            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config);
+        if(*all || *cv_command) {
+            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, cv_scale || all_scale);
             fout.mkdir("CV_hists");
             fout.cd("CV_hists");
             for(const auto &[name, hist]: cv_hists) {
@@ -184,21 +190,21 @@ int main(int argc, char* argv[])
             }
         }
 
-        if(*cov_command) {
+        if(*all || *cov_command) {
             std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
             fout.mkdir("Covariance");
             fout.cd("Covariance");
             covariance->Write("collapsed_frac_cov");
         }
 
-        if(*errband_command) {
-            std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
+        if(*all || *errband_command) {
+            std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, err_scale || all_scale);
             fout.mkdir("ErrorBand");
             fout.cd("ErrorBand");
             err_band->Write("err_band");
         }
 
-        if(*spline_command) {
+        if((*all && with_splines) || *spline_command) {
             std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
             fout.mkdir("Splines");
             fout.cd("Splines");
@@ -216,9 +222,7 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, const PROconfig& inconfig) {
-    bool div_bin = true;
-
+std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, const PROconfig& inconfig, bool scale) {
     std::map<std::string, std::unique_ptr<TH1D>> hists;  
 
     size_t global_subchannel_index = 0;
@@ -234,7 +238,7 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, con
                     htmp->SetLineWidth(1);
                     htmp->SetLineColor(kBlack);
                     htmp->SetFillColor(rcolor);
-                    if(div_bin) htmp->Scale(1,"width");
+                    if(scale) htmp->Scale(1,"width");
                     hists[subchannel_name] = std::move(htmp);
 
                     log<LOG_DEBUG>(L"%1% || Printot %2% %3% %4% %5% %6% : Integral %7% ") % __func__ % global_channel_index % global_subchannel_index % subchannel_name.c_str() % sc % ic % hists[subchannel_name]->Integral();
@@ -297,7 +301,7 @@ getSplineGraphs(const PROsyst &systs, const PROconfig &config) {
     return spline_graphs;
 }
 
-std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst) {
+std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale) {
     //TODO: Only works with 1 mode/detector/channel
     Eigen::VectorXd cv = CollapseMatrix(config, FillCVSpectrum(config, prop, true).Spec());
     std::vector<double> edges = config.GetChannelBinEdges(0);
@@ -311,6 +315,7 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     TH1D tmphist("th", "", cv.size(), edges.data());
     for(size_t i = 0; i < cv.size(); ++i)
         tmphist.SetBinContent(i+1, cv(i));
+    if(scale) tmphist.Scale(1, "width");
     //std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
     std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(&tmphist);
     for(size_t i = 0; i < cv.size(); ++i) {
@@ -318,9 +323,10 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
         for(size_t j = 0; j < 1000; ++j) {
             binconts[j] = specs[j](i);
         }
+        double scale_factor = tmphist.GetBinContent(i+1)/cv(i);
         std::sort(binconts.begin(), binconts.end());
-        double ehi = std::abs(binconts[840] - cv(i));
-        double elo = std::abs(cv(i) - binconts[160]);
+        double ehi = std::abs((binconts[840] - cv(i))*scale_factor);
+        double elo = std::abs((cv(i) - binconts[160])*scale_factor);
         ret->SetPointEYhigh(i, ehi);
         ret->SetPointEYlow(i, elo);
     }
