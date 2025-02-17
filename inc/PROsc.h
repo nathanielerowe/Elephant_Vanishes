@@ -90,7 +90,7 @@ namespace PROfit{
                 return prob;
             }
 
-        std::vector<std::function<float(float,float,float,float)>> model_functions;
+        std::vector<std::function<float(std::vector<float>,float,float)>> model_functions;
 
         std::vector<Eigen::MatrixXd> hists;
 

@@ -231,7 +231,8 @@ namespace PROfit {
 
     float GetOscWeight(int rule, float le, const PROsc &inosc, const std::vector<float> &inphysparams) {
         // The model functions take L and E separately, so give E as 1 and L as L/E
-        return inosc.model_functions[rule](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), 1, le);
+        // input here is in logspace, and the model functions also expect log space NOW std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1])
+        return inosc.model_functions[rule](inphysparams, 1, le);
     }
 
     float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, const std::vector<float> &inphysparams) {
@@ -240,9 +241,9 @@ namespace PROfit {
         //for now everything is numu disappearance 3+1. 
         // inphysparams[0] is log(delta-msq)
         // inphysparams[1] is sinsq2thmumu
+        // input here is in logspace, and the model functions also expect log space NOW std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1])
 
-//        float prob2 = inosc.Pmumu(std::pow(10, inphysparams[0]), inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx]);
-        float prob = inosc.model_functions[inprop.model_rule[ev_idx]](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), inprop.truth[ev_idx], inprop.baseline[ev_idx] );
+        float prob = inosc.model_functions[inprop.model_rule[ev_idx]](inphysparams, inprop.truth[ev_idx], inprop.baseline[ev_idx] );
         return prob;
     }
 
