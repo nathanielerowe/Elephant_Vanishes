@@ -1,5 +1,7 @@
 #include "PROsurf.h"
 #include "PROfitter.h"
+#include "PROCNP.h"
+#include "PROlog.h"
 
 using namespace PROfit;
 
@@ -30,9 +32,7 @@ std::vector<int> sorted_indices(const std::vector<double>& vec) {
     return indices;
 }
 
-
-
-PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbinsy, LogLin lly, double y_lo, double y_hi) : nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXd::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXd::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
+PROsurf::PROsurf(PROmetric &metric, size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbinsy, LogLin lly, double y_lo, double y_hi) : metric(metric), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXd::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXd::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
     if(llx == LogAxis) {
         x_lo = std::log10(x_lo);
         x_hi = std::log10(x_hi);
@@ -47,10 +47,8 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceStat(const PROconfig &config, const PROpeller &prop, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
+void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
     std::ofstream chi_file;
-    PROchi::EvalStrategy strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
-
     if(!filename.empty()){
         chi_file.open(filename);
     }
@@ -59,38 +57,44 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, const PROpeller &prop, co
     dummy_syst.fractional_covariance = Eigen::MatrixXd::Constant(config.m_num_bins_total, config.m_num_bins_total, 0);
     Eigen::VectorXd empty_vec;
 
+    PROmetric *local_metric = metric.Clone();
+    local_metric->override_systs(dummy_syst);
+
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
-            PROchi chi("3plus1",&config,&prop,&dummy_syst,&osc, data, 0, 0, strat, physics_params);
-            double fx = chi(empty_vec, empty_vec, false);
+            local_metric->set_physics_param_fixed(physics_params);
+            double fx = (*local_metric)(empty_vec, empty_vec, false);
             surface(i, j) = fx;
             if(!filename.empty()){
                 chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx<<std::flush;
             }
         }
     }
+    delete local_metric;
 }
 
-std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpeller *prop, const PROsyst *systs, const PROsc *osc, const PROspec *data, std::vector<surfOut> multi_physics_params, PROchi::EvalStrategy strat, bool binned_weighting, int start, int end){
-
-    strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
-
+std::vector<surfOut> PROsurf::PointHelper(const PROsyst *systs, std::vector<surfOut> multi_physics_params, int start, int end){
     std::vector<surfOut> outs;
 
+    // Make a local copy for this thread
+    PROmetric *local_metric = metric.Clone();
+
     for(int i=start; i<end;i++){
+        local_metric->reset();
 
         surfOut output;
         std::vector<float> physics_params = multi_physics_params[i].grid_val;
         output.grid_val = physics_params;
         output.grid_index = multi_physics_params[i].grid_index;
 
+        local_metric->set_physics_param_fixed(physics_params);
+
         int nparams = systs->GetNSplines();
-        PROchi chi("3plus1",config,prop,systs,osc,*data, nparams, systs->GetNSplines(), strat, physics_params);
 
         if(nparams == 0) {
             Eigen::VectorXd empty_vec;
-            output.chi = chi(empty_vec, empty_vec, false);
+            output.chi = (*local_metric)(empty_vec, empty_vec, false);
             outs.push_back(output);
             continue;
         }
@@ -101,40 +105,26 @@ std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpell
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
-        //Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-        //Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
         Eigen::VectorXd lb = Eigen::VectorXd::Map(systs->spline_lo.data(), systs->spline_lo.size());
         Eigen::VectorXd ub = Eigen::VectorXd::Map(systs->spline_hi.data(), systs->spline_hi.size());
 
         PROfitter fitter(ub, lb, param);
-        output.chi = fitter.Fit(chi);
+        output.chi = fitter.Fit(*local_metric);
         outs.push_back(output);
 
     }
+    
+    delete local_metric;
 
     return outs;
-
 }
 
 
-void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nThreads) {
-
-    std::random_device rd{};
-    std::mt19937 rng{rd()};
-    std::normal_distribution<float> d;
-    std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
-    PROchi::EvalStrategy strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
-
-    int nparams = systs.GetNSplines();
-    Eigen::VectorXd lastx = Eigen::VectorXd::Constant(nparams, 0.01);
-
+void PROsurf::FillSurface(const PROsyst &systs, std::string filename, int nThreads) {
     std::ofstream chi_file;
-
     if(!filename.empty()){
         chi_file.open(filename);
     }
-
-    //data.plotSpectrum(config,"TTCV");
 
     std::vector<surfOut> grid;
     for(size_t i = 0; i < nbinsx; i++) {
@@ -149,8 +139,6 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
     int loopSize = grid.size();
     int chunkSize = loopSize / nThreads;
 
-    //std::vector<surfOut> PointHelper(const PROconfig *config, const PROpeller *prop, const PROsyst *systs, const PROosc *osc, const PROspec *data, std::vector<surfOut>> multi_physics_params, PROchi::EvalStrategy strat, bool binned_weighting, int start, int end);
-
     std::vector<std::future<std::vector<surfOut>>> futures; 
 
     log<LOG_INFO>(L"%1% || Starting THREADS  : %2% , Loops %3%, Chunks %4%") % __func__ % nThreads % loopSize % chunkSize;
@@ -159,8 +147,8 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-                    return this->PointHelper(&config, &prop, &systs, &osc, &data, grid, strat, binned_weighting, start, end);
-                    }));
+            return this->PointHelper(&systs, grid, start, end);
+        }));
 
     }
 

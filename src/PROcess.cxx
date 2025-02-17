@@ -33,6 +33,37 @@ namespace PROfit {
 
     }
 
+    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsc *inosc, const std::vector<float> &physparams, bool binned){
+
+        PROspec myspectrum(inconfig.m_num_bins_total);
+
+        if(binned) {
+            for(long int i = 0; i < inprop.hist.rows(); ++i) {
+                float le = inprop.histLE[i];
+                if(physparams.size() != 0) {
+                    for(size_t j = 0; j < inosc->model_functions.size(); ++j) {
+                        float oscw = GetOscWeight(j, le, *inosc, physparams);
+                        for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
+                            myspectrum.Fill(k, oscw * inosc->hists[j](i, k));
+                        }
+                    }
+                } else {
+                    for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
+                        myspectrum.Fill(k, inprop.hist(i, k));
+                    }
+                }
+            }
+        } else {
+            for(size_t i = 0; i<inprop.truth.size(); ++i){
+                float oscw  = physparams.size() != 0 ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
+                float add_w = inprop.added_weights[i]; 
+                myspectrum.Fill(inprop.bin_indices[i], oscw * add_w);
+            }
+        }
+        return myspectrum;
+
+    }
+
     PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, const std::vector<float> &inshifts, const std::vector<float> &physparams, bool binned){
 
         PROspec myspectrum(inconfig.m_num_bins_total);
