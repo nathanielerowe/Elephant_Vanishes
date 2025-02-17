@@ -10,12 +10,12 @@
 using namespace PROfit;
 
 static inline
-std::vector<std::vector<double>> latin_hypercube_sampling(size_t num_samples, size_t dimensions, std::uniform_real_distribution<float>&dis, std::mt19937 &gen) {
-    std::vector<std::vector<double>> samples(num_samples, std::vector<double>(dimensions));
+std::vector<std::vector<float>> latin_hypercube_sampling(size_t num_samples, size_t dimensions, std::uniform_real_distribution<float>&dis, std::mt19937 &gen) {
+    std::vector<std::vector<float>> samples(num_samples, std::vector<float>(dimensions));
 
     for (size_t d = 0; d < dimensions; ++d) {
 
-        std::vector<double> perm(num_samples);
+        std::vector<float> perm(num_samples);
         for (size_t i = 0; i < num_samples; ++i) {
             perm[i] = (i + dis(gen)) / num_samples;  
         }
@@ -29,7 +29,7 @@ std::vector<std::vector<double>> latin_hypercube_sampling(size_t num_samples, si
 }
 
 static inline
-std::vector<int> sorted_indices(const std::vector<double>& vec) {
+std::vector<int> sorted_indices(const std::vector<float>& vec) {
     std::vector<int> indices(vec.size());
     for (size_t i = 0; i < vec.size(); ++i) {
         indices[i] = i;
@@ -38,33 +38,33 @@ std::vector<int> sorted_indices(const std::vector<double>& vec) {
     return indices;
 }
 
-double PROfitter::Fit(PROmetric &metric) {
+float PROfitter::Fit(PROmetric &metric) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
     std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
 
-    std::vector<std::vector<double>> latin_samples = latin_hypercube_sampling(n_multistart, ub.size(), d_uni,rng);
-    for(std::vector<double> &pt: latin_samples) {
+    std::vector<std::vector<float>> latin_samples = latin_hypercube_sampling(n_multistart, ub.size(), d_uni,rng);
+    for(std::vector<float> &pt: latin_samples) {
         for(size_t i = 0; i < pt.size(); ++i) {
             if(ub(i) != 3 || lb(i) != -3) {
-                double width = std::isinf(ub(i)) || std::isinf(lb(i)) ? 4 : ub(i) - lb(i);
-                double center = std::isinf(ub(i)) ? lb(i) + width/2.0 :
+                float width = std::isinf(ub(i)) || std::isinf(lb(i)) ? 4 : ub(i) - lb(i);
+                float center = std::isinf(ub(i)) ? lb(i) + width/2.0 :
                                 std::isinf(lb(i)) ? ub(i) - width/2.0 :
                                 (ub(i) + lb(i)) / 2.0;
-                double randpt = pt[i] / 4.0;
+                float randpt = pt[i] / 4.0;
                 pt[i] = center + randpt * width;
             }
         }
     }
-    std::vector<double> chi2s_multistart;
+    std::vector<float> chi2s_multistart;
     chi2s_multistart.reserve(n_multistart);
 
     log<LOG_INFO>(L"%1% || Starting MultiGlobal runs : %2%") % __func__ % n_multistart ;
     for(int s = 0; s < n_multistart; s++){
-        Eigen::VectorXd x = Eigen::Map<Eigen::VectorXd>(latin_samples[s].data(), latin_samples[s].size());
-        Eigen::VectorXd grad = Eigen::VectorXd::Constant(x.size(), 0);
-        double fx =  metric(x, grad, false);
+        Eigen::VectorXf x = Eigen::Map<Eigen::VectorXf>(latin_samples[s].data(), latin_samples[s].size());
+        Eigen::VectorXf grad = Eigen::VectorXf::Constant(x.size(), 0);
+        float fx =  metric(x, grad, false);
         chi2s_multistart.push_back(fx);
 
     }
@@ -74,16 +74,16 @@ double PROfitter::Fit(PROmetric &metric) {
     log<LOG_INFO>(L"%1% || Ending MultiGlobal Best two are : %2% and %3%") % __func__ % chi2s_multistart[best_multistart[0]] %   chi2s_multistart[best_multistart[1]];
     log<LOG_INFO>(L"%1% || Best Points is  : %2% ") % __func__ % latin_samples[best_multistart[0]];
 
-    std::vector<double> chi2s_localfits;
+    std::vector<float> chi2s_localfits;
     chi2s_localfits.reserve(n_localfit);
-    double chimin = 9999999;
+    float chimin = 9999999;
 
     log<LOG_INFO>(L"%1% || Starting Local Gradients runs : %2%") % __func__ % n_localfit ;
     for(int s = 0; s < n_localfit; s++){
         //Get the nth
-        Eigen::VectorXd x = Eigen::Map<Eigen::VectorXd>( latin_samples[best_multistart[s]].data(), latin_samples[best_multistart[s]].size());   
+        Eigen::VectorXf x = Eigen::Map<Eigen::VectorXf>( latin_samples[best_multistart[s]].data(), latin_samples[best_multistart[s]].size());   
         int niter;
-        double fx;
+        float fx;
         try {
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
@@ -104,10 +104,10 @@ double PROfitter::Fit(PROmetric &metric) {
     // and do CV
     log<LOG_INFO>(L"%1% || Starting CV fit ") % __func__  ;
     int niter;
-    double fx;
-    Eigen::VectorXd x;
+    float fx;
+    Eigen::VectorXf x;
     try {
-        x = Eigen::VectorXd::Constant(best_fit.size(), 0.012);
+        x = Eigen::VectorXf::Constant(best_fit.size(), 0.012);
         niter = solver.minimize(metric, x, fx, lb, ub);
     } catch(std::runtime_error &except) {
         log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();

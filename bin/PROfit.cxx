@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     std::map<std::string, float> injected_systs;
     int maxevents = 100;
 
-    //doubles
+    //floats
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");

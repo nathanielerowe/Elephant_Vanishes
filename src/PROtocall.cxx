@@ -2,12 +2,12 @@
 
 namespace PROfit{
 
-    int FindGlobalBin(const PROconfig &inconfig, double reco_value, const std::string& subchannel_fullname){
+    int FindGlobalBin(const PROconfig &inconfig, float reco_value, const std::string& subchannel_fullname){
         int subchannel_index = inconfig.GetSubchannelIndex(subchannel_fullname);
         return FindGlobalBin(inconfig, reco_value, subchannel_index);
     }
 
-    int FindGlobalBin(const PROconfig &inconfig, double reco_value, int subchannel_index){
+    int FindGlobalBin(const PROconfig &inconfig, float reco_value, int subchannel_index){
         int global_bin_start = inconfig.GetGlobalBinStart(subchannel_index);
         int channel_index = inconfig.GetChannelIndex(subchannel_index);
         int local_bin = FindLocalBin(inconfig, reco_value, channel_index);
@@ -15,10 +15,10 @@ namespace PROfit{
     }
 
 
-    int FindLocalBin(const PROconfig &inconfig, double reco_value, int channel_index){
+    int FindLocalBin(const PROconfig &inconfig, float reco_value, int channel_index){
 
         //find local bin 
-        const std::vector<double>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
+        const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
         auto pos_iter = std::upper_bound(bin_edges.begin(), bin_edges.end(), reco_value);
 
         //over/under-flow, don't care for now
@@ -30,12 +30,12 @@ namespace PROfit{
         return pos_iter - bin_edges.begin() - 1; 
     }
 
-    int FindGlobalTrueBin(const PROconfig &inconfig, double true_value, const std::string& subchannel_fullname){
+    int FindGlobalTrueBin(const PROconfig &inconfig, float true_value, const std::string& subchannel_fullname){
         int subchannel_index = inconfig.GetSubchannelIndex(subchannel_fullname);
         return FindGlobalTrueBin(inconfig, true_value, subchannel_index);
     }
 
-    int FindGlobalTrueBin(const PROconfig &inconfig, double true_value, int subchannel_index){
+    int FindGlobalTrueBin(const PROconfig &inconfig, float true_value, int subchannel_index){
         int global_bin_start = inconfig.GetGlobalTrueBinStart(subchannel_index);
         int channel_index = inconfig.GetChannelIndex(subchannel_index);
         if(inconfig.GetChannelNTrueBins(channel_index) == 0){
@@ -48,10 +48,10 @@ namespace PROfit{
     }
 
 
-    int FindLocalTrueBin(const PROconfig &inconfig, double true_value, int channel_index){
+    int FindLocalTrueBin(const PROconfig &inconfig, float true_value, int channel_index){
 
         //find local bin 
-        const std::vector<double>& bin_edges = inconfig.GetChannelTrueBinEdges(channel_index);
+        const std::vector<float>& bin_edges = inconfig.GetChannelTrueBinEdges(channel_index);
         auto pos_iter = std::upper_bound(bin_edges.begin(), bin_edges.end(), true_value);
 
         //over/under-flow, don't care for now
@@ -70,8 +70,8 @@ namespace PROfit{
             return inconfig.GetSubchannelIndexFromGlobalTrueBin(global_bin);
     }
 
-    Eigen::MatrixXd CollapseMatrix(const PROconfig &inconfig, const Eigen::MatrixXd& full_matrix){
-        Eigen::MatrixXd collapsing_matrix = inconfig.GetCollapsingMatrix();
+    Eigen::MatrixXf CollapseMatrix(const PROconfig &inconfig, const Eigen::MatrixXf& full_matrix){
+        Eigen::MatrixXf collapsing_matrix = inconfig.GetCollapsingMatrix();
         
         int num_bin_before_collapse = collapsing_matrix.rows();
         if(full_matrix.rows() != num_bin_before_collapse || full_matrix.cols() != num_bin_before_collapse){
@@ -81,18 +81,18 @@ namespace PROfit{
         }
 
         //log<LOG_DEBUG>(L"%1% || CT  %2% x %3%. Full matrix: %4% x %5% ") % __func__ % collapsing_matrix.transpose().rows() %  collapsing_matrix.transpose().cols() % full_matrix.rows() % full_matrix.cols();
-        Eigen::MatrixXd result_matrix   = collapsing_matrix.transpose()*full_matrix*collapsing_matrix;
+        Eigen::MatrixXf result_matrix   = collapsing_matrix.transpose()*full_matrix*collapsing_matrix;
         return result_matrix;
     }
 
-    Eigen::VectorXd CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXd& full_vector){
-        Eigen::MatrixXd collapsing_matrix = inconfig.GetCollapsingMatrix();
+    Eigen::VectorXf CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXf& full_vector){
+        Eigen::MatrixXf collapsing_matrix = inconfig.GetCollapsingMatrix();
         if(full_vector.size() != collapsing_matrix.rows()){
             log<LOG_ERROR>(L"%1% || Vector dimension doesn't match expected size. Provided vector size: %2% . Expected size: %3%") % __func__ % full_vector.size() % collapsing_matrix.rows();
             log<LOG_ERROR>(L"Terminating.");
             exit(EXIT_FAILURE);
         }
-        Eigen::VectorXd result_vector = collapsing_matrix.transpose() * full_vector;
+        Eigen::VectorXf result_vector = collapsing_matrix.transpose() * full_vector;
         return result_vector;
     }
 

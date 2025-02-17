@@ -46,8 +46,8 @@ namespace PROfit{
                 model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmue(a, b, c, d); });
 
                 for(size_t m = 0; m < model_functions.size(); ++m) {
-                    hists.emplace_back(Eigen::MatrixXd::Constant(prop.hist.rows(), prop.hist.cols(),0.0));
-                    Eigen::MatrixXd &h = hists.back();
+                    hists.emplace_back(Eigen::MatrixXf::Constant(prop.hist.rows(), prop.hist.cols(),0.0));
+                    Eigen::MatrixXf &h = hists.back();
                     for(size_t i = 0; i < prop.bin_indices.size(); ++i) {
                         if(prop.model_rule[i] != (int)m) continue;
                         int tbin = prop.true_bin_indices[i], rbin = prop.bin_indices[i];
@@ -99,13 +99,13 @@ namespace PROfit{
 
         // TODO: Fix this to do more than numu disappearance
         size_t nphysicsparams = 2;
-        Eigen::VectorXd lb{{-2, -std::numeric_limits<double>::infinity()}};
-        Eigen::VectorXd ub{{2, 0}};
+        Eigen::VectorXf lb{{-2, -std::numeric_limits<float>::infinity()}};
+        Eigen::VectorXf ub{{2, 0}};
         std::vector<std::string> param_names{"dmsq", "sinsq2thmm"}; 
 
         std::vector<std::function<float(float,float,float,float)>> model_functions;
 
-        std::vector<Eigen::MatrixXd> hists;
+        std::vector<Eigen::MatrixXf> hists;
 
     };
 

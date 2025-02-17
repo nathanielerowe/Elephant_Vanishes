@@ -1470,7 +1470,7 @@ enum class object_category : int {
     boolean_value = 8,
     floating_point = 10,
     number_constructible = 12,
-    double_constructible = 14,
+    float_constructible = 14,
     integer_constructible = 16,
     // string like types
     string_assignable = 23,
@@ -1571,11 +1571,11 @@ struct classify_object<T,
     static constexpr object_category value{object_category::wrapper_value};
 };
 
-/// Assignable from double or int
+/// Assignable from float or int
 template <typename T>
 struct classify_object<T,
                        typename std::enable_if<uncommon_type<T>::value && type_count<T>::value == 1 &&
-                                               !is_wrapper<T>::value && is_direct_constructible<T, double>::value &&
+                                               !is_wrapper<T>::value && is_direct_constructible<T, float>::value &&
                                                is_direct_constructible<T, int>::value>::type> {
     static constexpr object_category value{object_category::number_constructible};
 };
@@ -1584,18 +1584,18 @@ struct classify_object<T,
 template <typename T>
 struct classify_object<T,
                        typename std::enable_if<uncommon_type<T>::value && type_count<T>::value == 1 &&
-                                               !is_wrapper<T>::value && !is_direct_constructible<T, double>::value &&
+                                               !is_wrapper<T>::value && !is_direct_constructible<T, float>::value &&
                                                is_direct_constructible<T, int>::value>::type> {
     static constexpr object_category value{object_category::integer_constructible};
 };
 
-/// Assignable from double
+/// Assignable from float
 template <typename T>
 struct classify_object<T,
                        typename std::enable_if<uncommon_type<T>::value && type_count<T>::value == 1 &&
-                                               !is_wrapper<T>::value && is_direct_constructible<T, double>::value &&
+                                               !is_wrapper<T>::value && is_direct_constructible<T, float>::value &&
                                                !is_direct_constructible<T, int>::value>::type> {
-    static constexpr object_category value{object_category::double_constructible};
+    static constexpr object_category value{object_category::float_constructible};
 };
 
 /// Tuple type
@@ -1604,7 +1604,7 @@ struct classify_object<
     T,
     typename std::enable_if<is_tuple_like<T>::value &&
                             ((type_count<T>::value >= 2 && !is_wrapper<T>::value) ||
-                             (uncommon_type<T>::value && !is_direct_constructible<T, double>::value &&
+                             (uncommon_type<T>::value && !is_direct_constructible<T, float>::value &&
                               !is_direct_constructible<T, int>::value) ||
                              (uncommon_type<T>::value && type_count<T>::value >= 2))>::type> {
     static constexpr object_category value{object_category::tuple_value};
@@ -1649,7 +1649,7 @@ constexpr const char *type_name() {
 template <typename T,
           enable_if_t<classify_object<T>::value == object_category::floating_point ||
                           classify_object<T>::value == object_category::number_constructible ||
-                          classify_object<T>::value == object_category::double_constructible,
+                          classify_object<T>::value == object_category::float_constructible,
                       detail::enabler> = detail::dummy>
 constexpr const char *type_name() {
     return "FLOAT";
@@ -1889,7 +1889,7 @@ bool lexical_cast(const std::string &input, T &output) {
 template <typename T,
           enable_if_t<classify_object<T>::value == object_category::complex_number, detail::enabler> = detail::dummy>
 bool lexical_cast(const std::string &input, T &output) {
-    using XC = typename wrapped_type<T, double>::type;
+    using XC = typename wrapped_type<T, float>::type;
     XC x{0.0}, y{0.0};
     auto str1 = input;
     bool worked = false;
@@ -1973,7 +1973,7 @@ bool lexical_cast(const std::string &input, T &output) {
     return from_stream(input, output);
 }
 
-/// Assignable from double or int
+/// Assignable from float or int
 template <
     typename T,
     enable_if_t<classify_object<T>::value == object_category::number_constructible, detail::enabler> = detail::dummy>
@@ -1984,7 +1984,7 @@ bool lexical_cast(const std::string &input, T &output) {
         return true;
     }
 
-    double dval = 0.0;
+    float dval = 0.0;
     if(lexical_cast(input, dval)) {
         output = T{dval};
         return true;
@@ -2006,12 +2006,12 @@ bool lexical_cast(const std::string &input, T &output) {
     return from_stream(input, output);
 }
 
-/// Assignable from double
+/// Assignable from float
 template <
     typename T,
-    enable_if_t<classify_object<T>::value == object_category::double_constructible, detail::enabler> = detail::dummy>
+    enable_if_t<classify_object<T>::value == object_category::float_constructible, detail::enabler> = detail::dummy>
 bool lexical_cast(const std::string &input, T &output) {
-    double val = 0.0;
+    float val = 0.0;
     if(lexical_cast(input, val)) {
         output = T{val};
         return true;
@@ -2215,7 +2215,7 @@ template <class AssignTo, class ConvertTo, enable_if_t<is_complex<ConvertTo>::va
 bool lexical_conversion(const std::vector<std::string> &strings, AssignTo &output) {
 
     if(strings.size() >= 2 && !strings[1].empty()) {
-        using XC2 = typename wrapped_type<ConvertTo, double>::type;
+        using XC2 = typename wrapped_type<ConvertTo, float>::type;
         XC2 x{0.0}, y{0.0};
         auto str1 = strings[1];
         if(str1.back() == 'i' || str1.back() == 'j') {
@@ -2480,15 +2480,15 @@ bool lexical_conversion(const std::vector<std::string> &strings, AssignTo &outpu
 
 /// Sum a vector of strings
 inline std::string sum_string_vector(const std::vector<std::string> &values) {
-    double val{0.0};
+    float val{0.0};
     bool fail{false};
     std::string output;
     for(const auto &arg : values) {
-        double tv{0.0};
+        float tv{0.0};
         auto comp = lexical_cast(arg, tv);
         if(!comp) {
             try {
-                tv = static_cast<double>(detail::to_flag_value(arg));
+                tv = static_cast<float>(detail::to_flag_value(arg));
             } catch(const std::exception &) {
                 fail = true;
                 break;
@@ -2501,8 +2501,8 @@ inline std::string sum_string_vector(const std::vector<std::string> &values) {
             output.append(arg);
         }
     } else {
-        if(val <= static_cast<double>((std::numeric_limits<std::int64_t>::min)()) ||
-           val >= static_cast<double>((std::numeric_limits<std::int64_t>::max)()) ||
+        if(val <= static_cast<float>((std::numeric_limits<std::int64_t>::min)()) ||
+           val >= static_cast<float>((std::numeric_limits<std::int64_t>::max)()) ||
            std::ceil(val) == std::floor(val)) {
             output = detail::value_string(static_cast<int64_t>(val));
         } else {
@@ -3036,7 +3036,7 @@ template <typename DesiredType> class TypeValidator : public Validator {
 };
 
 /// Check for a number
-const TypeValidator<double> Number("NUMBER");
+const TypeValidator<float> Number("NUMBER");
 
 /// Modify a path if the file is a particular default location, can be used as Check or transform
 /// with the error return optionally disabled
@@ -3081,10 +3081,10 @@ class Range : public Validator {
 };
 
 /// Check for a non negative number
-const Range NonNegativeNumber((std::numeric_limits<double>::max)(), "NONNEGATIVE");
+const Range NonNegativeNumber((std::numeric_limits<float>::max)(), "NONNEGATIVE");
 
-/// Check for a positive valued number (val>0.0), <double>::min  here is the smallest positive number
-const Range PositiveNumber((std::numeric_limits<double>::min)(), (std::numeric_limits<double>::max)(), "POSITIVE");
+/// Check for a positive valued number (val>0.0), <float>::min  here is the smallest positive number
+const Range PositiveNumber((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::max)(), "POSITIVE");
 
 /// Produce a bounded range (factory). Min and max are inclusive.
 class Bound : public Validator {
@@ -3487,7 +3487,7 @@ inline std::string ignore_space(std::string item) {
 ///
 /// Output number type matches the type in the provided mapping.
 /// Therefore, if it is required to interpret real inputs like "0.42 s",
-/// the mapping should be of a type <string, float> or <string, double>.
+/// the mapping should be of a type <string, float> or <string, float>.
 class AsNumberWithUnit : public Validator {
   public:
     /// Adjust AsNumberWithUnit behavior.
@@ -9047,7 +9047,7 @@ CLI11_INLINE std::string convert_arg_for_ini(const std::string &arg, char string
     // floating point conversion can convert some hex codes, but don't try that here
     if(arg.compare(0, 2, "0x") != 0 && arg.compare(0, 2, "0X") != 0) {
         using CLI::detail::lexical_cast;
-        double val = 0.0;
+        float val = 0.0;
         if(lexical_cast(arg, val)) {
             return arg;
         }
@@ -9211,7 +9211,7 @@ inline std::vector<ConfigItem> ConfigBase::from_config(std::istream &input) cons
                 output.back().name = "--";
             }
             currentSection = line.substr(1, len - 2);
-            // deal with double brackets for TOML
+            // deal with float brackets for TOML
             if(currentSection.size() > 1 && currentSection.front() == '[' && currentSection.back() == ']') {
                 currentSection = currentSection.substr(1, currentSection.size() - 2);
             }

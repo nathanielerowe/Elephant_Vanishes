@@ -1,5 +1,5 @@
-#ifndef PROCHI_H_
-#define PROCHI_H_
+#ifndef PROCNP_H_
+#define PROCNP_H_
 
 // STANDARD
 #include <string>
@@ -17,21 +17,10 @@
 
 namespace PROfit{
 
-    /* 
-     * Class: Class that gathers the MC (PROpeller), Systematics (PROsyst) and model (PROsc) and forms a function calculating a chi^2 that can be minimized over
-     * Note:
-     *  the PROconfig,PROpeller..etc need to be accessable by the class so that the function operato "()" when passed to minimizer can access them. 
-     *  Saved as pointers to the objects created in the primary executable.
-     * Todo:
-     *  Add capability to define function externally?
-     *  Improve gradient calculation
-     *  */
-
-    class PROchi : public PROmetric
+    class PROCNP : public PROmetric
     {
+        // TODO: How much of this should be in PROmetric instead?
         private:
-            // TODO: How much of this should be in PROmetric instead?
-
             std::string model_tag;
 
             const PROconfig *config;
@@ -53,44 +42,45 @@ namespace PROfit{
 
             bool correlated_systematics;
             Eigen::MatrixXf prior_covariance;
-            Eigen::MatrixXf collapsed_stat_covariance;
 
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROCNP(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
             virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient);
             virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient, bool nograd);
 
-            virtual void reset() {
+            PROmetric *Clone() const {
+                return new PROCNP(*this);
+            }
+
+            void reset() {
                 physics_param_fixed.clear();
                 last_value = 0;
                 last_param = Eigen::VectorXf::Constant(last_param.size(), 0);
             }
 
-            virtual PROmetric *Clone() const {
-                return new PROchi(*this);
-            }
-
-            virtual void set_physics_param_fixed(const std::vector<float> &physics_param) {
+            void set_physics_param_fixed(const std::vector<float> &physics_param) {
                 physics_param_fixed = physics_param;
             }
 
-            virtual void override_systs(const PROsyst &new_syst) {
+            void override_systs(const PROsyst &new_syst) {
                 nparams -= nsyst;
                 syst = &new_syst;
                 nsyst = syst->GetNSplines();
                 nparams += nsyst;
             }
-            
+
             float Pull(const Eigen::VectorXf &systs);
 
             void fixSpline(int fix, float valin);
 
-            virtual int nParams() const {return nparams;}
+            int nParams() const {return nparams;}
 
     };
+
+
 }
 #endif

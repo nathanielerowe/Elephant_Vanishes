@@ -33,12 +33,12 @@
 #include "TTreeFormula.h"
 #include "TColor.h"
 
-/*eweight_type here to switch between uboone style "double" and SBNcode style "float"  */
+/*eweight_type here to switch between uboone style "float" and SBNcode style "float"  */
 #define TYPE_FLOAT
 #ifdef TYPE_FLOAT  
 typedef float eweight_type;
 #else
-typedef double eweight_type;
+typedef float eweight_type;
 #endif
 
 namespace PROfit{
@@ -106,10 +106,10 @@ namespace PROfit{
         // Function: evaluate additional weight setup in the branch and return in floating precision 
         // Note: if no additional weight is set, value of 1.0 will be returned.
         inline
-            double GetMonteCarloWeight() const{
+            float GetMonteCarloWeight() const{
                 if(branch_monte_carlo_weight_formula){ 
                     branch_monte_carlo_weight_formula->GetNdata();
-                    return (double)branch_monte_carlo_weight_formula->EvalInstance();
+                    return (float)branch_monte_carlo_weight_formula->EvalInstance();
                 }
                 return 1.0;
             }
@@ -117,19 +117,19 @@ namespace PROfit{
 
         //Function: evaluate branch 'name' and return the value. Usually its reconstructed quantity
         //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-        template <typename T=double>
+        template <typename T=float>
             T GetValue() const;
 
 
         //Function: evaluate formula 'true_L_name' and return the value. Usually it's true baseline.
         //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-        template <typename T=double>
+        template <typename T=float>
             T GetTrueL() const;
 
 
         //Function: evaluate formula 'true_param_name' and return the value. Usually it's true energy  
         //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-        template <typename T=double>
+        template <typename T=float>
             T GetTrueValue() const;
     };
 
@@ -207,7 +207,7 @@ namespace PROfit{
 
 
             std::string m_xmlname;	
-            double m_plot_pot;
+            float m_plot_pot;
             std::vector<std::string> m_fullnames;
 
             size_t m_num_detectors;
@@ -217,13 +217,13 @@ namespace PROfit{
             /*Vectors of length num_channels. Unless specificed all refer to fittable (reco) variables*/
             std::vector<size_t> m_num_subchannels; 
             std::vector<size_t> m_channel_num_bins;
-            std::vector<std::vector<double> > m_channel_bin_edges;
-            std::vector<std::vector<double> > m_channel_bin_widths;
+            std::vector<std::vector<float> > m_channel_bin_edges;
+            std::vector<std::vector<float> > m_channel_bin_widths;
 
             /* New true bins to save the truth level variables in addition.*/
             std::vector<size_t> m_channel_num_truebins;
-            std::vector<std::vector<double> > m_channel_truebin_edges;
-            std::vector<std::vector<double> > m_channel_truebin_widths;
+            std::vector<std::vector<float> > m_channel_truebin_edges;
+            std::vector<std::vector<float> > m_channel_truebin_widths;
 
 
             bool m_has_oscillation_patterns;
@@ -258,7 +258,7 @@ namespace PROfit{
             size_t m_num_bins_total_collapsed;
 
             /* Eigen Matrix for collapsing subchannels->channels*/
-            Eigen::MatrixXd collapsing_matrix;
+            Eigen::MatrixXf collapsing_matrix;
 
             //This section entirely for montecarlo generation of a covariance matrix or PROspec 
             bool m_write_out_variation;
@@ -271,8 +271,8 @@ namespace PROfit{
             std::vector<std::string> m_mcgen_tree_name;	
             std::vector<std::string> m_mcgen_file_name;	
             std::vector<long int> m_mcgen_maxevents;	
-            std::vector<double> m_mcgen_pot;	
-            std::vector<double> m_mcgen_scale;	
+            std::vector<float> m_mcgen_pot;	
+            std::vector<float> m_mcgen_scale;	
             std::vector<int> m_mcgen_numfriends;	
             std::vector<bool> m_mcgen_fake;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_map;
@@ -314,7 +314,7 @@ namespace PROfit{
              * 	     To collapse a full vector V, please do T.transpose() * V
              */
             inline 
-                Eigen::MatrixXd GetCollapsingMatrix() const {return collapsing_matrix; }
+                Eigen::MatrixXf GetCollapsingMatrix() const {return collapsing_matrix; }
 
             /* Function: Calculate how big each mode block and decector block are, for any given number of channels/subchannels, before and after the collapse
              * Note: only consider mode/detector/channel/subchannels that are actually used 
@@ -348,9 +348,10 @@ namespace PROfit{
              */
             size_t GetGlobalBinStart(size_t subchannel_index) const;
 
+            size_t GetCollapsedGlobalBinStart(size_t channel_index) const;
 
             /* Function: given channel index, return list of bin edges for this channel */
-            const std::vector<double>& GetChannelBinEdges(size_t channel_index) const;
+            const std::vector<float>& GetChannelBinEdges(size_t channel_index) const;
 
             /* Function: given channel index, return number of true bins for this channel */
             size_t GetChannelNTrueBins(size_t channel_index) const;
@@ -361,7 +362,7 @@ namespace PROfit{
             size_t GetGlobalTrueBinStart(size_t subchannel_index) const;
 
             /* Function: given channel index, return list of bin edges for this channel */
-            const std::vector<double>& GetChannelTrueBinEdges(size_t channel_index) const;
+            const std::vector<float>& GetChannelTrueBinEdges(size_t channel_index) const;
 
             /* Function: Hex to int*/
             int HexToROOTColor(const std::string& hexColor) const;
