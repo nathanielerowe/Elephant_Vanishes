@@ -2,6 +2,7 @@
 #include "PROlog.h"
 #include "PROspec.h"
 #include "PROsyst.h"
+#include "PROtocall.h"
 
 #include <Eigen/Eigen>
 
@@ -188,14 +189,15 @@ namespace PROfit {
         Eigen::VectorXd cvspec = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
 
         // TODO: We should think about centralizing rng in a thread-safe/thread-aware way
-        std::random_device rd{};
-        std::mt19937 rng{rd()};
+        static std::random_device rd{};
+        static std::mt19937 rng{rd()};
         std::normal_distribution<float> d;
         std::vector<float> throws;
-        Eigen::VectorXd throwC = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
+        //Eigen::VectorXd throwC = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
+        Eigen::VectorXd throwC = Eigen::VectorXd::Constant(inconfig.m_num_bins_total_collapsed, 0);
         for(size_t i = 0; i < insyst.GetNSplines(); i++)
             throws.push_back(d(rng));
-        for(size_t i = 0; i < inconfig.m_num_bins_total; i++)
+        for(size_t i = 0; i < inconfig.m_num_bins_total_collapsed; i++)
             throwC(i) = d(rng);
 
 
@@ -205,9 +207,14 @@ namespace PROfit {
                 systw *= insyst.GetSplineShift(j, throws[j], i);
             }
             for(size_t k = 0; k < inconfig.m_num_bins_total; ++k) {
-                spec(k) = systw * inprop.hist(i, k);
-                cvspec(k) = inprop.hist(i, k);
+                spec(k) += systw * inprop.hist(i, k);
+                cvspec(k) += inprop.hist(i, k);
             }
+        }
+
+        if(insyst.GetNCovar() == 0) {
+            Eigen::VectorXd final_spec = CollapseMatrix(inconfig, spec);
+            return PROspec(final_spec, final_spec.array().sqrt());
         }
 
         // TODO: We probably just want to do this once and save it somewhere.
@@ -215,9 +222,9 @@ namespace PROfit {
         // know about cvspec.
         Eigen::MatrixXd diag = cvspec.asDiagonal();
         Eigen::MatrixXd full_cov = diag * insyst.fractional_covariance * diag;
-        Eigen::LLT<Eigen::MatrixXd> llt(full_cov);
+        Eigen::LLT<Eigen::MatrixXd> llt(CollapseMatrix(inconfig, full_cov));
 
-        Eigen::VectorXd final_spec = spec + llt.matrixL() * throwC;
+        Eigen::VectorXd final_spec = CollapseMatrix(inconfig, spec) + llt.matrixL() * throwC;
         
         return PROspec(final_spec, final_spec.array().sqrt());
     }

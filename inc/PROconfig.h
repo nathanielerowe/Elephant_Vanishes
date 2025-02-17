@@ -348,6 +348,7 @@ namespace PROfit{
              */
             size_t GetGlobalBinStart(size_t subchannel_index) const;
 
+            size_t GetCollapsedGlobalBinStart(size_t channel_index) const;
 
             /* Function: given channel index, return list of bin edges for this channel */
             const std::vector<double>& GetChannelBinEdges(size_t channel_index) const;
