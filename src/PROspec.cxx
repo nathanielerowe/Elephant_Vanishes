@@ -6,8 +6,8 @@ using namespace PROfit;
 
 PROspec::PROspec(size_t num_bins):
     nbins(num_bins),
-    spec(Eigen::VectorXd::Zero(num_bins)),
-    error(Eigen::VectorXd::Zero(num_bins)){
+    spec(Eigen::VectorXf::Zero(num_bins)),
+    error(Eigen::VectorXf::Zero(num_bins)){
     }
 
 PROspec PROspec::PoissonVariation(const PROspec &s) {
@@ -43,7 +43,7 @@ void PROspec::Print() const {
 }
 
 
-void PROspec::Fill(int bin_index, double weight){
+void PROspec::Fill(int bin_index, float weight){
     //Removed to help speed up filling
     spec(bin_index) += weight;
     float tmp_err = error(bin_index);
@@ -52,7 +52,7 @@ void PROspec::Fill(int bin_index, double weight){
     return;
 }
 
-void PROspec::QuickFill(int bin_index, double weight){
+void PROspec::QuickFill(int bin_index, float weight){
     spec(bin_index) += weight;
     return;
 }
@@ -61,7 +61,7 @@ TH1D PROspec::toTH1D_Collapsed(const PROconfig &inconfig, int channel_index) con
     int global_bin_start = inconfig.GetCollapsedGlobalBinStart(channel_index);
     //set up hist specs
     int nbins = inconfig.m_channel_num_bins[channel_index];
-    const std::vector<double>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
+    const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
     std::string hist_name = inconfig.m_channel_names[channel_index];
     std::string xaxis_title = inconfig.m_channel_units[channel_index];
 
@@ -84,7 +84,7 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index) const{
 
     //set up hist specs
     int nbins = inconfig.m_channel_num_bins[channel_index];
-    const std::vector<double>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
+    const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
     std::string hist_name = inconfig.m_fullnames[subchannel_index];
     std::string xaxis_title = inconfig.m_channel_units[channel_index];
 
@@ -142,8 +142,8 @@ PROspec PROspec::operator+(const PROspec& b) const{
     }
 
 
-    Eigen::VectorXd sum_spec = this->spec + b.spec;
-    Eigen::VectorXd error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
+    Eigen::VectorXf sum_spec = this->spec + b.spec;
+    Eigen::VectorXf error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
     return PROspec(sum_spec, error_spec);
 }
 
@@ -169,8 +169,8 @@ PROspec PROspec::operator-(const PROspec& b) const{
     }
 
 
-    Eigen::VectorXd sum_spec = this->spec - b.spec;
-    Eigen::VectorXd error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
+    Eigen::VectorXf sum_spec = this->spec - b.spec;
+    Eigen::VectorXf error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
     return PROspec(sum_spec, error_spec);
 }
 
@@ -196,13 +196,13 @@ PROspec PROspec::operator/(const PROspec& b) const{
     }
 
 
-    Eigen::VectorXd ratio_spec = this->eigenvector_division(this->spec, b.spec);
+    Eigen::VectorXf ratio_spec = this->eigenvector_division(this->spec, b.spec);
 
     //calculate relative error, and sqrt of quadratic sum of relative error
-    Eigen::VectorXd this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
-    Eigen::VectorXd ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
+    Eigen::VectorXf this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
+    Eigen::VectorXf ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
 
-    Eigen::VectorXd ratio_error = this->eigenvector_multiplication(ratio_spec, ratio_relative_error);
+    Eigen::VectorXf ratio_error = this->eigenvector_multiplication(ratio_spec, ratio_relative_error);
     return PROspec(ratio_spec, ratio_error); 
 }
 
@@ -217,36 +217,36 @@ PROspec& PROspec::operator/=(const PROspec& b) {
 
     this->spec =  this->eigenvector_division(this->spec, b.spec);
     //calculate relative error, and sqrt of quadratic sum of relative error
-    Eigen::VectorXd this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
-    Eigen::VectorXd ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
+    Eigen::VectorXf this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
+    Eigen::VectorXf ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
 
     this->error  = this->eigenvector_multiplication(this->spec, ratio_relative_error);
     return *this; 
 }
 
-PROspec PROspec::operator*(double scale) const{
+PROspec PROspec::operator*(float scale) const{
 
-    Eigen::VectorXd scaled_spec = scale * this->spec, scaled_error = scale * this->error;
+    Eigen::VectorXf scaled_spec = scale * this->spec, scaled_error = scale * this->error;
     return PROspec(scaled_spec, scaled_error);
 }
 
-PROspec& PROspec::operator*=(double scale){
+PROspec& PROspec::operator*=(float scale){
 
     this->spec *= scale; 
     this->error *= scale;
     return *this;
 }
 
-Eigen::VectorXd PROspec::eigenvector_sqrt_quadrature_sum(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const{
+Eigen::VectorXf PROspec::eigenvector_sqrt_quadrature_sum(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const{
     int nbin = a.size();
-    Eigen::VectorXd error_spec = Eigen::VectorXd::Zero(nbin); 
+    Eigen::VectorXf error_spec = Eigen::VectorXf::Zero(nbin); 
     error_spec = ((a.array()).square() + (b.array()).square()).sqrt();
     return error_spec;
 }
 
-Eigen::VectorXd PROspec::eigenvector_division(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const{
+Eigen::VectorXf PROspec::eigenvector_division(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const{
     int nbin = a.size();
-    Eigen::VectorXd ratio_spec = Eigen::VectorXd::Zero(nbin);
+    Eigen::VectorXf ratio_spec = Eigen::VectorXf::Zero(nbin);
     for(int i = 0; i != nbin; ++i){
         if(b(i) == 0){
             if(a(i) !=0 ){
@@ -263,9 +263,9 @@ Eigen::VectorXd PROspec::eigenvector_division(const Eigen::VectorXd& a, const Ei
     return ratio_spec;
 }
 
-Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const{
+Eigen::VectorXf PROspec::eigenvector_multiplication(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const{
     int nbin = a.size();
-    Eigen::VectorXd ratio_spec = Eigen::VectorXd::Zero(nbin);
+    Eigen::VectorXf ratio_spec = Eigen::VectorXf::Zero(nbin);
     for(int i = 0; i != nbin; ++i){
         ratio_spec(i) = a(i) * b(i);
     }

@@ -48,7 +48,7 @@ namespace PROfit{
         std::vector<float> knob_index;
 
         int index;
-        std::vector<std::vector<std::array<double, 4>>> spline_coeffs;
+        std::vector<std::vector<std::array<float, 4>>> spline_coeffs;
 
         //std::vector<PROspec> m_multi_spec;
 
@@ -84,10 +84,10 @@ namespace PROfit{
         void CreateSpecs(int num_bins);
 
         /* Function: given global bin index, and event weight, fill the central value spectrum */
-        void FillCV(int global_bin, double event_weight);
+        void FillCV(int global_bin, float event_weight);
 
         /* Function: given global bin index, and event weight, fill the spectrum of given universe */
-        void FillUniverse(int universe, int global_bin, double event_weight);
+        void FillUniverse(int universe, int global_bin, float event_weight);
 
         /* Function: return CV spectrum in PROspec */
         const PROspec& CV() const;
@@ -187,7 +187,7 @@ namespace PROfit{
 
     /* Function: Event by event processing for PROcess_CAFs
     */
-    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin, long int global_true_bin);
+    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, float add_weight, long int global_bin, long int global_true_bin);
 
     /* Function: given configuration, generate spectrum at central value. 
      * Note: assume the input config has SBNfit-style files, TODO: check if compatible with CAF-style
@@ -205,9 +205,9 @@ namespace PROfit{
      *		syst_vector: list of SystStruct TO BE UPDATED, each stores all variation spectra of one systematic
      *		syst_additional_weight: additional weight applied to systematic variation
      */
-    void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight);
+    void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight);
 
-    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, double mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop);
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop);
 
 
 

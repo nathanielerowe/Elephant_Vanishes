@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     int maxevents = 100;
     bool oscillate = false;
 
-    //doubles
+    //floats
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_flag("-O,--Oscillate", oscillate, "Fit with oscillations.");
@@ -59,15 +59,15 @@ int main(int argc, char* argv[])
     PROsc osc(myprop);
 
     //Setup minimization parameetrsM
-    LBFGSpp::LBFGSBParam<double> param;  
-    //LBFGSpp::LBFGSParam<double> param;  
+    LBFGSpp::LBFGSBParam<float> param;  
+    //LBFGSpp::LBFGSParam<float> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
     param.max_linesearch = 50;
-    LBFGSpp::LBFGSBSolver<double> solver(param); 
-    //LBFGSpp::LBFGSSolver<double> solver(param); 
+    LBFGSpp::LBFGSBSolver<float> solver(param); 
+    //LBFGSpp::LBFGSSolver<float> solver(param); 
 
-    Eigen::VectorXd data = systsstructs.back().CV().Spec();
+    Eigen::VectorXf data = systsstructs.back().CV().Spec();
 
     //int nparams = 2 + systs.GetNSplines();
     int nparams = 2*oscillate + systs.GetNSplines();
@@ -89,19 +89,19 @@ int main(int argc, char* argv[])
     PROchi chi("3plus1",&myConf,&myprop,&systs,oscillate ? &osc : NULL, newSpec, nparams, systs.GetNSplines());
 
     // Bounds
-    Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
+    Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
     if(oscillate){
         lb(0) = 0.01; lb(1) = 0;
     }
-    Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
+    Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
     if(oscillate){
         ub(0) = 100; ub(1) = 1;
     }
     // Initial guess
-    Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.2);
+    Eigen::VectorXf x = Eigen::VectorXf::Constant(nparams, 0.2);
 
     // x will be overwritten to be the best point found
-    double fx;
+    float fx;
     int niter = -1;
     try {
         niter = solver.minimize(chi, x, fx, lb, ub);

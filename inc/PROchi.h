@@ -48,12 +48,12 @@ namespace PROfit{
             float fixed_val;
 
             //Save last values for gradient calculation
-            Eigen::VectorXd last_param;
+            Eigen::VectorXf last_param;
             float last_value;
 
             bool correlated_systematics;
-            Eigen::MatrixXd prior_covariance;
-            Eigen::MatrixXd collapsed_stat_covariance;
+            Eigen::MatrixXf prior_covariance;
+            Eigen::MatrixXf collapsed_stat_covariance;
 
         public:
 
@@ -61,13 +61,13 @@ namespace PROfit{
             PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
-            virtual double operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient);
-            virtual double operator()(const Eigen::VectorXd &param, Eigen::VectorXd &gradient, bool nograd);
+            virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient);
+            virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient, bool nograd);
 
             virtual void reset() {
                 physics_param_fixed.clear();
                 last_value = 0;
-                last_param = Eigen::VectorXd::Constant(last_param.size(), 0);
+                last_param = Eigen::VectorXf::Constant(last_param.size(), 0);
             }
 
             virtual PROmetric *Clone() const {
@@ -85,9 +85,9 @@ namespace PROfit{
                 nparams += nsyst;
             }
             
-            float Pull(const Eigen::VectorXd &systs);
+            float Pull(const Eigen::VectorXf &systs);
 
-            void fixSpline(int fix, double valin);
+            void fixSpline(int fix, float valin);
 
             virtual int nParams() const {return nparams;}
 

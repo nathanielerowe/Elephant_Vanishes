@@ -25,19 +25,19 @@ using namespace PROfit;
 log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 struct fc_out{
-    double chi2_syst, chi2_osc, dmsq, sinsq2tmm;
-    Eigen::VectorXd best_fit_syst, best_fit_osc, syst_throw;
+    float chi2_syst, chi2_osc, dmsq, sinsq2tmm;
+    Eigen::VectorXf best_fit_syst, best_fit_osc, syst_throw;
 };
 
 struct fc_args {
     const size_t todo;
-    std::vector<double>* dchi2s;
+    std::vector<float>* dchi2s;
     std::vector<fc_out>* out;
     const PROconfig config;
     const PROpeller prop;
     const PROsyst systs;
     const std::vector<float> phy_params;
-    const Eigen::MatrixXd L;
+    const Eigen::MatrixXf L;
     const int thread;
     const bool binned;
 };
@@ -51,7 +51,7 @@ void fc_worker(fc_args args) {
         log<LOG_INFO>(L"%1% | Thread #%2% Throw #%3%") % __func__ % args.thread % u;
         std::normal_distribution<float> d;
         std::vector<float> throws;
-        Eigen::VectorXd throwC = Eigen::VectorXd::Constant(args.config.m_num_bins_total, 0);
+        Eigen::VectorXf throwC = Eigen::VectorXf::Constant(args.config.m_num_bins_total, 0);
         for(size_t i = 0; i < args.systs.GetNSplines(); i++)
             throws.push_back(d(rng));
         for(size_t i = 0; i < args.config.m_num_bins_total; i++)
@@ -60,31 +60,31 @@ void fc_worker(fc_args args) {
         PROspec newSpec = PROspec::PoissonVariation(PROspec(CollapseMatrix(args.config, shifted.Spec()) + args.L * throwC, CollapseMatrix(args.config, shifted.Error())));
 
         // No oscillations
-        LBFGSpp::LBFGSBParam<double> param;  
+        LBFGSpp::LBFGSBParam<float> param;  
         param.epsilon = 1e-6;
         param.max_iterations = 100;
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
         size_t nparams = args.systs.GetNSplines();
-        Eigen::VectorXd lb = Eigen::VectorXd::Map(args.systs.spline_lo.data(), args.systs.spline_lo.size());
-        Eigen::VectorXd ub = Eigen::VectorXd::Map(args.systs.spline_hi.data(), args.systs.spline_hi.size());
+        Eigen::VectorXf lb = Eigen::VectorXf::Map(args.systs.spline_lo.data(), args.systs.spline_lo.size());
+        Eigen::VectorXf ub = Eigen::VectorXf::Map(args.systs.spline_hi.data(), args.systs.spline_hi.size());
         PROfitter fitter(ub, lb, param);
 
         PROchi chi("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, nparams, args.systs.GetNSplines(), strat);
-        double chi2_syst = fitter.Fit(chi);
+        float chi2_syst = fitter.Fit(chi);
 
         // With oscillations
-        LBFGSpp::LBFGSBParam<double> param_osc;  
+        LBFGSpp::LBFGSBParam<float> param_osc;  
         param_osc.epsilon = 1e-6;
         param_osc.max_iterations = 100;
         param_osc.max_linesearch = 250;
         param_osc.delta = 1e-6;
 
         nparams = 2 + args.systs.GetNSplines();
-        Eigen::VectorXd lb_osc = Eigen::VectorXd::Constant(nparams, -3.0);
-        lb_osc(0) = -2; lb_osc(1) = -std::numeric_limits<double>::infinity();
-        Eigen::VectorXd ub_osc = Eigen::VectorXd::Constant(nparams, 3.0);
+        Eigen::VectorXf lb_osc = Eigen::VectorXf::Constant(nparams, -3.0);
+        lb_osc(0) = -2; lb_osc(1) = -std::numeric_limits<float>::infinity();
+        Eigen::VectorXf ub_osc = Eigen::VectorXf::Constant(nparams, 3.0);
         ub_osc(0) = 2; ub_osc(1) = 0;
         for(size_t i = 2; i < nparams; ++i) {
             lb_osc(i) = lb(i-2);
@@ -93,10 +93,9 @@ void fc_worker(fc_args args) {
         PROfitter fitter_osc(ub_osc, lb_osc, param);
 
         PROchi chi_osc("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, nparams, args.systs.GetNSplines(), strat);
-        double chi2_osc = fitter_osc.Fit(chi_osc); 
+        float chi2_osc = fitter_osc.Fit(chi_osc); 
 
-        Eigen::VectorXd t = Eigen::VectorXd::Constant(throws.size(), 0);
-        for(size_t i = 0; i < throws.size(); i++) t(i) = throws[i];
+        Eigen::VectorXf t = Eigen::VectorXf::Map(throws.data(), throws.size());
 
         args.out->push_back({
                 chi2_syst, chi2_osc, 
@@ -156,11 +155,11 @@ int main(int argc, char* argv[])
       systs = systs.excluding(systs_excluded);
     }
 
-    Eigen::MatrixXd diag = FillCVSpectrum(myConf, myprop, !eventbyevent).Spec().array().matrix().asDiagonal();
-    Eigen::MatrixXd full_cov = diag * systs.fractional_covariance * diag;
-    Eigen::LLT<Eigen::MatrixXd> llt(CollapseMatrix(myConf, full_cov));
+    Eigen::MatrixXf diag = FillCVSpectrum(myConf, myprop, !eventbyevent).Spec().array().matrix().asDiagonal();
+    Eigen::MatrixXf full_cov = diag * systs.fractional_covariance * diag;
+    Eigen::LLT<Eigen::MatrixXf> llt(CollapseMatrix(myConf, full_cov));
     
-    std::vector<std::vector<double>> dchi2s;
+    std::vector<std::vector<float>> dchi2s;
     dchi2s.reserve(nthread);
     std::vector<std::vector<fc_out>> outs;
     outs.reserve(nthread);
@@ -180,8 +179,8 @@ int main(int argc, char* argv[])
     if(savetoroot) {
         TFile fout(filename.c_str(), "RECREATE");
         fout.cd();
-        double chi2_osc, chi2_syst, best_dmsq, best_sinsq2t;
-        std::map<std::string, double> best_systs_osc, best_systs, syst_throw;
+        float chi2_osc, chi2_syst, best_dmsq, best_sinsq2t;
+        std::map<std::string, float> best_systs_osc, best_systs, syst_throw;
         TTree tree("tree", "tree");
         tree.Branch("chi2_osc", &chi2_osc); 
         tree.Branch("chi2_syst", &chi2_syst); 
@@ -226,7 +225,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    std::vector<double> flattened_dchi2s;
+    std::vector<float> flattened_dchi2s;
     for(const auto& v: dchi2s) for(const auto& dchi2: v) flattened_dchi2s.push_back(dchi2);
     std::sort(flattened_dchi2s.begin(), flattened_dchi2s.end());
     std::cout << "90% delta chi2: " << flattened_dchi2s[0.9*flattened_dchi2s.size()] << std::endl;

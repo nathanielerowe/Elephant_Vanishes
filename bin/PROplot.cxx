@@ -252,7 +252,7 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, con
 }
 
 std::unique_ptr<TH2D> covarianceTH2D(const PROsyst &syst, const PROconfig &config) {
-    Eigen::MatrixXd fractional_cov = CollapseMatrix(config, syst.fractional_covariance);
+    Eigen::MatrixXf fractional_cov = CollapseMatrix(config, syst.fractional_covariance);
 
     std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin #;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
 
@@ -303,12 +303,12 @@ getSplineGraphs(const PROsyst &systs, const PROconfig &config) {
 
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale) {
     //TODO: Only works with 1 mode/detector/channel
-    Eigen::VectorXd cv = CollapseMatrix(config, FillCVSpectrum(config, prop, true).Spec());
-    std::vector<double> edges = config.GetChannelBinEdges(0);
-    std::vector<double> centers;
+    Eigen::VectorXf cv = CollapseMatrix(config, FillCVSpectrum(config, prop, true).Spec());
+    std::vector<float> edges = config.GetChannelBinEdges(0);
+    std::vector<float> centers;
     for(size_t i = 0; i < edges.size() - 1; ++i)
         centers.push_back((edges[i+1] + edges[i])/2);
-    std::vector<Eigen::VectorXd> specs;
+    std::vector<Eigen::VectorXf> specs;
     for(size_t i = 0; i < 1000; ++i)
         specs.push_back(FillSystRandomThrow(config, prop, syst).Spec());
         //specs.push_back(CollapseMatrix(config, FillSystRandomThrow(config, prop, syst).Spec()));
@@ -319,14 +319,14 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     //std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
     std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(&tmphist);
     for(size_t i = 0; i < cv.size(); ++i) {
-        std::array<double, 1000> binconts;
+        std::array<float, 1000> binconts;
         for(size_t j = 0; j < 1000; ++j) {
             binconts[j] = specs[j](i);
         }
-        double scale_factor = tmphist.GetBinContent(i+1)/cv(i);
+        float scale_factor = tmphist.GetBinContent(i+1)/cv(i);
         std::sort(binconts.begin(), binconts.end());
-        double ehi = std::abs((binconts[840] - cv(i))*scale_factor);
-        double elo = std::abs((cv(i) - binconts[160])*scale_factor);
+        float ehi = std::abs((binconts[840] - cv(i))*scale_factor);
+        float elo = std::abs((cv(i) - binconts[160])*scale_factor);
         ret->SetPointEYhigh(i, ehi);
         ret->SetPointEYlow(i, elo);
     }

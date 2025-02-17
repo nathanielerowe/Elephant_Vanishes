@@ -5,12 +5,12 @@
 
 using namespace PROfit;
 
-std::vector<std::vector<double>> latin_hypercube_sampling(size_t num_samples, size_t dimensions, std::uniform_real_distribution<float>&dis, std::mt19937 &gen) {
-    std::vector<std::vector<double>> samples(num_samples, std::vector<double>(dimensions));
+std::vector<std::vector<float>> latin_hypercube_sampling(size_t num_samples, size_t dimensions, std::uniform_real_distribution<float>&dis, std::mt19937 &gen) {
+    std::vector<std::vector<float>> samples(num_samples, std::vector<float>(dimensions));
 
     for (size_t d = 0; d < dimensions; ++d) {
 
-        std::vector<double> perm(num_samples);
+        std::vector<float> perm(num_samples);
         for (size_t i = 0; i < num_samples; ++i) {
             perm[i] = (i + dis(gen)) / num_samples;  
         }
@@ -23,7 +23,7 @@ std::vector<std::vector<double>> latin_hypercube_sampling(size_t num_samples, si
     return samples;
 }
 
-std::vector<int> sorted_indices(const std::vector<double>& vec) {
+std::vector<int> sorted_indices(const std::vector<float>& vec) {
     std::vector<int> indices(vec.size());
     for (size_t i = 0; i < vec.size(); ++i) {
         indices[i] = i;
@@ -32,7 +32,7 @@ std::vector<int> sorted_indices(const std::vector<double>& vec) {
     return indices;
 }
 
-PROsurf::PROsurf(PROmetric &metric, size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbinsy, LogLin lly, double y_lo, double y_hi) : metric(metric), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXd::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXd::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
+PROsurf::PROsurf(PROmetric &metric, size_t nbinsx, LogLin llx, float x_lo, float x_hi, size_t nbinsy, LogLin lly, float y_lo, float y_hi) : metric(metric), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXf::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXf::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
     if(llx == LogAxis) {
         x_lo = std::log10(x_lo);
         x_hi = std::log10(x_hi);
@@ -54,8 +54,8 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
     }
 
     PROsyst dummy_syst;
-    dummy_syst.fractional_covariance = Eigen::MatrixXd::Constant(config.m_num_bins_total, config.m_num_bins_total, 0);
-    Eigen::VectorXd empty_vec;
+    dummy_syst.fractional_covariance = Eigen::MatrixXf::Constant(config.m_num_bins_total, config.m_num_bins_total, 0);
+    Eigen::VectorXf empty_vec;
 
     PROmetric *local_metric = metric.Clone();
     local_metric->override_systs(dummy_syst);
@@ -64,7 +64,7 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
         for(size_t j = 0; j < nbinsy; j++) {
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
             local_metric->set_physics_param_fixed(physics_params);
-            double fx = (*local_metric)(empty_vec, empty_vec, false);
+            float fx = (*local_metric)(empty_vec, empty_vec, false);
             surface(i, j) = fx;
             if(!filename.empty()){
                 chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx<<std::flush;
@@ -93,20 +93,20 @@ std::vector<surfOut> PROsurf::PointHelper(const PROsyst *systs, std::vector<surf
         int nparams = systs->GetNSplines();
 
         if(nparams == 0) {
-            Eigen::VectorXd empty_vec;
+            Eigen::VectorXf empty_vec;
             output.chi = (*local_metric)(empty_vec, empty_vec, false);
             outs.push_back(output);
             continue;
         }
 
-        LBFGSpp::LBFGSBParam<double> param;
+        LBFGSpp::LBFGSBParam<float> param;
         param.epsilon = 1e-6;
         param.max_iterations = 100;
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
-        Eigen::VectorXd lb = Eigen::VectorXd::Map(systs->spline_lo.data(), systs->spline_lo.size());
-        Eigen::VectorXd ub = Eigen::VectorXd::Map(systs->spline_hi.data(), systs->spline_hi.size());
+        Eigen::VectorXf lb = Eigen::VectorXf::Map(systs->spline_lo.data(), systs->spline_lo.size());
+        Eigen::VectorXf ub = Eigen::VectorXf::Map(systs->spline_hi.data(), systs->spline_hi.size());
 
         PROfitter fitter(ub, lb, param);
         output.chi = fitter.Fit(*local_metric);
@@ -166,14 +166,14 @@ void PROsurf::FillSurface(const PROsyst &systs, std::string filename, int nThrea
 
 }
 
-std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
-    double step = 0.001;
+std::vector<float> findMinAndBounds(TGraph *g, float val,float range) {
+    float step = 0.001;
     range = range+step;
     int n = g->GetN();
-    double minY = 1e9, minX = 0;
+    float minY = 1e9, minX = 0;
     for (int i = 0; i < n; ++i) {
         double x, y;
-        g->GetPoint(i, x, y);
+        g->GetPoint(i, x,y);
         if (y < minY) {
             minY = y;
             minX = x;
@@ -181,11 +181,11 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     }
     //..ok so minX is the min and Currentl minY is the chi^2. Want this to be delta chi^2
 
-    double leftX = minX, rightX = minX;
+    float leftX = minX, rightX = minX;
     
     // Search to the left of the minimum
-    for (double x = minX; x >= -range; x -= step) {
-        double y = g->Eval(x) - minY; //DeltaChi^2
+    for (float x = minX; x >= -range; x -= step) {
+        float y = g->Eval(x) - minY; //DeltaChi^2
         if (y >= val) {
             leftX = x;
             break;
@@ -194,8 +194,8 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     
 
     // Search to the right of the minimum
-    for (double x = minX; x <= range; x += step) {
-        double y = g->Eval(x)-minY;
+    for (float x = minX; x <= range; x += step) {
+        float y = g->Eval(x)-minY;
         if (y >= val) {
             rightX = x;
             break;
@@ -209,13 +209,13 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
 int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename) {
 
 
-    LBFGSpp::LBFGSBParam<double> param;
+    LBFGSpp::LBFGSBParam<float> param;
     param.epsilon = 1e-6;
     param.max_iterations = 100;
     param.max_linesearch = 50;
     param.delta = 1e-6;
 
-    LBFGSpp::LBFGSBSolver<double> solver(param);
+    LBFGSpp::LBFGSBSolver<float> solver(param);
     int nparams = systs.GetNSplines();
     std::vector<float> physics_params; 
 
@@ -229,11 +229,11 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     std::vector<std::unique_ptr<TGraph>> graphs; 
 
     //hack
-    std::vector<double> priorX;
-    std::vector<double> priorY;
+    std::vector<float> priorX;
+    std::vector<float> priorY;
 
     for(int i=0; i<=30;i++){
-        double which_value = -3.0+0.2*i;
+        float which_value = -3.0+0.2*i;
         priorX.push_back(which_value);
         priorY.push_back(which_value*which_value);
 
@@ -246,22 +246,22 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
         int which_spline = w;
 
 
-        std::vector<double> knob_vals;
-        std::vector<double> knob_chis;
+        std::vector<float> knob_vals;
+        std::vector<float> knob_chis;
 
         for(int i=0; i<=30;i++){
 
-            //Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-            //Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-            Eigen::VectorXd ub = Eigen::VectorXd::Map(systs.spline_hi.data(), systs.spline_hi.size());
-            Eigen::VectorXd lb = Eigen::VectorXd::Map(systs.spline_lo.data(), systs.spline_lo.size());
-            Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
-            Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
-            Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
+            //Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
+            //Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
+            Eigen::VectorXf ub = Eigen::VectorXf::Map(systs.spline_hi.data(), systs.spline_hi.size());
+            Eigen::VectorXf lb = Eigen::VectorXf::Map(systs.spline_lo.data(), systs.spline_lo.size());
+            Eigen::VectorXf x = Eigen::VectorXf::Constant(nparams, 0.0);
+            Eigen::VectorXf grad = Eigen::VectorXf::Constant(nparams, 0.0);
+            Eigen::VectorXf bestx = Eigen::VectorXf::Constant(nparams, 0.0);
 
 
-            double which_value = -3.0+0.2*i;
-            double fx;
+            float which_value = -3.0+0.2*i;
+            float fx;
             knob_vals.push_back(which_value);
 
             lb[which_spline] = which_value;
@@ -274,7 +274,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
             log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
             try {
-                x = Eigen::VectorXd::Constant(nparams, 0.012);
+                x = Eigen::VectorXf::Constant(nparams, 0.012);
                 solver.minimize(chi, x, fx, lb, ub);
             } catch(std::runtime_error &except) {
                 log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
@@ -318,23 +318,23 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     bool twosig = false;
     int nBins = systs.spline_names.size();
 
-    std::vector<double> bfvalues;
-    std::vector<double> values1_up;
-    std::vector<double> values1_down;
+    std::vector<float> bfvalues;
+    std::vector<float> values1_up;
+    std::vector<float> values1_down;
 
-    std::vector<double> values2_up;
-    std::vector<double> values2_down;
+    std::vector<float> values2_up;
+    std::vector<float> values2_down;
 
     log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two igma turned on? : %2% ") % __func__ % twosig;
 
     for(auto &g:graphs){
-        std::vector<double> tmp = findMinAndBounds(g.get(),1.0,3.0);
+        std::vector<float> tmp = findMinAndBounds(g.get(),1.0,3.0);
         bfvalues.push_back(tmp[0]);
         values1_down.push_back(tmp[1]);
         values1_up.push_back(tmp[2]);
 
         if(twosig){
-            std::vector<double> tmp2 = findMinAndBounds(g.get(),4.0,3.0);
+            std::vector<float> tmp2 = findMinAndBounds(g.get(),4.0,3.0);
             values2_down.push_back(tmp2[1]);
             values2_up.push_back(tmp2[2]);
         }
@@ -343,12 +343,12 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     
     log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% ") % __func__ % nBins % bfvalues.size() % values1_down.size() % values1_up.size() ;
 
-    double minVal = *std::min_element(values1_down.begin(), values1_down.end());
-    double maxVal = *std::max_element(values1_up.begin(), values1_up.end());
+    float minVal = *std::min_element(values1_down.begin(), values1_down.end());
+    float maxVal = *std::max_element(values1_up.begin(), values1_up.end());
 
-    double wid = twosig? 0.4  : 0.8;
-    double off1 = twosig?0.1   : 0.0;
-    double off2 = twosig?0.5  : 0.0;
+    float wid = twosig? 0.4  : 0.8;
+    float off1 = twosig?0.1   : 0.0;
+    float off2 = twosig?0.5  : 0.0;
 
     TH1D *h1up = new TH1D("hup", "Bar Chart", nBins, 0, nBins);
     TH1D *h1down = new TH1D("hdown", "Bar Chart", nBins, 0, nBins);

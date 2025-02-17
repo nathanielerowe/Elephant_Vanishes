@@ -10,25 +10,25 @@ namespace PROfit {
 
 class PROfitter {
 public:
-    Eigen::VectorXd ub, lb, best_fit;
-    LBFGSpp::LBFGSBParam<double> param;
-    LBFGSpp::LBFGSBSolver<double> solver;
+    Eigen::VectorXf ub, lb, best_fit;
+    LBFGSpp::LBFGSBParam<float> param;
+    LBFGSpp::LBFGSBSolver<float> solver;
     int n_multistart = 100, n_localfit = 5;
 
-    PROfitter(const Eigen::VectorXd ub, const Eigen::VectorXd lb, const LBFGSpp::LBFGSBParam<double> &param = {})
+    PROfitter(const Eigen::VectorXf ub, const Eigen::VectorXf lb, const LBFGSpp::LBFGSBParam<float> &param = {})
         : ub(ub), lb(lb), param(param), solver(param) {}
 
-    double Fit(PROmetric &metric);
+    float Fit(PROmetric &metric);
 
-    Eigen::VectorXd FinalGradient() const {return solver.final_grad();}
-    double FinalGradientNorm() const {return solver.final_grad_norm();}
-    Eigen::MatrixXd Hessian() const {return solver.final_approx_hessian();}
-    Eigen::MatrixXd InverseHessian() const {return solver.final_approx_inverse_hessian();}
-    Eigen::MatrixXd Covariance() const {return InverseHessian();}
-    Eigen::VectorXd BestFit() const {return best_fit;}
+    Eigen::VectorXf FinalGradient() const {return solver.final_grad();}
+    float FinalGradientNorm() const {return solver.final_grad_norm();}
+    Eigen::MatrixXf Hessian() const {return solver.final_approx_hessian();}
+    Eigen::MatrixXf InverseHessian() const {return solver.final_approx_inverse_hessian();}
+    Eigen::MatrixXf Covariance() const {return InverseHessian();}
+    Eigen::VectorXf BestFit() const {return best_fit;}
 
     // If you don't belive the uncertainties on the parameters, you can use the final fit value to estimate the variance
-    Eigen::MatrixXd ScaledCovariance(double chi2, int n_datapoint) const {return Covariance()*chi2/double(n_datapoint-best_fit.size());}
+    Eigen::MatrixXf ScaledCovariance(float chi2, int n_datapoint) const {return Covariance()*chi2/float(n_datapoint-best_fit.size());}
 
 };
 

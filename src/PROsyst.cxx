@@ -82,14 +82,14 @@ namespace PROfit {
         return ret;
     }
 
-    Eigen::MatrixXd PROsyst::SumMatrices() const{
+    Eigen::MatrixXf PROsyst::SumMatrices() const{
 
-        Eigen::MatrixXd sum_matrix;
+        Eigen::MatrixXf sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
             log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
 
-            sum_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
+            sum_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
             for(auto& p : covmat){
                 sum_matrix += p;
             }
@@ -100,14 +100,14 @@ namespace PROfit {
         return sum_matrix;
     }
 
-    Eigen::MatrixXd PROsyst::SumMatrices(const std::vector<std::string>& sysnames) const{
+    Eigen::MatrixXf PROsyst::SumMatrices(const std::vector<std::string>& sysnames) const{
 
-        Eigen::MatrixXd sum_matrix;
+        Eigen::MatrixXf sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
             log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
 
-            sum_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
+            sum_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
         }
         else{
             log<LOG_ERROR>(L"%1% || There is no covariance available!!") % __func__;
@@ -133,7 +133,7 @@ namespace PROfit {
 
         //generate matrix only if it's not already in the map 
         if(syst_map.find(sysname) == syst_map.end()){
-            std::pair<Eigen::MatrixXd, Eigen::MatrixXd> matrices = PROsyst::GenerateCovarMatrices(syst);
+            std::pair<Eigen::MatrixXf, Eigen::MatrixXf> matrices = PROsyst::GenerateCovarMatrices(syst);
             syst_map[sysname] = {covmat.size(), SystType::Covariance};
             covmat.push_back(matrices.first);
             corrmat.push_back(matrices.second);
@@ -144,17 +144,17 @@ namespace PROfit {
     }
 
 
-    std::pair<Eigen::MatrixXd, Eigen::MatrixXd>  PROsyst::GenerateCovarMatrices(const SystStruct& sys_obj){
+    std::pair<Eigen::MatrixXf, Eigen::MatrixXf>  PROsyst::GenerateCovarMatrices(const SystStruct& sys_obj){
         //get fractional covar
-        Eigen::MatrixXd frac_covar_matrix = PROsyst::GenerateFracCovarMatrix(sys_obj);
+        Eigen::MatrixXf frac_covar_matrix = PROsyst::GenerateFracCovarMatrix(sys_obj);
 
         //get fractional covariance matrix
-        Eigen::MatrixXd corr_covar_matrix = PROsyst::GenerateCorrMatrix(frac_covar_matrix);
+        Eigen::MatrixXf corr_covar_matrix = PROsyst::GenerateCorrMatrix(frac_covar_matrix);
 
-        return std::pair<Eigen::MatrixXd, Eigen::MatrixXd>({frac_covar_matrix, corr_covar_matrix});
+        return std::pair<Eigen::MatrixXf, Eigen::MatrixXf>({frac_covar_matrix, corr_covar_matrix});
     }
 
-    Eigen::MatrixXd PROsyst::GenerateFullCovarMatrix(const SystStruct& sys_obj){
+    Eigen::MatrixXf PROsyst::GenerateFullCovarMatrix(const SystStruct& sys_obj){
         int n_universe = sys_obj.GetNUniverse(); 
         std::string sys_name = sys_obj.GetSysName();
 
@@ -163,36 +163,36 @@ namespace PROfit {
         log<LOG_INFO>(L"%1% || Generating covariance matrix.. size: %2% x %3%") % __func__ % nbins % nbins;
 
         //build full covariance matrix 
-        Eigen::MatrixXd full_covar_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
+        Eigen::MatrixXf full_covar_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
         for(int i = 0; i != n_universe; ++i){
             PROspec spec_diff  = cv_spec - sys_obj.Variation(i);
-            full_covar_matrix += (spec_diff.Spec() * spec_diff.Spec().transpose() ) / static_cast<double>(n_universe);
+            full_covar_matrix += (spec_diff.Spec() * spec_diff.Spec().transpose() ) / static_cast<float>(n_universe);
         }
 
         return full_covar_matrix;
     }
 
-    Eigen::MatrixXd PROsyst::GenerateFracCovarMatrix(const SystStruct& sys_obj){
+    Eigen::MatrixXf PROsyst::GenerateFracCovarMatrix(const SystStruct& sys_obj){
 
         //build full covariance matrix 
-        Eigen::MatrixXd full_covar_matrix = PROsyst::GenerateFullCovarMatrix(sys_obj);
+        Eigen::MatrixXf full_covar_matrix = PROsyst::GenerateFullCovarMatrix(sys_obj);
 
         //build fractional covariance matrix 
         //first, get the matrix with diagonal being reciprocal of CV spectrum prdiction
         const PROspec& cv_spec = sys_obj.CV();
         int nbins = cv_spec.GetNbins();
-        Eigen::MatrixXd cv_spec_matrix =  Eigen::MatrixXd::Identity(nbins, nbins);
+        Eigen::MatrixXf cv_spec_matrix =  Eigen::MatrixXf::Identity(nbins, nbins);
         for(int i =0; i != nbins; ++i)
             cv_spec_matrix(i, i) = 1.0/cv_spec.GetBinContent(i);
 
         //second, get fractioal covar
-        Eigen::MatrixXd frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
+        Eigen::MatrixXf frac_covar_matrix = cv_spec_matrix * full_covar_matrix * cv_spec_matrix;
 
         //zero out nans 
         PROsyst::toFiniteMatrix(frac_covar_matrix);
 
         //check if it's good
-        if(!PROsyst::isPositiveSemiDefinite_WithTolerance(frac_covar_matrix,Eigen::NumTraits<double>::dummy_precision())){
+        if(!PROsyst::isPositiveSemiDefinite_WithTolerance(frac_covar_matrix,Eigen::NumTraits<float>::dummy_precision())){
             log<LOG_ERROR>(L"%1% || Fractional Covariance Matrix is not positive semi-definite!") % __func__;
             log<LOG_ERROR>(L"Terminating.");
             exit(EXIT_FAILURE);
@@ -201,14 +201,14 @@ namespace PROfit {
         return frac_covar_matrix;
     }
 
-    Eigen::MatrixXd PROsyst::GenerateCorrMatrix(const Eigen::MatrixXd& frac_matrix){
+    Eigen::MatrixXf PROsyst::GenerateCorrMatrix(const Eigen::MatrixXf& frac_matrix){
         int nbins = frac_matrix.rows();
-        Eigen::MatrixXd corr_covar_matrix = frac_matrix;
+        Eigen::MatrixXf corr_covar_matrix = frac_matrix;
 
-        Eigen::MatrixXd error_reciprocal_matrix = Eigen::MatrixXd::Zero(nbins, nbins);
+        Eigen::MatrixXf error_reciprocal_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
         for(int i = 0; i != nbins; ++i){
             if(frac_matrix(i,i) != 0){
-                double temp = sqrt(frac_matrix(i,i));
+                float temp = sqrt(frac_matrix(i,i));
                 error_reciprocal_matrix(i,i) = 1.0/temp;
             }
             else
@@ -224,15 +224,16 @@ namespace PROfit {
     }
 
 
-    void PROsyst::toFiniteMatrix(Eigen::MatrixXd& in_matrix){
+    void PROsyst::toFiniteMatrix(Eigen::MatrixXf& in_matrix){
         if(!PROsyst::isFiniteMatrix(in_matrix)){
             log<LOG_DEBUG>(L"%1% || Changing Nan/inf values to 0.0") % __func__;
-            in_matrix = in_matrix.unaryExpr([](double v) { return std::isfinite(v)? v : 0.0; });
+            in_matrix = in_matrix.unaryExpr([](float v) -> float { return std::isfinite(v) ? v : 0.0f; });
+
         }
         return;
     }
 
-    bool PROsyst::isFiniteMatrix(const Eigen::MatrixXd& in_matrix){
+    bool PROsyst::isFiniteMatrix(const Eigen::MatrixXf& in_matrix){
 
         //check for nan and infinite
         if(!in_matrix.allFinite()){
@@ -242,16 +243,16 @@ namespace PROfit {
         return true;
     }
 
-    bool PROsyst::isPositiveSemiDefinite(const Eigen::MatrixXd& in_matrix){
+    bool PROsyst::isPositiveSemiDefinite(const Eigen::MatrixXf& in_matrix){
 
         //first, check if it's symmetric 
-        if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
-            log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<double>::dummy_precision();
+        if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<float>::dummy_precision())){
+            log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<float>::dummy_precision();
             return false;
         }
 
         //second, check if it's positive semi-definite;
-        Eigen::LDLT<Eigen::MatrixXd> llt(in_matrix);
+        Eigen::LDLT<Eigen::MatrixXf> llt(in_matrix);
         if((llt.info() == Eigen::NumericalIssue ) || (!llt.isPositive()) )
             return false;
 
@@ -259,23 +260,23 @@ namespace PROfit {
 
     }
 
-    bool PROsyst::isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXd& in_matrix, double tolerance ){
+    bool PROsyst::isPositiveSemiDefinite_WithTolerance(const Eigen::MatrixXf& in_matrix, float tolerance ){
 
         //first, check if it's symmetric 
-        if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<double>::dummy_precision())){
-            log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<double>::dummy_precision();
+        if(!in_matrix.isApprox(in_matrix.transpose(), Eigen::NumTraits<float>::dummy_precision())){
+            log<LOG_ERROR>(L"%1% || Covariance matrix is not symmetric, with tolerance of %2%") % __func__ % Eigen::NumTraits<float>::dummy_precision();
             return false;
         }
 
 
         //second, check if it's positive semi-definite;
-        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(in_matrix);
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(in_matrix);
         if(eigensolver.info() != Eigen::Success){
             log<LOG_ERROR>(L"%1% || Failing to get eigenvalues..") % __func__ ;
             return false;
         }
 
-        Eigen::VectorXd eigenvals = eigensolver.eigenvalues();
+        Eigen::VectorXf eigenvals = eigensolver.eigenvalues();
         for(auto val : eigenvals ){
             if(val < 0 && fabs(val) > tolerance){
                 log<LOG_ERROR>(L"%1% || Matrix is not PSD. Found negative eigenvalues beyond tolerance (%2%): %3%") % __func__ % tolerance % val;
@@ -449,13 +450,13 @@ namespace PROfit {
         return ret;
     }
 
-    Eigen::MatrixXd PROsyst::GrabMatrix(const std::string& sys) const{
+    Eigen::MatrixXf PROsyst::GrabMatrix(const std::string& sys) const{
         if(syst_map.find(sys) != syst_map.end())
             return covmat.at(syst_map.at(sys).first);	
         else{
             log<LOG_ERROR>(L"%1% || Systematic you asked for : %2% doesn't have matrix saved yet..") % __func__ % sys.c_str();
             log<LOG_ERROR>(L"%1% || Return empty matrix .") % __func__ ;
-            return Eigen::MatrixXd();
+            return Eigen::MatrixXf();
         }
     }
 

@@ -39,7 +39,7 @@ int main(int argc, char* argv[]){
   auto start = chrono::high_resolution_clock::now();
   auto flat_caf = std::make_unique<TFile>(infilename.c_str(),"read");
   auto end  = chrono::high_resolution_clock::now();
-  double time_taken =
+  float time_taken =
       chrono::duration_cast<chrono::nanoseconds>(end - start).count();
  
   time_taken *= 1e-9;
@@ -47,9 +47,9 @@ int main(int argc, char* argv[]){
   std::cout<<"It took this many seconds to open caf: "<<time_taken<<std::endl;
   TTree *mytree = (TTree*)flat_caf->Get("nutree");
   
-  double recoE = 0;
-  double trueE =0;
-  double baseline=0;
+  float recoE = 0;
+  float trueE =0;
+  float baseline=0;
   
   mytree->SetBranchAddress("trueE", &trueE);
   mytree->SetBranchAddress("recoE", &recoE);
