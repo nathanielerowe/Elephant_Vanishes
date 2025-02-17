@@ -63,12 +63,12 @@ std::vector<T> buffer_to_vector(const py::buffer buf) {
         return vec;
     }
 
-    // Convertable cases: double -> float, long
-    if (buf_format == py::format_descriptor<double>::format() &&
+    // Convertable cases: float -> float, long
+    if (buf_format == py::format_descriptor<float>::format() &&
         (py::format_descriptor<T>::format() == py::format_descriptor<float>::format() ||
          py::format_descriptor<T>::format() == py::format_descriptor<int>::format())) {
 
-      double* ptr = static_cast<double*>(info.ptr);
+      float* ptr = static_cast<float*>(info.ptr);
 
       for (ssize_t i = 0; i < info.size; ++i) {
           vec[i] = static_cast<T>(ptr[i]);
@@ -110,7 +110,7 @@ PROfit::SystStruct init_SystStruct_np(
         const py::buffer knobinds_np,
 	const int index) {
 
-  // Convert double buffer to float 
+  // Convert float buffer to float 
 
   // turn the numpy vectors into c++ vectors
   std::vector<float> knobvals = buffer_to_vector<float>(knobvals_np);
@@ -121,7 +121,7 @@ PROfit::SystStruct init_SystStruct_np(
 
 PROfit::PROsyst init_PROsyst_empty(unsigned N) {
   PROfit::PROsyst ret;
-  ret.fractional_covariance = Eigen::MatrixXd::Constant(N, N, 0);
+  ret.fractional_covariance = Eigen::MatrixXf::Constant(N, N, 0);
   return ret;
 }
 
@@ -134,7 +134,7 @@ void savePROsurf(const PROfit::PROsurf &surface,
     bool logx=false, bool logy=false, const std::string &xlabel="", const std::string &ylabel="", 
     const std::string &rootfile="", const std::string &pdffile="") {
 
-  std::vector<double> binedges_x, binedges_y;
+  std::vector<float> binedges_x, binedges_y;
   for(size_t i = 0; i < surface.nbinsx+1; i++)
     binedges_x.push_back(logx ? std::pow(10, surface.edges_x(i)) : surface.edges_x(i));
   for(size_t i = 0; i < surface.nbinsy+1; i++)
@@ -170,11 +170,11 @@ PYBIND11_MODULE(_profit, m) {
     m.def("savePROsurf", &savePROsurf);
 
     // helper functions
-    // m.def("FindGlobalBin", py::vectorize(py::overload_cast<const PROfit::PROconfig &, double, const std::string&>(&PROfit::FindGlobalBin)));
-    m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, double v, std::string &s) { return PROfit::FindGlobalBin(c, v, s);}));
-    m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalBin(c, v, i);}));
-    m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, std::string &s) { return PROfit::FindGlobalTrueBin(c, v, s);}));
-    m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, double v, int i) { return PROfit::FindGlobalTrueBin(c, v, i);}));
+    // m.def("FindGlobalBin", py::vectorize(py::overload_cast<const PROfit::PROconfig &, float, const std::string&>(&PROfit::FindGlobalBin)));
+    m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, float v, std::string &s) { return PROfit::FindGlobalBin(c, v, s);}));
+    m.def("FindGlobalBin", py::vectorize([](PROfit::PROconfig &c, float v, int i) { return PROfit::FindGlobalBin(c, v, i);}));
+    m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, float v, std::string &s) { return PROfit::FindGlobalTrueBin(c, v, s);}));
+    m.def("FindGlobalTrueBin", py::vectorize([](PROfit::PROconfig &c, float v, int i) { return PROfit::FindGlobalTrueBin(c, v, i);}));
 
     m.def("FillRecoSpectra", py::overload_cast<const PROfit::PROconfig &, 
                                                const PROfit::PROpeller &, 
@@ -335,12 +335,12 @@ PYBIND11_MODULE(_profit, m) {
              std::vector<int> &, 
              std::vector<int> &>())
         .def_property("hist",
-             [](PROfit::PROpeller &p) -> Eigen::MatrixXd& {return p.hist;},
-             [](PROfit::PROpeller &p, const Eigen::MatrixXd &h) {p.hist = h;}, 
+             [](PROfit::PROpeller &p) -> Eigen::MatrixXf& {return p.hist;},
+             [](PROfit::PROpeller &p, const Eigen::MatrixXf &h) {p.hist = h;}, 
              py::return_value_policy::reference_internal)
         .def_property("histLE",
-             [](PROfit::PROpeller &p) -> Eigen::VectorXd& {return p.histLE;},
-             [](PROfit::PROpeller &p, const Eigen::VectorXd &v) {p.histLE = v;}, 
+             [](PROfit::PROpeller &p) -> Eigen::VectorXf& {return p.histLE;},
+             [](PROfit::PROpeller &p, const Eigen::VectorXf &v) {p.histLE = v;}, 
              py::return_value_policy::reference_internal)
         .def_property("reco",
              [](PROfit::PROpeller &p) {return py::array(p.reco.size(), p.reco.data(), py::capsule(&p.reco, [](void *v) {}));},
@@ -439,10 +439,10 @@ PYBIND11_MODULE(_profit, m) {
 
     // PROsurf
     py::class_<PROfit::PROsurf>(m, "PROsurf")
-        .def(py::init<size_t, const Eigen::VectorXd &, size_t, const Eigen::VectorXd &>())
-        .def(py::init<size_t, PROfit::PROsurf::LogLin, double, double, size_t, PROfit::PROsurf::LogLin, double, double>())
+        .def(py::init<size_t, const Eigen::VectorXf &, size_t, const Eigen::VectorXf &>())
+        .def(py::init<size_t, PROfit::PROsurf::LogLin, float, float, size_t, PROfit::PROsurf::LogLin, float, float>())
         .def(py::init<const PROfit::PROsurf &>())
-        .def(py::init([](const Eigen::VectorXd &xe, const Eigen::VectorXd &ye) {return PROfit::PROsurf(xe.size()-1, xe, ye.size()-1, ye);}))
+        .def(py::init([](const Eigen::VectorXf &xe, const Eigen::VectorXf &ye) {return PROfit::PROsurf(xe.size()-1, xe, ye.size()-1, ye);}))
         .def("FillSurfaceStat", &PROfit::PROsurf::FillSurfaceStat)
         .def("FillSurface", &PROfit::PROsurf::FillSurface)
         .def_readonly("edges_x",  &PROfit::PROsurf::edges_x)
@@ -463,15 +463,15 @@ PYBIND11_MODULE(_profit, m) {
                       int, int, PROfit::PROchi::EvalStrategy, std::vector<float>>(), 
              // Keep alive's for all of the objects that PROchi holds by reference
              py::keep_alive<0, 2>(), py::keep_alive<0, 3>(), py::keep_alive<0, 4>(), py::keep_alive<0, 5>())
-        .def("__call__", [](PROfit::PROchi &chi, const Eigen::VectorXd &param, bool rungradient=true) -> std::variant<double, std::pair<double, Eigen::VectorXd>> {
+        .def("__call__", [](PROfit::PROchi &chi, const Eigen::VectorXf &param, bool rungradient=true) -> std::variant<float, std::pair<float, Eigen::VectorXf>> {
             if (rungradient) {
-              Eigen::VectorXd gradient(chi.nParams());
-              double v = chi(param, gradient, true);
-              return {std::pair<double, Eigen::VectorXd>(v, gradient)};
+              Eigen::VectorXf gradient(chi.nParams());
+              float v = chi(param, gradient, true);
+              return {std::pair<float, Eigen::VectorXf>(v, gradient)};
             }
             else {
-              Eigen::VectorXd dummy;
-              double v = chi(param, dummy, false);
+              Eigen::VectorXf dummy;
+              float v = chi(param, dummy, false);
               return {v};
             }
 
@@ -484,7 +484,7 @@ PYBIND11_MODULE(_profit, m) {
 
     // PROfitter
     py::class_<PROfit::PROfitter>(m, "PROfitter")
-        .def(py::init<const Eigen::VectorXd, const Eigen::VectorXd, const LBFGSpp::LBFGSBParam<double>&>(), py::keep_alive<0, 3>())
+        .def(py::init<const Eigen::VectorXf, const Eigen::VectorXf, const LBFGSpp::LBFGSBParam<float>&>(), py::keep_alive<0, 3>())
         .def(py::init<const PROfit::PROfitter&>())
         .def("Fit", &PROfit::PROfitter::Fit)
         .def("FinalGradient", &PROfit::PROfitter::FinalGradient)
@@ -501,16 +501,16 @@ PYBIND11_MODULE(_profit, m) {
         .def_readonly("best_fit",  &PROfit::PROfitter::best_fit);
 
     // LBFGSBParam for PROfitter
-    py::class_<LBFGSpp::LBFGSBParam<double>>(m, "LBFGSBParam")
+    py::class_<LBFGSpp::LBFGSBParam<float>>(m, "LBFGSBParam")
         .def(py::init<>())
-        .def(py::init<const LBFGSpp::LBFGSBParam<double>&>())
-        .def("check_param", &LBFGSpp::LBFGSBParam<double>::check_param)
-        .def_readwrite("epsilon", &LBFGSpp::LBFGSBParam<double>::epsilon)
-        .def_readwrite("max_iterations", &LBFGSpp::LBFGSBParam<double>::max_iterations)
-        .def_readwrite("max_linesearch", &LBFGSpp::LBFGSBParam<double>::max_linesearch)
-        .def_readwrite("m", &LBFGSpp::LBFGSBParam<double>::m)
-        .def_readwrite("past", &LBFGSpp::LBFGSBParam<double>::past)
-        .def_readwrite("delta", &LBFGSpp::LBFGSBParam<double>::delta);
+        .def(py::init<const LBFGSpp::LBFGSBParam<float>&>())
+        .def("check_param", &LBFGSpp::LBFGSBParam<float>::check_param)
+        .def_readwrite("epsilon", &LBFGSpp::LBFGSBParam<float>::epsilon)
+        .def_readwrite("max_iterations", &LBFGSpp::LBFGSBParam<float>::max_iterations)
+        .def_readwrite("max_linesearch", &LBFGSpp::LBFGSBParam<float>::max_linesearch)
+        .def_readwrite("m", &LBFGSpp::LBFGSBParam<float>::m)
+        .def_readwrite("past", &LBFGSpp::LBFGSBParam<float>::past)
+        .def_readwrite("delta", &LBFGSpp::LBFGSBParam<float>::delta);
     
 
     // instantiate numpy

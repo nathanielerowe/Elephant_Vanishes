@@ -27,13 +27,13 @@ class ChiTest
         int n;
     public:
         ChiTest(int n_) : n(n_) {}
-        double operator()(const Eigen::VectorXd &x, Eigen::VectorXd &grad)
+        float operator()(const Eigen::VectorXf &x, Eigen::VectorXf &grad)
         {
-            double fx = 0.0;
+            float fx = 0.0;
             for(int i = 0; i < n; i += 2)
             {
-                double t1 = 1.0 - x[i];
-                double t2 = 10 * (x[i + 1] - x[i] * x[i]);
+                float t1 = 1.0 - x[i];
+                float t2 = 10 * (x[i + 1] - x[i] * x[i]);
                 grad[i + 1] = 20 * t2;
                 grad[i]     = -2.0 * (x[i] * grad[i + 1] + t1);
                 fx += t1 * t1 + t2 * t2;
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     std::string xmlname = "NULL.xml"; 
     int maxevents = 100;
 
-    //doubles
+    //floats
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
@@ -78,12 +78,12 @@ int main(int argc, char* argv[])
     PROsc osc(myprop);
 
     //Setup minimization parameetrs
-    LBFGSpp::LBFGSBParam<double> param;  
+    LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
-    LBFGSpp::LBFGSBSolver<double> solver(param); 
+    LBFGSpp::LBFGSBSolver<float> solver(param); 
 
-    Eigen::VectorXd data = systsstructs.back().CV().Spec();
+    Eigen::VectorXf data = systsstructs.back().CV().Spec();
 
     int nparams = 3;
 
@@ -91,17 +91,17 @@ int main(int argc, char* argv[])
     PROchi chi("3plus1",&myConf,&myprop,&systs,&osc, systsstructs.back().CV(), nparams, 1);
 
     // Bounds
-    Eigen::VectorXd lb(3);
+    Eigen::VectorXf lb(3);
     lb << 0.01 , 0  , -3;
-    Eigen::VectorXd ub(3);
+    Eigen::VectorXf ub(3);
     ub <<  100, 1, 3 ;
 
     // Initial guess
-    Eigen::VectorXd x(3);
+    Eigen::VectorXf x(3);
     x << 3, 0.5, 0.0;
 
     // x will be overwritten to be the best point found
-    double fx;
+    float fx;
     int niter = solver.minimize(chi, x, fx, lb, ub);
     
     log<LOG_DEBUG>(L"%1% || FINISHED MINIMIZING: NITERATIONS %2%  and MINIMUM PARAMS  %3% %4% %5%" ) % __func__ % niter % x[0] % x[1] % x[2];

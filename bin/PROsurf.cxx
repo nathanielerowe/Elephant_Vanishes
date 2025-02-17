@@ -113,9 +113,9 @@ int main(int argc, char* argv[])
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams, !eventbyevent) :
                    injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs, !eventbyevent) :
                    FillCVSpectrum(config, prop, !eventbyevent);
-    Eigen::VectorXd data_vec = CollapseMatrix(config, data.Spec());
-    Eigen::VectorXd err_vec_sq = data.Error().array().square();
-    Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+    Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
+    Eigen::VectorXf err_vec_sq = data.Error().array().square();
+    Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
     data = PROspec(data_vec, err_vec);
 
     if(syst_list.size()) {
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
     //And do a PROfile of pulls at the data also
     //PROfile(config,prop,systs,osc,data,filename+"_PROfile");
 
-    std::vector<double> binedges_x, binedges_y;
+    std::vector<float> binedges_x, binedges_y;
     for(size_t i = 0; i < surface.nbinsx+1; i++)
         binedges_x.push_back(logx ? std::pow(10, surface.edges_x(i)) : surface.edges_x(i));
     for(size_t i = 0; i < surface.nbinsy+1; i++)

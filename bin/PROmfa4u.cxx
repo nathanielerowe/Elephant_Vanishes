@@ -39,13 +39,13 @@ class ChiTest
         int n;
     public:
         ChiTest(int n_) : n(n_) {}
-        double operator()(const Eigen::VectorXd &x, Eigen::VectorXd &grad)
+        float operator()(const Eigen::VectorXf &x, Eigen::VectorXf &grad)
         {
-            double fx = 0.0;
+            float fx = 0.0;
             for(int i = 0; i < n; i += 2)
             {
-                double t1 = 1.0 - x[i];
-                double t2 = 10 * (x[i + 1] - x[i] * x[i]);
+                float t1 = 1.0 - x[i];
+                float t2 = 10 * (x[i + 1] - x[i] * x[i]);
                 grad[i + 1] = 20 * t2;
                 grad[i]     = -2.0 * (x[i] * grad[i + 1] + t1);
                 fx += t1 * t1 + t2 * t2;
@@ -147,7 +147,7 @@ struct Block : public BlockBase<T>
             const       diy::Master::ProxyWithLink& cp,
             //MFAInfo&    mfa_info,
             DomainArgs& args,
-            Eigen::Tensor<double, 4> vals,
+            Eigen::Tensor<float, 4> vals,
             bool  rescale)            // rescale science values
     {
         //std::cout << "$$$$ dom_dim: " << a->dom_dim << std::endl; 
@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
     std::string xmlname = "NULL.xml"; 
     int maxevents = 100;
 
-    //doubles
+    //floats
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
@@ -267,24 +267,24 @@ int main(int argc, char* argv[])
     //TH1D hmm = mySpec.toTH1D(myConf);
 
 
-    LBFGSpp::LBFGSBParam<double> param;  
+    LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
-    LBFGSpp::LBFGSBSolver<double> solver(param); 
+    LBFGSpp::LBFGSBSolver<float> solver(param); 
 
     int n=78;
     ChiTest fun(n);
 
     // Bounds
-    Eigen::VectorXd lb = Eigen::VectorXd::Constant(n, 0.0);
-    Eigen::VectorXd ub = Eigen::VectorXd::Constant(n, std::numeric_limits<double>::infinity());
+    Eigen::VectorXf lb = Eigen::VectorXf::Constant(n, 0.0);
+    Eigen::VectorXf ub = Eigen::VectorXf::Constant(n, std::numeric_limits<float>::infinity());
 
     // Initial guess
-    Eigen::VectorXd x = Eigen::VectorXd::Constant(n, 2.0);
+    Eigen::VectorXf x = Eigen::VectorXf::Constant(n, 2.0);
 
 
     // x will be overwritten to be the best point found
-    double fx;
+    float fx;
     int niter = solver.minimize(fun, x, fx, lb, ub);
 
 

@@ -26,7 +26,7 @@ namespace PROfit{
     /* Class: Primary class for storing final spectra and associated errors.
      * Note: 
      *  A barebones class, as all binning, collapsing..etc.. is handeled by PROconfig. 
-     *  Essentially two Eigen::VectorXd and associated functionality
+     *  Essentially two Eigen::VectorXf and associated functionality
      * Todo: 
      *  The toRoot/toTH1Dnot implemented. Do we need them?
      * */
@@ -36,25 +36,25 @@ namespace PROfit{
         private:
             //Base
             size_t nbins;
-            Eigen::VectorXd spec;
-            Eigen::VectorXd error;
+            Eigen::VectorXf spec;
+            Eigen::VectorXf error;
 
 
             //---- private helper function --------
             // Function: given two eigenvector of same dimension, calculate element-wise calculation of sqrt(a**2 + b**2) 
-            Eigen::VectorXd eigenvector_sqrt_quadrature_sum(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const;
+            Eigen::VectorXf eigenvector_sqrt_quadrature_sum(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const;
 
             // Function: given two eigenvector of same dimension, calculate element-wise division a/b 
-            Eigen::VectorXd eigenvector_division(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const;
+            Eigen::VectorXf eigenvector_division(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const;
 
             // Function: given two eigenvector of same dimension, calculate element-wise multiplication a*b 
-            Eigen::VectorXd eigenvector_multiplication(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const;
+            Eigen::VectorXf eigenvector_multiplication(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const;
 
         public:
 
             //Constructors
             PROspec():nbins(0) {}
-            PROspec(const Eigen::VectorXd &in_spec, const Eigen::VectorXd &in_error) : nbins(in_spec.size()), spec(in_spec), error(in_error){}
+            PROspec(const Eigen::VectorXf &in_spec, const Eigen::VectorXf &in_error) : nbins(in_spec.size()), spec(in_spec), error(in_error){}
 
             /* Function: create PROspec of given size */
             PROspec(size_t num_bins);
@@ -86,8 +86,8 @@ namespace PROfit{
              * 	 Care when using QuickFill!! 
              *
              */
-            void Fill(int bin_index, double weight);
-            void QuickFill(int bin_index, double weight);
+            void Fill(int bin_index, float weight);
+            void QuickFill(int bin_index, float weight);
 
             /* Function: zero out the spectrum and error, but keep the dimension */
             void Zero();
@@ -104,7 +104,7 @@ namespace PROfit{
              * Note: bin index starts at 0
              */
             inline
-                double GetBinContent(int bin) const{
+                float GetBinContent(int bin) const{
                     return spec(bin);
                 }
 
@@ -112,19 +112,19 @@ namespace PROfit{
              * Note: bin index starts at 0
              */
             inline
-                double GetBinError(int bin) const{
+                float GetBinError(int bin) const{
                     return error(bin);
                 }
 
             /*Return reference to the core specturm */ 
             inline
-                const Eigen::VectorXd& Spec() const{
+                const Eigen::VectorXf& Spec() const{
                     return spec;
                 }
 
             /*Return reference to the error specturm */ 
             inline
-                const Eigen::VectorXd& Error() const{
+                const Eigen::VectorXf& Error() const{
                     return error;
                 }
 
@@ -146,9 +146,9 @@ namespace PROfit{
             //division assignment
             PROspec& operator/=(const PROspec& b);
             //scaling (multiply with constant)
-            PROspec operator*(double scale) const;
+            PROspec operator*(float scale) const;
             //scaling assignmnet 
-            PROspec& operator*=(double scale);
+            PROspec& operator*=(float scale);
     };
 
 }

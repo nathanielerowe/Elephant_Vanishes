@@ -38,7 +38,7 @@ namespace PROfit{
             /*Function: Primary Constructor from raw std::vectors of MC values */ 
             PROpeller(const PROconfig &config, std::vector<float> &intruth, std::vector<float> &inreco, std::vector<float> &inbaseline, std::vector<int> &inpdg, std::vector<float> &inadded_weights, std::vector<int> &inbin_indices, std::vector<int> &inmodel_rule, std::vector<int> &intrue_bin_indices) : truth(intruth), reco(inreco), baseline(inbaseline), pdg(inpdg), added_weights(inadded_weights), bin_indices(inbin_indices), model_rule(inmodel_rule), true_bin_indices(intrue_bin_indices){
                 nevents = truth.size();
-                hist = Eigen::MatrixXd::Constant(config.m_num_truebins_total, config.m_num_bins_total, 0);
+                hist = Eigen::MatrixXf::Constant(config.m_num_truebins_total, config.m_num_bins_total, 0);
                 for(size_t i = 0; i < bin_indices.size(); ++i)
                     hist(true_bin_indices[i], bin_indices[i]) += added_weights[i];
 	    }
@@ -52,8 +52,8 @@ namespace PROfit{
             std::vector<int>   bin_indices;        /*Precalculated Bin index*/
             std::vector<int>   model_rule;
             std::vector<int>   true_bin_indices;
-            Eigen::MatrixXd    hist;
-            Eigen::VectorXd    histLE;
+            Eigen::MatrixXf    hist;
+            Eigen::VectorXf    histLE;
 
     };
 

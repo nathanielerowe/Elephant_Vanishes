@@ -25,7 +25,7 @@ namespace PROfit {
 struct surfOut{
     std::vector<int> grid_index;
     std::vector<float> grid_val;
-    double chi;
+    float chi;
 };
 
 int PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename);
@@ -34,17 +34,17 @@ class PROsurf {
 public:
     PROmetric &metric;
     size_t nbinsx, nbinsy;
-    Eigen::VectorXd edges_x, edges_y;
-    Eigen::MatrixXd surface;
+    Eigen::VectorXf edges_x, edges_y;
+    Eigen::MatrixXf surface;
 
     enum LogLin {
         LinAxis,
         LogAxis,
     };
 
-    PROsurf(PROmetric &metric, size_t nbinsx, const Eigen::VectorXd &edges_x, size_t nbinsy, const Eigen::VectorXd &edges_y) : metric(metric), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(edges_x), edges_y(edges_y), surface(nbinsx, nbinsy) { }
+    PROsurf(PROmetric &metric, size_t nbinsx, const Eigen::VectorXf &edges_x, size_t nbinsy, const Eigen::VectorXf &edges_y) : metric(metric), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(edges_x), edges_y(edges_y), surface(nbinsx, nbinsy) { }
 
-    PROsurf(PROmetric &metric, size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbinsy, LogLin lly, double y_lo, double y_hi);
+    PROsurf(PROmetric &metric, size_t nbinsx, LogLin llx, float x_lo, float x_hi, size_t nbinsy, LogLin lly, float y_lo, float y_hi);
 
     std::vector<surfOut> PointHelper(const PROsyst *systs, std::vector<surfOut> multi_physics_params, int start, int end);
 

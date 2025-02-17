@@ -185,16 +185,16 @@ namespace PROfit {
     }
 
     PROspec FillSystRandomThrow(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst) {
-        Eigen::VectorXd spec = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
-        Eigen::VectorXd cvspec = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
+        Eigen::VectorXf spec = Eigen::VectorXf::Constant(inconfig.m_num_bins_total, 0);
+        Eigen::VectorXf cvspec = Eigen::VectorXf::Constant(inconfig.m_num_bins_total, 0);
 
         // TODO: We should think about centralizing rng in a thread-safe/thread-aware way
         static std::random_device rd{};
         static std::mt19937 rng{rd()};
         std::normal_distribution<float> d;
         std::vector<float> throws;
-        //Eigen::VectorXd throwC = Eigen::VectorXd::Constant(inconfig.m_num_bins_total, 0);
-        Eigen::VectorXd throwC = Eigen::VectorXd::Constant(inconfig.m_num_bins_total_collapsed, 0);
+        //Eigen::VectorXf throwC = Eigen::VectorXf::Constant(inconfig.m_num_bins_total, 0);
+        Eigen::VectorXf throwC = Eigen::VectorXf::Constant(inconfig.m_num_bins_total_collapsed, 0);
         for(size_t i = 0; i < insyst.GetNSplines(); i++)
             throws.push_back(d(rng));
         for(size_t i = 0; i < inconfig.m_num_bins_total_collapsed; i++)
@@ -213,24 +213,25 @@ namespace PROfit {
         }
 
         if(insyst.GetNCovar() == 0) {
-            Eigen::VectorXd final_spec = CollapseMatrix(inconfig, spec);
+            Eigen::VectorXf final_spec = CollapseMatrix(inconfig, spec);
             return PROspec(final_spec, final_spec.array().sqrt());
         }
 
         // TODO: We probably just want to do this once and save it somewhere.
         // But where? PROpeller doesn't know about systs and PROsyst doesn't
         // know about cvspec.
-        Eigen::MatrixXd diag = cvspec.asDiagonal();
-        Eigen::MatrixXd full_cov = diag * insyst.fractional_covariance * diag;
-        Eigen::LLT<Eigen::MatrixXd> llt(CollapseMatrix(inconfig, full_cov));
+        Eigen::MatrixXf diag = cvspec.asDiagonal();
+        Eigen::MatrixXf full_cov = diag * insyst.fractional_covariance * diag;
+        Eigen::LLT<Eigen::MatrixXf> llt(CollapseMatrix(inconfig, full_cov));
 
-        Eigen::VectorXd final_spec = CollapseMatrix(inconfig, spec) + llt.matrixL() * throwC;
+        Eigen::VectorXf final_spec = CollapseMatrix(inconfig, spec) + llt.matrixL() * throwC;
         
         return PROspec(final_spec, final_spec.array().sqrt());
     }
 
     float GetOscWeight(int rule, float le, const PROsc &inosc, const std::vector<float> &inphysparams) {
         // The model functions take L and E separately, so give E as 1 and L as L/E
+        // input here is in logspace, and the model functions also expect log space NOW 
         return inosc.model_functions[rule](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), 1, le);
     }
 
@@ -240,8 +241,8 @@ namespace PROfit {
         //for now everything is numu disappearance 3+1. 
         // inphysparams[0] is log(delta-msq)
         // inphysparams[1] is sinsq2thmumu
+        // input here is in logspace, and the model functions also expect log space NOW std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1])
 
-//        float prob2 = inosc.Pmumu(std::pow(10, inphysparams[0]), inphysparams[1], inprop.truth[ev_idx], inprop.baseline[ev_idx]);
         float prob = inosc.model_functions[inprop.model_rule[ev_idx]](std::pow(10, inphysparams[0]), std::pow(10, inphysparams[1]), inprop.truth[ev_idx], inprop.baseline[ev_idx] );
         return prob;
     }

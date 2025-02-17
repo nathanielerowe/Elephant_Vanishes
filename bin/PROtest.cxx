@@ -76,13 +76,13 @@ int main(int argc, char* argv[])
         }
 
 
-        LBFGSpp::LBFGSBParam<double> param;
+        LBFGSpp::LBFGSBParam<float> param;
         param.epsilon = 1e-6;
         param.max_iterations = 100;
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
-        LBFGSpp::LBFGSBSolver<double> solver(param);
+        LBFGSpp::LBFGSBSolver<float> solver(param);
         int nparams = systs.GetNSplines();
         std::vector<float> physics_params; 
 
@@ -94,11 +94,11 @@ int main(int argc, char* argv[])
         std::vector<std::unique_ptr<TGraph>> graphs; 
 
         //hack
-        std::vector<double> priorX;
-        std::vector<double> priorY;
+        std::vector<float> priorX;
+        std::vector<float> priorY;
 
        for(int i=0; i<=20;i++){
-           double which_value = -2.0+0.2*i;
+           float which_value = -2.0+0.2*i;
            priorX.push_back(which_value);
            priorY.push_back(which_value*which_value);
 
@@ -111,20 +111,20 @@ int main(int argc, char* argv[])
             int which_spline = w;
 
 
-            std::vector<double> knob_vals;
-            std::vector<double> knob_chis;
+            std::vector<float> knob_vals;
+            std::vector<float> knob_chis;
 
             for(int i=0; i<=20;i++){
                 
-                Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-                Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-                Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
-                Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
-                Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
+                Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
+                Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
+                Eigen::VectorXf x = Eigen::VectorXf::Constant(nparams, 0.0);
+                Eigen::VectorXf grad = Eigen::VectorXf::Constant(nparams, 0.0);
+                Eigen::VectorXf bestx = Eigen::VectorXf::Constant(nparams, 0.0);
 
 
-                double which_value = -2.0+0.2*i;
-                double fx;
+                float which_value = -2.0+0.2*i;
+                float fx;
                 knob_vals.push_back(which_value);
 
                 lb[which_spline] = which_value;
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
 
                 log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
                 try {
-                    x = Eigen::VectorXd::Constant(nparams, 0.012);
+                    x = Eigen::VectorXf::Constant(nparams, 0.012);
                     solver.minimize(chi, x, fx, lb, ub);
                 } catch(std::runtime_error &except) {
                     log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
         std::cout << syst_vector.size() << std::endl;
 
         //generate covariance matrix 
-        Eigen::MatrixXd fractional_matrix = Eigen::MatrixXd::Zero(15, 15);
+        Eigen::MatrixXf fractional_matrix = Eigen::MatrixXf::Zero(15, 15);
         for(auto& s : syst_vector)
             fractional_matrix += PROsyst::GenerateFracCovarMatrix(s);
         std::cout << " Formed fractional covariance matrix by PROfit: " << std::endl; 
@@ -255,7 +255,7 @@ int main(int argc, char* argv[])
         std::cout << "Matrix is positive semidefinite? " << res1 << " " << res2 << std::endl;
 
 
-        Eigen::MatrixXd matrix1(3,3), matrix2(2,2), matrix3(2,2);
+        Eigen::MatrixXf matrix1(3,3), matrix2(2,2), matrix3(2,2);
         matrix1 << 3,2,1,2,3,1,1,2,3;
         matrix2 << 1, 2, 2, 3;
         matrix3 << 1, 2, 2, 4;
@@ -271,12 +271,12 @@ int main(int argc, char* argv[])
 
 
         //matrix collapsing 
-        Eigen::MatrixXd collapsed_fraction = CollapseMatrix(config, fractional_matrix);
+        Eigen::MatrixXf collapsed_fraction = CollapseMatrix(config, fractional_matrix);
         std::cout << "Collapsed Matrix by PROfit: " << std::endl;
         std::cout << collapsed_fraction << std::endl;
 
 
-        Eigen::MatrixXd correlation_matrix = PROsyst::GenerateCorrMatrix(fractional_matrix);
+        Eigen::MatrixXf correlation_matrix = PROsyst::GenerateCorrMatrix(fractional_matrix);
         std::cout << "Correlation Matrix" << std::endl;
         std::cout << correlation_matrix << std::endl;
 
