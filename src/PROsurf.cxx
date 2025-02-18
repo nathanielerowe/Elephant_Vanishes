@@ -249,6 +249,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
         std::vector<float> knob_vals;
         std::vector<float> knob_chis;
 
+        Eigen::VectorXf last_bf = Eigen::VectorXf::Constant(nparams,0);
         for(int i=0; i<=30;i++){
             Eigen::VectorXf ub, lb;
 
@@ -290,8 +291,9 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2);
             chi.fixSpline(which_spline,which_value);
 
-            fx = fitter.Fit(chi);
-
+            fx = fitter.Fit(chi,last_bf);
+            last_bf = fitter.best_fit;
+            
            // log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
            // try {
            //     x = Eigen::VectorXd::Constant(nparams, 0.012);
