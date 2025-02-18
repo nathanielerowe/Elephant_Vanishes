@@ -38,13 +38,15 @@ std::vector<int> sorted_indices(const std::vector<float>& vec) {
     return indices;
 }
 
-float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt={} ) {
+float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
     std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
 
     std::vector<std::vector<float>> latin_samples = latin_hypercube_sampling(n_multistart, ub.size(), d_uni,rng);
+
+    //Rescale the latin hypercube now at -2 to 2, scale to real bounds.
     for(std::vector<float> &pt: latin_samples) {
         for(size_t i = 0; i < pt.size(); ++i) {
             if(ub(i) != 3 || lb(i) != -3) {
@@ -66,8 +68,8 @@ float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt={} ) {
         Eigen::VectorXf grad = Eigen::VectorXf::Constant(x.size(), 0);
         float fx =  metric(x, grad, false);
         chi2s_multistart.push_back(fx);
-
     }
+
     //Sort so we can take the best N_localfits for further zoning
     std::vector<int> best_multistart = sorted_indices(chi2s_multistart);    
 
@@ -109,7 +111,7 @@ float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt={} ) {
     if(seed_pt.size()!=0){
         log<LOG_INFO>(L"%1% || Starting Seed fit ") % __func__  ;
         try {
-            x = Eigen::VectorXf::Constant(best_fit.size(), 0.012);
+            x = Eigen::VectorXf::Map( seed_pt.data(), seed_pt.size());   
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
             log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
@@ -120,10 +122,10 @@ float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt={} ) {
             chimin = fx;
         }
 
-        log<LOG_INFO>(L"%1% ||  CV Run has a chi %2%") % __func__ %  fx;
+        log<LOG_INFO>(L"%1% ||  Seed Run has a chi %2%") % __func__ %  fx;
         std::string spec_string = "";
         for(auto &f : x) spec_string+=" "+std::to_string(f); 
-        log<LOG_INFO>(L"%1% || Best Point post CV is  : %2% ") % __func__ % spec_string.c_str();
+        log<LOG_INFO>(L"%1% || Best Point post Seed is  : %2% ") % __func__ % spec_string.c_str();
     }
 
 

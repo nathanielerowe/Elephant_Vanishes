@@ -251,8 +251,6 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
         for(int i=0; i<=30;i++){
 
-            //Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
-            //Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
             Eigen::VectorXf ub = Eigen::VectorXf::Map(systs.spline_hi.data(), systs.spline_hi.size());
             Eigen::VectorXf lb = Eigen::VectorXf::Map(systs.spline_lo.data(), systs.spline_lo.size());
             Eigen::VectorXf x = Eigen::VectorXf::Constant(nparams, 0.0);
