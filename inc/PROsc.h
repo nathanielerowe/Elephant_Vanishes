@@ -2,6 +2,7 @@
 #define PROSC_H_
 
 // STANDARD
+#include <limits>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -81,8 +82,14 @@ namespace PROfit{
                 dmsq =std::pow(10, dmsq);
                 sinsq2thmumu =std::pow(10, sinsq2thmumu);
 
-                if(sinsq2thmumu > 1) sinsq2thmumu = 1;
-                if(sinsq2thmumu < 0) sinsq2thmumu = 0;
+                if(sinsq2thmumu > 1) {
+                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is greater than 1") % __func__ % sinsq2thmumu;
+                    sinsq2thmumu = 1;
+                }
+                if(sinsq2thmumu < 0) {
+                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is less than 0") % __func__ % sinsq2thmumu;
+                    sinsq2thmumu = 0;
+                }
 
                 float sinterm = std::sin(1.27*dmsq*(baseline/enu));
                 float prob    = 1.0 - (sinsq2thmumu*sinterm*sinterm);
@@ -95,6 +102,12 @@ namespace PROfit{
 
                 return prob;
             }
+
+        // TODO: Fix this to do more than numu disappearance
+        size_t nphysicsparams = 2;
+        Eigen::VectorXf lb{{-2, -std::numeric_limits<float>::infinity()}};
+        Eigen::VectorXf ub{{2, 0}};
+        std::vector<std::string> param_names{"dmsq", "sinsq2thmm"}; 
 
         std::vector<std::function<float(std::vector<float>,float,float)>> model_functions;
 
