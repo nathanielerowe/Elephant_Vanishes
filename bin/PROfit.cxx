@@ -61,7 +61,8 @@ int main(int argc, char* argv[])
 
     std::vector<float> pparams = {std::log10(injected_pt[0]), std::log10(injected_pt[1])};
     std::cout << "Injected point: sinsq2t = " << injected_pt[0] << " dmsq = " << injected_pt[1] << std::endl;
-    PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(myConf, myprop, systs, &osc, {0,0,0,0,0,0,0,0,0}, pparams, true) :
+    std::vector<float> inshifts_data_cv(systs.GetNSplines(),0);
+    PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(myConf, myprop, systs, &osc, inshifts_data_cv, pparams, true) :
                    FillCVSpectrum(myConf, myprop, true);
     Eigen::VectorXf data_vec = CollapseMatrix(myConf, data.Spec());
     Eigen::VectorXf err_vec_sq = data.Error().array().square();
