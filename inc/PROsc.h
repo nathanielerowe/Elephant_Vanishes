@@ -2,6 +2,7 @@
 #define PROSC_H_
 
 // STANDARD
+#include <limits>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -40,9 +41,9 @@ namespace PROfit{
 
             PROsc(const PROpeller &prop){
 
-                model_functions.push_back([this](float , float , float , float ) {(void)this; return 1.0; });//c++14 way of ignoring unused
-                model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmumu(a, b, c, d); });
-                model_functions.push_back([this](float a, float b, float c, float d) {return this->Pmue(a, b, c, d); });
+                model_functions.push_back([this](std::vector<float>v, float , float ) {(void)this; return 1.0; });//c++14 way of ignoring unused
+                model_functions.push_back([this](std::vector<float>v, float c, float d) {return this->Pmumu(v[0],v[1], c, d); });
+                model_functions.push_back([this](std::vector<float>v, float c, float d) {return this->Pmue(v[0],v[1], c, d); });
 
                 for(size_t m = 0; m < model_functions.size(); ++m) {
                     hists.emplace_back(Eigen::MatrixXf::Constant(prop.hist.rows(), prop.hist.cols(),0.0));
@@ -58,6 +59,9 @@ namespace PROfit{
 
             /* Function: 3+1 numu->nue apperance prob in SBL approx */
             float Pmue(float dmsq, float sinsq2thmue, float enu, float baseline) const{
+                dmsq =std::pow(10, dmsq);
+                sinsq2thmue =std::pow(10, sinsq2thmue);
+
                 if(sinsq2thmue > 1) sinsq2thmue = 1;
                 if(sinsq2thmue < 0) sinsq2thmue = 0;
 
@@ -75,8 +79,17 @@ namespace PROfit{
 
             /* Function: 3+1 numu->numue disapperance prob in SBL approx */
             float Pmumu(float dmsq, float sinsq2thmumu, float enu, float baseline) const{
-                if(sinsq2thmumu > 1) sinsq2thmumu = 1;
-                if(sinsq2thmumu < 0) sinsq2thmumu = 0;
+                dmsq =std::pow(10, dmsq);
+                sinsq2thmumu =std::pow(10, sinsq2thmumu);
+
+                if(sinsq2thmumu > 1) {
+                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is greater than 1") % __func__ % sinsq2thmumu;
+                    sinsq2thmumu = 1;
+                }
+                if(sinsq2thmumu < 0) {
+                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is less than 0") % __func__ % sinsq2thmumu;
+                    sinsq2thmumu = 0;
+                }
 
                 float sinterm = std::sin(1.27*dmsq*(baseline/enu));
                 float prob    = 1.0 - (sinsq2thmumu*sinterm*sinterm);
@@ -90,7 +103,13 @@ namespace PROfit{
                 return prob;
             }
 
-        std::vector<std::function<float(float, float,float,float)>> model_functions;
+        // TODO: Fix this to do more than numu disappearance
+        size_t nphysicsparams = 2;
+        Eigen::VectorXf lb{{-2, -std::numeric_limits<float>::infinity()}};
+        Eigen::VectorXf ub{{2, 0}};
+        std::vector<std::string> param_names{"dmsq", "sinsq2thmm"}; 
+
+        std::vector<std::function<float(std::vector<float>,float,float)>> model_functions;
 
         std::vector<Eigen::MatrixXf> hists;
 
