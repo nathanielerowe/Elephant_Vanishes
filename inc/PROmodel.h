@@ -13,8 +13,8 @@ class PROmodel {
 public:
     size_t nparams;
     std::vector<std::string> param_names;
-    std::vector<float> lb, ub;
-    std::vector<std::function<float(std::vector<float>, float)>> model_rules;
+    Eigen::VectorXf lb, ub;
+    std::vector<std::function<float(Eigen::VectorXf, float)>> model_functions;
     std::vector<Eigen::MatrixXf> hists;
 };
 

@@ -39,15 +39,6 @@ PROCNP::PROCNP(const std::string tag, const PROconfig *conin, const PROpeller *p
           prior_covariance(iB, iA) = std::get<2>(t);
         }
     }
-
-    PROspec cv = physics_param_fixed.size() > 0 ? 
-        FillRecoSpectra(*config, *pin, model, physics_param_fixed, strat != EventByEvent) :
-        FillCVSpectrum(*config, *pin);
-    Eigen::MatrixXf collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
-    Eigen::MatrixXf mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
-    Eigen::MatrixXf collapsed_mc_stat_covariance = CollapseMatrix(*config, mc_stat_covariance);
-    
-    Eigen::MatrixXf collapsed_stat_covariance = 3 * (collapsed_data_stat_covariance.inverse() + 2 * collapsed_mc_stat_covariance.inverse()).inverse();
 }
 
 float PROCNP::Pull(const Eigen::VectorXf &systs) {
@@ -72,20 +63,12 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXf subvector1 = param.segment(0, nparams - nsyst);
-    std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-    if(fitparams.size() == 0 && physics_param_fixed.size()!=0 ) {
-        fitparams = physics_param_fixed;
-    }
-
     Eigen::VectorXf subvector2 = param.segment(nparams - nsyst, nsyst);
-    std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
 
-    log<LOG_DEBUG>(L"%1% || Shifts size is %2%") % __func__ % shifts.size();
-
-    PROspec result = FillRecoSpectra(*config, *peller, *syst, model, params, strat == BinnedChi2);
+    PROspec result = FillRecoSpectra(*config, *peller, *syst, *model, param, strat == BinnedChi2);
     Eigen::MatrixXf inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
     
-    PROspec cv = FillRecoSpectra(*config, *peller, model, fitparams, strat != EventByEvent);
+    PROspec cv = FillRecoSpectra(*config, *peller, *syst, *model, subvector1, strat == EventByEvent);
     Eigen::MatrixXf collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
     Eigen::MatrixXf mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
     Eigen::MatrixXf collapsed_mc_stat_covariance = CollapseMatrix(*config, mc_stat_covariance);
@@ -138,19 +121,14 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * dval;
             
             Eigen::VectorXf subvector1 = tmpParams.segment(0, nparams - nsyst);
-            std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-            if(fitparams.size() == 0 && physics_param_fixed.size() != 0) {
-                fitparams = physics_param_fixed;
-            }
             Eigen::VectorXf subvector2 = tmpParams.segment(nparams - nsyst, nsyst);
-            std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
-            PROspec result = FillRecoSpectra(*config, *peller, *syst, model, tmpParams, strat != EventByEvent);
+            PROspec result = FillRecoSpectra(*config, *peller, *syst, *model, tmpParams, strat != EventByEvent);
             // Calcuate Full Covariance matrix
             Eigen::MatrixXf inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
 
             Eigen::MatrixXf new_collapsed_stat_covariance = collapsed_stat_covariance;
             if(i < nparams - nsyst) {
-                PROspec cv = FillRecoSpectra(*config, *peller, model, fitparams, strat != EventByEvent);
+                PROspec cv = FillRecoSpectra(*config, *peller, *syst, *model, subvector1, strat != EventByEvent);
                 Eigen::MatrixXf collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
                 Eigen::MatrixXf mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
                 Eigen::MatrixXf collapsed_mc_stat_covariance = CollapseMatrix(*config, mc_stat_covariance);

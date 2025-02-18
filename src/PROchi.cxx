@@ -58,20 +58,9 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient, bool rungradient){
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXf subvector1 = param.segment(0, nparams - nsyst);
-    std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-    if(fitparams.size() == 0 && physics_param_fixed.size()!=0 ) {
-        fitparams = physics_param_fixed;
-    }
-
     Eigen::VectorXf subvector2 = param.segment(nparams - nsyst, nsyst);
-    std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
 
-    log<LOG_DEBUG>(L"%1% || Shifts size is %2%") % __func__ % shifts.size();
-
-    PROspec result = FillRecoSpectra(*config, *peller, *syst, model, param, strat == BinnedChi2);
-
-    //std::cout<<"Spec "<< result.Spec()<<" .. "<<std::endl;
-    //result.plotSpectrum(*config,"TTPT");
+    PROspec result = FillRecoSpectra(*config, *peller, *syst, *model, param, strat == BinnedChi2);
 
     Eigen::MatrixXf inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
     
@@ -101,12 +90,7 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
          
        }
 
-      //std::cout<<"shape: "<<inverted_collapsed_full_covariance.size()<<std::endl;
-      //std::cout<<inverted_collapsed_full_covariance<<std::endl;
-
-    // Calculate Chi^2  value
     Eigen::VectorXf delta  = CollapseMatrix(*config,result.Spec()) - data.Spec(); 
-
     float pull = Pull(subvector2);
     float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
     float value = covar_portion + pull;
@@ -120,17 +104,12 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             int sgn = ((param(i) - last_param(i)) > 0) - ((param(i) - last_param(i)) < 0);
             if(!sgn) sgn = 1;
             //if(fitparams.size() != 0 && i == 1 && param(i) < -4 + dval) sgn = 1;
-            if(fitparams.size() != 0 && i == 1 && param(i) > 0 - dval) sgn = -1;
+            //if(fitparams.size() != 0 && i == 1 && param(i) > 0 - dval) sgn = -1;
             tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * dval;
             
             Eigen::VectorXf subvector1 = tmpParams.segment(0, nparams - nsyst);
-            std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-            if(fitparams.size() == 0 && physics_param_fixed.size() != 0) {
-                fitparams = physics_param_fixed;
-            }
             Eigen::VectorXf subvector2 = tmpParams.segment(nparams - nsyst, nsyst);
-            std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
-            PROspec result = FillRecoSpectra(*config, *peller, *syst, model, tmpParams, strat != EventByEvent);
+            PROspec result = FillRecoSpectra(*config, *peller, *syst, *model, tmpParams, strat != EventByEvent);
             // Calcuate Full Covariance matrix
             Eigen::MatrixXf inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
 
