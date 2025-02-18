@@ -1,8 +1,9 @@
 #include "PROsurf.h"
-#include "Eigen/src/Core/Matrix.h"
 #include "PROfitter.h"
 #include "PROCNP.h"
 #include "PROlog.h"
+
+#include <Eigen/Eigen>
 
 using namespace PROfit;
 
@@ -63,7 +64,7 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
 
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
-            Eigen::VectorXf physics_params = {(float)edges_y(j), (float)edges_x(i)};
+            Eigen::VectorXf physics_params{{(float)edges_y(j), (float)edges_x(i)}};
             float fx = (*local_metric)(physics_params, empty_vec, false);
             surface(i, j) = fx;
             if(!filename.empty()){
