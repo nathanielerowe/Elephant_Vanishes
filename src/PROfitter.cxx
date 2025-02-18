@@ -38,7 +38,7 @@ std::vector<int> sorted_indices(const std::vector<float>& vec) {
     return indices;
 }
 
-float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt) {
+float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
@@ -108,10 +108,10 @@ float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt) {
     float fx;
     Eigen::VectorXf x;
 
-    if(seed_pt.size()!=0){
+    if(seed_pt.norm()>0){
         log<LOG_INFO>(L"%1% || Starting Seed fit ") % __func__  ;
         try {
-            x = Eigen::VectorXf::Map( seed_pt.data(), seed_pt.size());   
+            x = seed_pt;   
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
             log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
