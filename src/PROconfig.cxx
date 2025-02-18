@@ -224,7 +224,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             // What are the bin edges and bin widths (bin widths just calculated from edges now)
             tinyxml2::XMLElement *pBin = pChan->FirstChildElement("bins");
-           
+
             log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning.   ") % __func__  ;
             const char* rmin = pBin->Attribute("min");
             const char* rmax = pBin->Attribute("max");
@@ -237,44 +237,44 @@ int PROconfig::LoadFromXML(const std::string &filename){
             // use edges if defined, otherwise use min-max-nbins 
             if(redges != NULL){
 
-                    std::stringstream reco_iss(redges);
-                    float number;
-                    while ( reco_iss >> number ){
-                        binedge.push_back(number);
-                    }
+                std::stringstream reco_iss(redges);
+                float number;
+                while ( reco_iss >> number ){
+                    binedge.push_back(number);
+                }
 
-                    nbinsp = binedge.size() - 1;
-                    for(int i = 0; i != nbinsp; ++i){
-                        binwidth.push_back(binedge[i+1] - binedge[i]);
-                    }
+                nbinsp = binedge.size() - 1;
+                for(int i = 0; i != nbinsp; ++i){
+                    binwidth.push_back(binedge[i+1] - binedge[i]);
+                }
 
-                    log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with  %2% bins, Edges defined as %2%    ") % __func__ % nbinsp % binedge ;
+                log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with  %2% bins, Edges defined as %3%    ") % __func__ % nbinsp % binedge ;
 
-                    m_channel_num_bins.push_back(nbinsp);
-                    m_channel_bin_edges.push_back(binedge);
-                    m_channel_bin_widths.push_back(binwidth);
+                m_channel_num_bins.push_back(nbinsp);
+                m_channel_bin_edges.push_back(binedge);
+                m_channel_bin_widths.push_back(binwidth);
 
-             }else if (rmin!=NULL && rmax!=NULL && rbnins!=NULL ){
-                
-                        float minp = strtod(rmin, &end);
-                        float maxp = strtod(rmax, &end);
-                        nbinsp = (int)strtod(rnbins, &end);
-                        float step = (maxp-minp)/(float)nbinsp;
-                        for(int i=0; i<nbinsp; i++){
-                            binedge.push_back(minp+i*step);
-                        }
-                        binedge.push_back(maxp);
-                        binwidth.resize(nbinsp, step);
-                        log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
-                    }
+            }else if (rmin!=NULL && rmax!=NULL && rnbins!=NULL ){
 
-                    m_channel_num_bins.push_back(nbinsp);
-                    m_channel_bin_edges.push_back(binedge);
-                    m_channel_bin_widths.push_back(binwidth);
+                float minp = strtod(rmin, &end);
+                float maxp = strtod(rmax, &end);
+                nbinsp = (int)strtod(rnbins, &end);
+                float step = (maxp-minp)/(float)nbinsp;
+                for(int i=0; i<nbinsp; i++){
+                    binedge.push_back(minp+i*step);
+                }
+                binedge.push_back(maxp);
+                binwidth.resize(nbinsp, step);
+                log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
+                log<LOG_DEBUG>(L"%1% || Which corresponds to edges %2%   ") % __func__ % binedge ;
+
+                m_channel_num_bins.push_back(nbinsp);
+                m_channel_bin_edges.push_back(binedge);
+                m_channel_bin_widths.push_back(binwidth);
             }else{
-                    log<LOG_ERROR>(L"%1% || ERROR: You need to define a reco binning using either edges or min/max/nsteps @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
-                    log<LOG_ERROR>(L"Terminating.");
-                    exit(EXIT_FAILURE);
+                log<LOG_ERROR>(L"%1% || ERROR: You need to define a reco binning using either edges or min/max/nsteps @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
             }
 
 
@@ -311,6 +311,9 @@ int PROconfig::LoadFromXML(const std::string &filename){
                             binwidth.push_back(binedge[i+1] - binedge[i]);
                         }
 
+                        log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with  %2% bins, Edges defined as %3%    ") % __func__ % nbinsp % binedge ;
+
+
                     }else{
                         float minp = strtod(tmin, &end);
                         float maxp = strtod(tmax, &end);
@@ -322,6 +325,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
                         binedge.push_back(maxp);
                         binwidth.resize(nbinsp, step);
                         log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
+                        log<LOG_DEBUG>(L"%1% || Which corresponds to edges %2%   ") % __func__ % binedge ;
+
                     }
 
                     m_channel_num_truebins.push_back(nbinsp);
@@ -558,15 +563,15 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
 
 
-                    if(use_universe){
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist ) );
-                    } else  if((std::string)bcentral == "true"){
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist,bsyst, true) );
-                        log<LOG_DEBUG>(L"%1% || Setting as  CV for det sys.") % __func__ ;
-                    } else {
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist,bsyst, false) );
-                        log<LOG_DEBUG>(L"%1% || Setting as individual (not CV) for det sys.") % __func__ ;
-                    }
+                if(use_universe){
+                    TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist ) );
+                } else  if((std::string)bcentral == "true"){
+                    TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist,bsyst, true) );
+                    log<LOG_DEBUG>(L"%1% || Setting as  CV for det sys.") % __func__ ;
+                } else {
+                    TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist,bsyst, false) );
+                    log<LOG_DEBUG>(L"%1% || Setting as individual (not CV) for det sys.") % __func__ ;
+                }
 
                 TEMP_branch_variables.back()->SetIncludeSystematics(TEMP_eventweight_branch_syst.back());
 
@@ -648,14 +653,14 @@ int PROconfig::LoadFromXML(const std::string &filename){
             while (getline(tup, s, ' ')) split.push_back(s);
 
             if (split.size() != 3) {
-              throw std::invalid_argument(std::string("Correlations should be formed as <Systematic A> <Systematic B> <Correlation>. Could not parse: ") + std::string(pCorrelations->GetText()));
+                throw std::invalid_argument(std::string("Correlations should be formed as <Systematic A> <Systematic B> <Correlation>. Could not parse: ") + std::string(pCorrelations->GetText()));
             }
 
             m_mcgen_correlations.push_back(std::make_tuple(split[0], split[1], std::stof(split[2])));
 
             pCorrelations = pCorrelations->NextSiblingElement("correlation");
         }
-        
+
 
         //weightMaps
         if(!pWeiMaps){
