@@ -14,7 +14,7 @@ public:
     size_t nparams;
     std::vector<std::string> param_names;
     Eigen::VectorXf lb, ub;
-    std::vector<std::function<float(Eigen::VectorXf, float)>> model_functions;
+    std::vector<std::function<float(const Eigen::VectorXf&, float)>> model_functions;
     std::vector<Eigen::MatrixXf> hists;
 };
 
