@@ -74,8 +74,12 @@ namespace PROfit{
                 return new PROchi(*this);
             }
 
-            virtual void set_physics_param_fixed(const std::vector<float> &physics_param) {
-                physics_param_fixed = physics_param;
+            virtual const PROmodel &GetModel() const {
+                return *model;
+            }
+
+            virtual const PROsyst &GetSysts() const {
+                return *syst;
             }
 
             virtual void override_systs(const PROsyst &new_syst) {

@@ -56,14 +56,18 @@ namespace PROfit{
                 return new PROCNP(*this);
             }
 
+            virtual const PROmodel &GetModel() const {
+                return *model;
+            }
+
+            virtual const PROsyst &GetSysts() const {
+                return *syst;
+            }
+
             void reset() {
                 physics_param_fixed.clear();
                 last_value = 0;
                 last_param = Eigen::VectorXf::Constant(last_param.size(), 0);
-            }
-
-            void set_physics_param_fixed(const std::vector<float> &physics_param) {
-                physics_param_fixed = physics_param;
             }
 
             void override_systs(const PROsyst &new_syst) {
