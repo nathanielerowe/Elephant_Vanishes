@@ -4,7 +4,7 @@
 using namespace PROfit;
 
 
-PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat, std::vector<float> physics_param_fixed) : PROmetric(), model_tag(tag), config(conin), peller(pin), syst(systin), osc(oscin), data(datain), nparams(nparams), nsyst(nsyst), strat(strat), physics_param_fixed(physics_param_fixed), correlated_systematics(false) {
+PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat, std::vector<float> physics_param_fixed) : PROmetric(), model_tag(tag), config(conin), peller(pin), syst(systin), model(modelin), data(datain), nparams(nparams), nsyst(nsyst), strat(strat), physics_param_fixed(physics_param_fixed), correlated_systematics(false) {
     last_value = 0.0; last_param = Eigen::VectorXf::Zero(nparams); 
     fixed_index = -999;
 
@@ -68,7 +68,7 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 
     log<LOG_DEBUG>(L"%1% || Shifts size is %2%") % __func__ % shifts.size();
 
-    PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams, strat == BinnedChi2);
+    PROspec result = FillRecoSpectra(*config, *peller, *syst, model, param, strat == BinnedChi2);
 
     //std::cout<<"Spec "<< result.Spec()<<" .. "<<std::endl;
     //result.plotSpectrum(*config,"TTPT");
@@ -107,16 +107,9 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
     // Calculate Chi^2  value
     Eigen::VectorXf delta  = CollapseMatrix(*config,result.Spec()) - data.Spec(); 
 
-    if(!(fixed_index<0)){
-        //subvector2[fixed_index]=0;   
-        //Dont do this anymore
-    }
-
     float pull = Pull(subvector2);
-    float dmsq_penalty = 0;
     float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
-    float value = covar_portion + dmsq_penalty + pull;
-
+    float value = covar_portion + pull;
 
     if(rungradient){
         float dval = 1e-4;
@@ -137,7 +130,7 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             }
             Eigen::VectorXf subvector2 = tmpParams.segment(nparams - nsyst, nsyst);
             std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
-            PROspec result = FillRecoSpectra(*config, *peller, *syst, osc, shifts, fitparams, strat != EventByEvent);
+            PROspec result = FillRecoSpectra(*config, *peller, *syst, model, tmpParams, strat != EventByEvent);
             // Calcuate Full Covariance matrix
             Eigen::MatrixXf inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
 
@@ -157,10 +150,6 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             // Calculate Chi^2  value
             Eigen::VectorXf delta  = CollapseMatrix(*config,result.Spec()) - data.Spec(); 
 
-            if(!(fixed_index<0)){
-                //subvector2[fixed_index]=0;   
-                //dont do this, cinlude it
-            }
             float pull = Pull(subvector2);
             float dmsq_penalty = 0;
             float value_grad = (delta.transpose())*inverted_collapsed_full_covariance*(delta) + dmsq_penalty + pull;
