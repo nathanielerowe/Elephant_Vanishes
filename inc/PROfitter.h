@@ -18,7 +18,7 @@ public:
     PROfitter(const Eigen::VectorXf ub, const Eigen::VectorXf lb, const LBFGSpp::LBFGSBParam<float> &param = {})
         : ub(ub), lb(lb), param(param), solver(param) {}
 
-    float Fit(PROmetric &metric);
+    float Fit(PROmetric &metric, const std::vector<float> &seed_pt);
 
     Eigen::VectorXf FinalGradient() const {return solver.final_grad();}
     float FinalGradientNorm() const {return solver.final_grad_norm();}

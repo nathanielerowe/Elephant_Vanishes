@@ -38,7 +38,7 @@ std::vector<int> sorted_indices(const std::vector<float>& vec) {
     return indices;
 }
 
-float PROfitter::Fit(PROmetric &metric) {
+float PROfitter::Fit(PROmetric &metric, const std::vector<float> &seed_pt={} ) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::normal_distribution<float> d;
@@ -101,11 +101,34 @@ float PROfitter::Fit(PROmetric &metric) {
     }
 
 
-    // and do CV
-    log<LOG_INFO>(L"%1% || Starting CV fit ") % __func__  ;
+    // and do Seeded Point
     int niter;
     float fx;
     Eigen::VectorXf x;
+
+    if(seed_pt.size()!=0){
+        log<LOG_INFO>(L"%1% || Starting Seed fit ") % __func__  ;
+        try {
+            x = Eigen::VectorXf::Constant(best_fit.size(), 0.012);
+            niter = solver.minimize(metric, x, fx, lb, ub);
+        } catch(std::runtime_error &except) {
+            log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+        }
+        chi2s_localfits.push_back(fx);
+        if(fx < chimin){
+            best_fit = x;
+            chimin = fx;
+        }
+
+        log<LOG_INFO>(L"%1% ||  CV Run has a chi %2%") % __func__ %  fx;
+        std::string spec_string = "";
+        for(auto &f : x) spec_string+=" "+std::to_string(f); 
+        log<LOG_INFO>(L"%1% || Best Point post CV is  : %2% ") % __func__ % spec_string.c_str();
+    }
+
+
+    // and do CV
+    log<LOG_INFO>(L"%1% || Starting CV fit ") % __func__  ;
     try {
         x = Eigen::VectorXf::Constant(best_fit.size(), 0.012);
         niter = solver.minimize(metric, x, fx, lb, ub);
