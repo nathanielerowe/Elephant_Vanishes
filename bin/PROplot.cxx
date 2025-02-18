@@ -3,6 +3,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
+#include "PROsc.h"
 #include "PROpeller.h"
 #include "PROcess.h"
 #include "PROtocall.h"
@@ -89,17 +90,23 @@ int main(int argc, char* argv[])
     PROsyst systs(systsstructs);
     PROsc osc(prop);
 
-    std::vector<float> pparams = {std::log10(apply_osc[0]), std::log10(apply_osc[1])};
-    std::cout << "Injected point: sinsq2t = " << apply_osc[0] << " dmsq = " << apply_osc[1] << std::endl;
-    for(const auto& [name, shift]: apply_shift)
-      std::cout << "Injected syst: " << name << " shifted by " << shift << " sigma\n";
-
-    PROspec spec = 
-        apply_osc[0] != 0 && apply_osc[1] != 0 ? 
-            FillRecoSpectra(config, prop, systs, &osc, apply_shift, pparams, !eventbyevent) :
-        apply_shift.size() ? 
-            FillRecoSpectra(config, prop, systs, apply_shift, !eventbyevent) :
-            FillCVSpectrum(config, prop, !eventbyevent);
+    Eigen::VectorXf pparams{{std::log10(apply_osc[0]), std::log10(apply_osc[1])}};
+    log<LOG_INFO>(L"%1% || Injected point: sinsq2t = %2%, dmsq = %3%") % __func__ % apply_osc[0] % apply_osc[1];
+    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(osc.nparams + systs.GetNSplines(), 0);
+    for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
+    for(const auto& [name, shift]: apply_shift) {
+        log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
+        auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
+        if(it == systs.spline_names.end()) {
+            log<LOG_ERROR>(L"%1% || Error: Unrecognized spline %2%. Ignoring this injected shift.") % __func__ % name.c_str();
+            continue;
+        }
+        int idx = std::distance(systs.spline_names.begin(), it);
+        allparams(idx) = shift;
+    }
+    PROspec spec = (apply_osc[0] != 0 && apply_osc[1] != 0) || apply_shift.size() ? 
+        FillRecoSpectra(config, prop, systs, osc, allparams, !eventbyevent) :
+        FillCVSpectrum(config, prop, !eventbyevent);
 
     if(syst_list.size()) {
       systs = systs.subset(syst_list);

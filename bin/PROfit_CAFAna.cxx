@@ -2,6 +2,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
+#include "PROsc.h"
 #include "PROpeller.h"
 #include "PROchi.h"
 #include "PROcess.h"
@@ -86,7 +87,7 @@ int main(int argc, char* argv[])
     newSpec.Print();
 
     //Build chi^2 object
-    PROchi chi("3plus1",&myConf,&myprop,&systs,oscillate ? &osc : NULL, newSpec, nparams, systs.GetNSplines());
+    PROchi chi("3plus1",&myConf,&myprop,&systs,oscillate ? &osc : NULL, newSpec);
 
     // Bounds
     Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);

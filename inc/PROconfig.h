@@ -22,9 +22,7 @@
 #include "tinyxml2.h"
 
 // EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
+#include <Eigen/Eigen>
 
 //PROfit
 #include "PROlog.h"
