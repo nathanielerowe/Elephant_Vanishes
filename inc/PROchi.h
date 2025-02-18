@@ -30,6 +30,8 @@ namespace PROfit{
     class PROchi : public PROmetric
     {
         private:
+
+        public:
             // TODO: How much of this should be in PROmetric instead?
 
             std::string model_tag;
@@ -53,10 +55,10 @@ namespace PROfit{
             Eigen::MatrixXf prior_covariance;
             Eigen::MatrixXf collapsed_stat_covariance;
 
-        public:
 
             /*Function: Constructor bringing all objects together*/
             PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+
 
             /*Function: operator() is what is passed to minimizer.*/
             virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient);

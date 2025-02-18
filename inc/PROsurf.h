@@ -28,7 +28,21 @@ struct surfOut{
     float chi;
 };
 
-int PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool with_osc = false);
+struct profOut{
+    std::vector<float> knob_vals;
+    std::vector<float> knob_chis;
+    float chi;
+};
+
+class PROfile {
+
+	public:
+	PROmetric &metric;
+
+	PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc = false, int nThreads = 1);
+
+    	std::vector<profOut> PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc, int nparams);
+};
 
 class PROsurf {
 public:

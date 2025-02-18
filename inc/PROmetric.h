@@ -24,6 +24,7 @@ public:
     virtual const PROmodel &GetModel() const = 0;
     virtual const PROsyst  &GetSysts() const = 0;
     virtual ~PROmetric() {}
+    virtual void fixSpline(int,float)  = 0;
 };
 
 };
