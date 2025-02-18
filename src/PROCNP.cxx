@@ -60,17 +60,20 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 
 
 float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient, bool rungradient){
-    size_t nparams = model->nparams+syst->GetNSplines();
-    size_t nsyst = syst->GetNSplines();
+    //size_t nparams = model->nparams+syst->GetNSplines();
+    //size_t nsyst = syst->GetNSplines();
 
     // Get Spectra from FillRecoSpectra
-    Eigen::VectorXf subvector1 = param.segment(0, nparams - nsyst);
-    Eigen::VectorXf subvector2 = param.segment(nparams - nsyst, nsyst);
+    Eigen::VectorXf subvector1 = param.segment(0, model->nparams);
+    log<LOG_DEBUG>(L"%1% || Created physics subvector with size %2%") % __func__ % subvector1.size();
+    Eigen::VectorXf subvector2 = param.segment(model->nparams, syst->GetNSplines());
+    log<LOG_DEBUG>(L"%1% || Created spline subvector with size %2%") % __func__ % subvector2.size();
 
     PROspec result = FillRecoSpectra(*config, *peller, *syst, *model, param, strat == BinnedChi2);
+
+
     Eigen::MatrixXf inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
-    
-    PROspec cv = FillRecoSpectra(*config, *peller, *syst, *model, subvector1, strat == EventByEvent);
+    PROspec cv = FillRecoSpectra(*config, *peller, *syst, *model, subvector1, strat != EventByEvent);
     Eigen::MatrixXf collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
     Eigen::MatrixXf mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
     Eigen::MatrixXf collapsed_mc_stat_covariance = CollapseMatrix(*config, mc_stat_covariance);
@@ -113,7 +116,7 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 
     if(rungradient){
         float dval = 1e-4;
-        for (int i = 0; i < nparams; i++) {
+        for (int i = 0; i < model->nparams+syst->GetNSplines(); i++) {
             //Eigen::VectorXf tmpParams = last_param;
             Eigen::VectorXf tmpParams = param;
             int sgn = ((param(i) - last_param(i)) > 0) - ((param(i) - last_param(i)) < 0);
@@ -122,14 +125,16 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             //else if(fitparams.size() != 0 && i == 1 && param(i) > 0 - dval) sgn = -1;
             tmpParams(i) = /*param(i) != last_param(i) ? param(i) :*/ param(i) + sgn * dval;
             
-            Eigen::VectorXf subvector1 = tmpParams.segment(0, nparams - nsyst);
-            Eigen::VectorXf subvector2 = tmpParams.segment(nparams - nsyst, nsyst);
+            Eigen::VectorXf subvector1 = tmpParams.segment(0, model->nparams);
+            log<LOG_DEBUG>(L"%1% || Created physics subvector with size %2%") % __func__ % subvector1.size();
+            Eigen::VectorXf subvector2 = tmpParams.segment(model->nparams, syst->GetNSplines());
+            log<LOG_DEBUG>(L"%1% || Created spline subvector with size %2%") % __func__ % subvector2.size();
             PROspec result = FillRecoSpectra(*config, *peller, *syst, *model, tmpParams, strat != EventByEvent);
             // Calcuate Full Covariance matrix
             Eigen::MatrixXf inverted_collapsed_full_covariance(config->m_num_bins_total_collapsed,config->m_num_bins_total_collapsed);
 
             Eigen::MatrixXf new_collapsed_stat_covariance = collapsed_stat_covariance;
-            if(i < nparams - nsyst) {
+            if(i < model->nparams) {
                 PROspec cv = FillRecoSpectra(*config, *peller, *syst, *model, subvector1, strat != EventByEvent);
                 Eigen::MatrixXf collapsed_data_stat_covariance = data.Spec().array().matrix().asDiagonal();
                 Eigen::MatrixXf mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
