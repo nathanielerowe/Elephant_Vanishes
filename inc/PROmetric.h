@@ -2,7 +2,7 @@
 #define PROMETRIC_H
 
 #include "PROsyst.h"
-
+#include "PROsc.h"
 #include <Eigen/Eigen>
 
 namespace PROfit {
@@ -23,6 +23,8 @@ public:
     virtual void reset() = 0;
     virtual PROmetric *Clone() const = 0;
     virtual ~PROmetric() {}
+    virtual const PROsc * getModel() const = 0;	
+    virtual void fixSpline(int,float)  = 0;
 };
 
 };

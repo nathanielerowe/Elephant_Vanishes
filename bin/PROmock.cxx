@@ -153,7 +153,10 @@ int main(int argc, char* argv[])
   //Define the model (currently 3+1 SBL)
   PROsc osc(prop);
 
-  PROfile(config,prop,systs,osc,data,filename+"_PROfile");
+  //Define a metric
+  PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),PROfit::PROchi::BinnedChi2);
+
+  PROfile(config,prop,systs,osc,data,chi,filename+"_PROfile");
 
   return 0;
 }

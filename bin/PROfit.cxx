@@ -31,12 +31,13 @@ int main(int argc, char* argv[])
     std::array<float, 2> injected_pt{0, 0};
     std::map<std::string, float> injected_systs;
     int maxevents = 100;
-
+    size_t nthread = 1;
     //floats
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
     app.add_option("-o,--outfile", filename, "Output filename")->default_str("profit");
+    app.add_option("-t, --nthread",   nthread, "Number of fits.")->default_val(1);
     app.add_option("--inject", injected_pt, "Physics parameters to inject as true signal.")->default_str("0 0");
 
     CLI11_PARSE(app, argc, argv);
@@ -173,7 +174,7 @@ int main(int argc, char* argv[])
     p.Draw();
     c.Print((filename+"_pulls.pdf").c_str(), "pdf");
 
-    PROfile(myConf, myprop, systs, osc, data, filename, true);
+    PROfile(myConf, myprop, systs, osc, data, chi,filename, true, nthread);
 
     return 0;
 }

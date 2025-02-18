@@ -55,6 +55,7 @@ namespace PROfit{
             PROmetric *Clone() const {
                 return new PROCNP(*this);
             }
+            const PROsc * getModel() const override {return osc;};
 
             void reset() {
                 physics_param_fixed.clear();
