@@ -54,6 +54,8 @@ namespace PROfit{
                 
                 nparams = 2;
                 param_names = {"dmsq", "sinsq2thmm"}; 
+                lb = Eigen::VectorXf(2);
+                ub = Eigen::VectorXf(2);
                 lb << -2, -std::numeric_limits<float>::infinity();
                 ub << 2, 0;
             };

@@ -4,14 +4,14 @@
 using namespace PROfit;
 
 
-PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat, std::vector<float> physics_param_fixed) : PROmetric(), model_tag(tag), config(conin), peller(pin), syst(systin), model(modelin), data(datain), nparams(nparams), nsyst(nsyst), strat(strat), physics_param_fixed(physics_param_fixed), correlated_systematics(false) {
-    last_value = 0.0; last_param = Eigen::VectorXf::Zero(nparams); 
+PROchi::PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, EvalStrategy strat, std::vector<float> physics_param_fixed) : PROmetric(), model_tag(tag), config(conin), peller(pin), syst(systin), model(modelin), data(datain), strat(strat), physics_param_fixed(physics_param_fixed), correlated_systematics(false) {
+    last_value = 0.0; last_param = Eigen::VectorXf::Zero(model->nparams+syst->GetNSplines()); 
     fixed_index = -999;
 
     // Build the correlation matrix between priors if configured to
     if (conin->m_mcgen_correlations.size()) {
         correlated_systematics = true;
-        prior_covariance = Eigen::MatrixXf::Identity(nsyst, nsyst);
+        prior_covariance = Eigen::MatrixXf::Identity(syst->GetNSplines(), syst->GetNSplines());
         for (auto const &t: conin->m_mcgen_correlations) {
           auto itA = std::find(systin->spline_names.begin(), systin->spline_names.end(), std::get<0>(t));
           if (itA == systin->spline_names.end()) {
@@ -56,6 +56,9 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 
 
 float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient, bool rungradient){
+    size_t nparams = model->nparams+syst->GetNSplines();
+    size_t nsyst = syst->GetNSplines();
+
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXf subvector1 = param.segment(0, nparams - nsyst);
     Eigen::VectorXf subvector2 = param.segment(nparams - nsyst, nsyst);

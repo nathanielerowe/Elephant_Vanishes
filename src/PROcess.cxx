@@ -29,10 +29,11 @@ namespace PROfit {
     }
 
     PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROmodel &inmodel, const Eigen::VectorXf &params, bool binned){
-
         PROspec myspectrum(inconfig.m_num_bins_total);
         Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);
-        Eigen::VectorXf shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
+        Eigen::VectorXf shifts;
+        if((size_t)params.size() > inmodel.nparams) 
+            shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
 
         if(binned) {
             for(long int i = 0; i < inprop.hist.rows(); ++i) {

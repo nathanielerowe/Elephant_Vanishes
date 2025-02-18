@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
                 x[which_spline] = which_value;
 
 
-                PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
+                PROchi chi("3plus1", &config, &prop, &systs, &osc, data, PROchi::BinnedChi2, physics_params);
                 chi.fixSpline(which_spline,which_value);
 
                 log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;

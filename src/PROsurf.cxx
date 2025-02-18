@@ -109,10 +109,10 @@ std::vector<surfOut> PROsurf::PointHelper(std::vector<surfOut> multi_physics_par
         Eigen::VectorXf ub(nparams+2);
         ub << local_metric->GetModel().ub, Eigen::VectorXf::Map(local_metric->GetSysts().spline_hi.data(), local_metric->GetSysts().spline_hi.size());
 
-        lb(x_idx) = multi_physics_params[i].grid_val[0];
-        ub(x_idx) = multi_physics_params[i].grid_val[0];
-        lb(y_idx) = multi_physics_params[i].grid_val[1];
-        ub(y_idx) = multi_physics_params[i].grid_val[1];
+        lb(x_idx) = multi_physics_params[i].grid_val[1];
+        ub(x_idx) = multi_physics_params[i].grid_val[1];
+        lb(y_idx) = multi_physics_params[i].grid_val[0];
+        ub(y_idx) = multi_physics_params[i].grid_val[0];
 
         PROfitter fitter(ub, lb, param);
         output.chi = fitter.Fit(*local_metric);
@@ -292,7 +292,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
 
             PROfitter fitter(ub, lb, param);
 
-            PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2);
+            PROchi chi("3plus1", &config, &prop, &systs, &osc, data, PROchi::BinnedChi2);
             chi.fixSpline(which_spline,which_value);
 
             fx = fitter.Fit(chi,last_bf);

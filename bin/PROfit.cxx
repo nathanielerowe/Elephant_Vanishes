@@ -81,8 +81,7 @@ int main(int argc, char* argv[])
 
     //PROfile(myConf, myprop, systs, osc, data, "profit_test", true);
     
-    PROchi chi("", &myConf, &myprop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),
-            PROfit::PROchi::BinnedChi2);
+    PROchi chi("", &myConf, &myprop, &systs, &osc, data, PROfit::PROchi::BinnedChi2);
 
     LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;

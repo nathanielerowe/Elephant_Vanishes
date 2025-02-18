@@ -16,7 +16,6 @@ public:
         BinnedChi2
     };
 
-    virtual int nParams() const = 0;
     virtual void override_systs(const PROsyst &new_syst) = 0;
     virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient) = 0;
     virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient, bool nograd) = 0;

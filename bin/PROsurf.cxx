@@ -136,9 +136,9 @@ int main(int argc, char* argv[])
 
     PROmetric *metric;
     if(chi2 == "PROchi") {
-        metric = new PROchi("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+        metric = new PROchi("", &config, &prop, &systs, &osc, data, PROmetric::BinnedChi2);
     } else if(chi2 == "PROCNP") {
-        metric = new PROCNP("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+        metric = new PROCNP("", &config, &prop, &systs, &osc, data, PROmetric::BinnedChi2);
     } else {
         log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
         abort();
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
 
     //Define grid and Surface
     size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
-    PROsurf surface(*metric, 0, 1, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+    PROsurf surface(*metric, 1, 0, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
                     nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
     
     if(statonly)

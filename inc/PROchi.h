@@ -39,8 +39,6 @@ namespace PROfit{
             const PROsyst *syst; 
             const PROmodel *model;
             const PROspec data;
-            int nparams;
-            int nsyst;
             EvalStrategy strat;
             std::vector<float> physics_param_fixed;
                         //Do we want to fix any param?
@@ -58,7 +56,7 @@ namespace PROfit{
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
             virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient);
@@ -83,18 +81,12 @@ namespace PROfit{
             }
 
             virtual void override_systs(const PROsyst &new_syst) {
-                nparams -= nsyst;
                 syst = &new_syst;
-                nsyst = syst->GetNSplines();
-                nparams += nsyst;
             }
             
             float Pull(const Eigen::VectorXf &systs);
 
             void fixSpline(int fix, float valin);
-
-            virtual int nParams() const {return nparams;}
-
     };
 }
 #endif
