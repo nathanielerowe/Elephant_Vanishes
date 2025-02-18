@@ -33,7 +33,7 @@ namespace PROfit{
      *  Add interfacte for defining own model
      */
 
-    class PROsc : PROmodel {
+    class PROsc : public PROmodel {
         public:
 
             PROsc(const PROpeller &prop) {

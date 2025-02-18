@@ -105,14 +105,24 @@ int main(int argc, char* argv[])
     //Define the model (currently 3+1 SBL)
     PROsc osc(prop);
     
-    std::vector<float> pparams = {std::log10(injected_pt[0]), std::log10(injected_pt[1])};
+    Eigen::VectorXf pparams{{std::log10(injected_pt[0]), std::log10(injected_pt[1])}};
     log<LOG_INFO>(L"%1% || Injected point: sinsq2t = %2%, dmsq = %3%") % __func__ % injected_pt[0] % injected_pt[1];
-    for(const auto& [name, shift]: injected_systs)
-      log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
+    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(osc.nparams + systs.GetNSplines(), 0);
+    for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
+    for(const auto& [name, shift]: injected_systs) {
+        log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
+        auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
+        if(it == systs.spline_names.end()) {
+            log<LOG_ERROR>(L"%1% || Error: Unrecognized spline %2%. Ignoring this injected shift.") % __func__ % name.c_str();
+            continue;
+        }
+        int idx = std::distance(systs.spline_names.begin(), it);
+        allparams(idx) = shift;
+    }
     //Grab Asimov Data
-    PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams, !eventbyevent) :
-                   injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs, !eventbyevent) :
-                   FillCVSpectrum(config, prop, !eventbyevent);
+    PROspec data = (injected_pt[0] != 0 && injected_pt[1] != 0) || injected_systs.size() ? 
+        FillRecoSpectra(config, prop, systs, osc, allparams, !eventbyevent) :
+        FillCVSpectrum(config, prop, !eventbyevent);
     Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
     Eigen::VectorXf err_vec_sq = data.Error().array().square();
     Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();

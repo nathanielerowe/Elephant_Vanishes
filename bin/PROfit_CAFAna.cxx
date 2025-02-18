@@ -2,6 +2,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
+#include "PROsc.h"
 #include "PROpeller.h"
 #include "PROchi.h"
 #include "PROcess.h"

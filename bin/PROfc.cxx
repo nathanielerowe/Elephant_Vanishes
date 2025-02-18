@@ -5,6 +5,7 @@
 #include "PROtocall.h"
 #include "PROcreate.h"
 #include "PROpeller.h"
+#include "PROsc.h"
 #include "PROchi.h"
 #include "PROcess.h"
 #include "PROfitter.h"
@@ -47,16 +48,16 @@ void fc_worker(fc_args args) {
     std::mt19937 rng{rd()};
     PROsc osc(args.prop);
     PROchi::EvalStrategy strat = args.binned ? PROchi::BinnedChi2 : PROchi::EventByEvent;
+    Eigen::VectorXf throws = Eigen::VectorXf::Constant(args.phy_params.size() + args.systs.GetNSplines(), 0);
     for(size_t u = 0; u < args.todo; ++u) {
         log<LOG_INFO>(L"%1% | Thread #%2% Throw #%3%") % __func__ % args.thread % u;
         std::normal_distribution<float> d;
-        std::vector<float> throws;
         Eigen::VectorXf throwC = Eigen::VectorXf::Constant(args.config.m_num_bins_total, 0);
         for(size_t i = 0; i < args.systs.GetNSplines(); i++)
-            throws.push_back(d(rng));
+            throws(i+args.phy_params.size()) = d(rng);
         for(size_t i = 0; i < args.config.m_num_bins_total; i++)
             throwC(i) = d(rng);
-        PROspec shifted = FillRecoSpectra(args.config, args.prop, args.systs, &osc, throws, args.phy_params, strat);
+        PROspec shifted = FillRecoSpectra(args.config, args.prop, args.systs, osc, throws, strat);
         PROspec newSpec = PROspec::PoissonVariation(PROspec(CollapseMatrix(args.config, shifted.Spec()) + args.L * throwC, CollapseMatrix(args.config, shifted.Error())));
 
         // No oscillations
