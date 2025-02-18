@@ -14,8 +14,6 @@
 #include "PROsc.h"
 #include "PROcess.h"
 #include "PROmetric.h"
-#include "PROparam.h"
-
 
 namespace PROfit{
 
@@ -44,6 +42,7 @@ namespace PROfit{
             int nparams;
             int nsyst;
             EvalStrategy strat;
+            std::vector<float> physics_param_fixed;
                         //Do we want to fix any param?
             int fixed_index;
             float fixed_val;
@@ -59,7 +58,7 @@ namespace PROfit{
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, PROparam &params, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
             virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient);

@@ -459,7 +459,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
             std::vector<std::string> TEMP_eventweight_branch_names;
             std::vector<int> TEMP_eventweight_branch_syst;
             std::vector<std::shared_ptr<BranchVariable>> TEMP_branch_variables;
-
             while(pBranch){
 
                 const char* bnam = pBranch->Attribute("name");
