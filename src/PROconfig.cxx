@@ -224,27 +224,58 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             // What are the bin edges and bin widths (bin widths just calculated from edges now)
             tinyxml2::XMLElement *pBin = pChan->FirstChildElement("bins");
-            std::stringstream iss(pBin->Attribute("edges"));
+           
+            log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning.   ") % __func__  ;
+            const char* rmin = pBin->Attribute("min");
+            const char* rmax = pBin->Attribute("max");
+            const char* rnbins = pBin->Attribute("nbins");
+            const char* redges =pBin->Attribute("edges");
 
-            float number;
-            std::vector<float> binedge;
-            std::vector<float> binwidth;
-            std::string binstring = "";
-            while ( iss >> number ){
-                binedge.push_back( number );
-                binstring+=" "+std::to_string(number);
+            int nbinsp;
+            std::vector<float> binedge, binwidth;
+
+            // use edges if defined, otherwise use min-max-nbins 
+            if(redges != NULL){
+
+                    std::stringstream reco_iss(redges);
+                    float number;
+                    while ( reco_iss >> number ){
+                        binedge.push_back(number);
+                    }
+
+                    nbinsp = binedge.size() - 1;
+                    for(int i = 0; i != nbinsp; ++i){
+                        binwidth.push_back(binedge[i+1] - binedge[i]);
+                    }
+
+                    log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with  %2% bins, Edges defined as %2%    ") % __func__ % nbinsp % binedge ;
+
+                    m_channel_num_bins.push_back(nbinsp);
+                    m_channel_bin_edges.push_back(binedge);
+                    m_channel_bin_widths.push_back(binwidth);
+
+             }else if (rmin!=NULL && rmax!=NULL && rbnins!=NULL ){
+                
+                        float minp = strtod(rmin, &end);
+                        float maxp = strtod(rmax, &end);
+                        nbinsp = (int)strtod(rnbins, &end);
+                        float step = (maxp-minp)/(float)nbinsp;
+                        for(int i=0; i<nbinsp; i++){
+                            binedge.push_back(minp+i*step);
+                        }
+                        binedge.push_back(maxp);
+                        binwidth.resize(nbinsp, step);
+                        log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
+                    }
+
+                    m_channel_num_bins.push_back(nbinsp);
+                    m_channel_bin_edges.push_back(binedge);
+                    m_channel_bin_widths.push_back(binwidth);
+            }else{
+                    log<LOG_ERROR>(L"%1% || ERROR: You need to define a reco binning using either edges or min/max/nsteps @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                    log<LOG_ERROR>(L"Terminating.");
+                    exit(EXIT_FAILURE);
             }
-
-            log<LOG_DEBUG>(L"%1% || Loading Bins with edges %2%  ") % __func__ % binstring.c_str();
-
-            for(size_t b = 0; b<binedge.size()-1; b++){
-                binwidth.push_back(fabs(binedge.at(b)-binedge.at(b+1)));
-            }
-
-            m_channel_num_bins.push_back(binedge.size()-1);
-
-            m_channel_bin_edges.push_back(binedge);
-            m_channel_bin_widths.push_back(binwidth);
 
 
             tinyxml2::XMLElement *pBinT = pChan->FirstChildElement("truebins");
