@@ -146,13 +146,13 @@ int main(int argc, char* argv[])
 
     //Define grid and Surface
     size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
-    PROsurf surface(*metric, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+    PROsurf surface(*metric, 0, 1, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
                     nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
     
     if(statonly)
         surface.FillSurfaceStat(config, !savetoroot ? filename : "");
     else
-        surface.FillSurface(systs, !savetoroot ? filename : "", nthread);
+        surface.FillSurface(!savetoroot ? filename : "", nthread);
 
     //And do a PROfile of pulls at the data also
     //PROfile(config,prop,systs,osc,data,filename+"_PROfile");
