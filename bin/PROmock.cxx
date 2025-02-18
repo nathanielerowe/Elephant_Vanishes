@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
   PROsc osc(prop);
 
   //Define a metric
-  PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),PROfit::PROchi::BinnedChi2);
+  PROchi chi("", &config, &prop, &systs, &osc, data, PROfit::PROchi::BinnedChi2);
 
   PROfile(config,prop,systs,osc,data,chi,filename+"_PROfile");
 
