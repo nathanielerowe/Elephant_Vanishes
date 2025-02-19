@@ -47,7 +47,7 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
     delete local_metric;
 }
 
-std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc){
+std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc, const Eigen::VectorXf& init_seed) {
 
     std::vector<profOut> outs;
     // Make a local copy for this thread
@@ -60,13 +60,14 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start
 
         int which_spline= i;
         bool isphys = which_spline < local_metric->GetModel().nparams;
-        if(isphys) nstep=3*nstep;
+        if(isphys) nstep=4*nstep;
         profOut output;
 
         log<LOG_INFO>(L"%1% || THREADS %2% in this batch if ( %3%,%4% )") % __func__ %  i % start % end;
         
 
         Eigen::VectorXf last_bf;
+        if(init_seed.norm()>0) last_bf= init_seed;
         for(int i=0; i<=nstep;i++){
             Eigen::VectorXf ub, lb;
 
@@ -88,17 +89,20 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start
                 lb = Eigen::VectorXf::Map(systs->spline_lo.data(), systs->spline_lo.size());
                 nparams = systs->GetNSplines();
             }
-            Eigen::VectorXf x = Eigen::VectorXf::Constant(nparams, 0.0);
-            Eigen::VectorXf grad = Eigen::VectorXf::Constant(nparams, 0.0);
-            Eigen::VectorXf bestx = Eigen::VectorXf::Constant(nparams, 0.0);
 
-            float which_value = lb(which_spline) + (ub(which_spline) - lb(which_spline)) * i / (float)nstep;
+
+
+            float which_value =  std::isinf(lb(which_spline)) ? -3 + (ub(which_spline) - (-3)) * i / (float)nstep :   lb(which_spline) + (ub(which_spline) - lb(which_spline)) * i / (float)nstep;
             float fx;
             output.knob_vals.push_back(which_value);
 
+            //log<LOG_INFO>(L"%1% || Fixed value of spline # %2% is value %3%, has a chi PRE of : %4% (i %5% nstep %6% || ub %7% lb %8% ") % __func__ % which_spline % which_value % fx % i % nstep % lb.size() % ub.size() ;
+            //std::vector<float> ubv(ub.data(), ub.data() + ub.size());
+            //std::vector<float> lbv(lb.data(), lb.data() + lb.size());
+            //log<LOG_INFO>(L"%1% || lb %2%  ub %3% ") % __func__ % lbv % ubv  ;
+
             lb[which_spline] = which_value;
             ub[which_spline] = which_value;
-            x[which_spline] = which_value;
 
             LBFGSpp::LBFGSBParam<float> param;
             param.epsilon = 1e-6;
@@ -119,9 +123,9 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start
           
 
             std::string spec_string = "";
-            for(auto &f : x) spec_string+=" "+std::to_string(f); 
-            log<LOG_INFO>(L"%1% || Fixed value of %2% for spline %3% was post  : %4% ") % __func__ % which_spline % which_value % fx;
-            log<LOG_INFO>(L"%1% || BF splines @ %2%") % __func__ %  spec_string.c_str();
+            for(auto &f : fitter.best_fit) spec_string+=" "+std::to_string(f); 
+            log<LOG_INFO>(L"%1% || Fixed value of spline # %2% is value %3%, has a chi post of : %4% (i %5% nstep %6% ") % __func__ % which_spline % which_value % fx % i % nstep;
+            log<LOG_INFO>(L"%1% || at a BF param value of @ %2%") % __func__ %  spec_string.c_str();
 
         }    //end spline loop        
 
@@ -270,7 +274,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val,float range) {
 }
 
 
-PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads) : metric(metric) {
+PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed) : metric(metric) {
 
     LBFGSpp::LBFGSBParam<float> param;
     param.epsilon = 1e-6;
@@ -316,7 +320,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-            return this->PROfilePointHelper(&systs, start, end,with_osc);
+            return this->PROfilePointHelper(&systs, start, end,with_osc,init_seed);
         }));
 
     }
@@ -347,9 +351,11 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
         graphs.back()->Draw("AL");
         graphs.back()->SetLineWidth(2);
 
-        gprior->Draw("L same");
-        gprior->SetLineStyle(2);
-        gprior->SetLineWidth(1);
+        if(w>=model.nparams){
+            gprior->Draw("L same");
+            gprior->SetLineStyle(2);
+            gprior->SetLineWidth(1);
+        }
         w++;
     }
 
