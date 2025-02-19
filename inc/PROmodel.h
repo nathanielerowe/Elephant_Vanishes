@@ -15,7 +15,7 @@ public:
     std::vector<std::string> param_names;
     Eigen::VectorXf lb, ub;
     std::vector<std::function<float(const Eigen::VectorXf&, float)>> model_functions;
-    std::vector<Eigen::MatrixXf> hists;
+    std::vector<Eigen::MatrixXf> hists; //2D hists for binned oscilattions
 };
 
 }
