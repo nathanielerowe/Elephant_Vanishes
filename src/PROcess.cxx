@@ -20,7 +20,7 @@ namespace PROfit {
                 }
             }
         } else {
-            for(size_t i = 0; i<inprop.truth.size(); ++i){
+            for(size_t i = 0; i<inprop.trueLE.size(); ++i){
                 float add_w = inprop.added_weights[i]; 
                 myspectrum.Fill(inprop.bin_indices[i], add_w);
             }
@@ -54,10 +54,10 @@ namespace PROfit {
                 }
             }
         } else {
-            for(size_t i = 0; i<inprop.truth.size(); ++i){
+            for(size_t i = 0; i<inprop.trueLE.size(); ++i){
 
                 float oscw  = phys.size() != 0 ? 
-                    inmodel.model_functions[inprop.model_rule[i]](phys, inprop.baseline[i] / inprop.truth[i]) :
+                    inmodel.model_functions[inprop.model_rule[i]](phys, inprop.trueLE[i]) :
                     1;
                 float add_w = inprop.added_weights[i]; 
                 const int true_bin = inprop.true_bin_indices[i]; 
