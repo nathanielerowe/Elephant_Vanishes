@@ -359,6 +359,8 @@ namespace PROfit {
 
         //open files, and link trees and branches
         int good_event = 0;
+        bool useXrootD = true;
+
         for(int fid=0; fid < num_files; ++fid) {
             const auto& fn = inconfig.m_mcgen_file_name.at(fid);
 
@@ -367,7 +369,7 @@ namespace PROfit {
 
             if (fn.find(".root") != std::string::npos) {
                 log<LOG_INFO>(L"%1% || Starting a (single) TCHain, loading file %2%") % __func__  % fn.c_str();
-                filesForChain.push_back(fn);
+                filesForChain.push_back(useXrootD ? convertToXRootD(fn) : fn);
             }else{
              
                 log<LOG_INFO>(L"%1% || Starting a TCHain, loading from filelist %2%") % __func__  % fn.c_str();
@@ -379,6 +381,7 @@ namespace PROfit {
 
                 std::string line;
                 while (std::getline(infile, line)) {
+                       if(useXrootD) line = convertToXRootD(line);
                        log<LOG_INFO>(L"%1% || Loading file %2% into TChain") %__func__ % line.c_str();
                        filesForChain.push_back(line);
                 }
@@ -652,7 +655,7 @@ namespace PROfit {
                 //grab additional weight for systematics
                 for(size_t is = 0; is != total_num_systematics; ++is){
                     if(syst_vector[is].HasWeightFormula()){
-                        sys_weight_formula[is]->UpdateFormulaLeaves();
+                        //sys_weight_formula[is]->UpdateFormulaLeaves();// not neede
                         sys_weight_formula[is]->GetNdata();	
                         sys_weight_value[is] = sys_weight_formula[is]->EvalInstance();
                     }
