@@ -151,12 +151,12 @@ int main(int argc, char* argv[])
   }
 
   //Define the model (currently 3+1 SBL)
-  PROsc osc(prop);
+  std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
   //Define a metric
-  PROchi chi("", &config, &prop, &systs, &osc, data, PROfit::PROchi::BinnedChi2);
+  PROchi chi("", config, prop, &systs, *model, data, PROfit::PROchi::BinnedChi2);
 
-  PROfile(config,prop,systs,osc,data,chi,filename+"_PROfile");
+  PROfile(config,prop,systs,*model,data,chi,filename+"_PROfile");
 
   return 0;
 }
