@@ -36,7 +36,7 @@ namespace PROfit {
 
     void SystStruct::CreateSpecs(int num_bins){
         this->CleanSpecs();
-        log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
+        log<LOG_DEBUG>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
 
         p_cv = std::make_shared<PROspec>(num_bins);
         for(int i = 0; i != n_univ; ++i){
@@ -71,8 +71,7 @@ namespace PROfit {
             exit(EXIT_FAILURE);
         }
 
-        log<LOG_INFO>(L"%1% || Systematic variation %2% passed sanity check!!") % __func__ % systname.c_str();
-        log<LOG_INFO>(L"%1% || Systematic variation %2% has %3% universes, and is in %4% mode with weight formula: %5%") % __func__ % systname.c_str() % n_univ % mode.c_str() % weight_formula.c_str();
+        log<LOG_DEBUG>(L"%1% || Systematic variation %2% has %3% universes, and is in %4% mode with weight formula: %5%") % __func__ % systname.c_str() % n_univ % mode.c_str() % weight_formula.c_str();
         return;
     }
 
@@ -557,14 +556,14 @@ namespace PROfit {
             std::string sys_weight_formula = "1";
             std::string sys_mode = inconfig.m_mcgen_variation_type_map.at(sys_name);
 
-            log<LOG_ERROR>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
+            log<LOG_INFO>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
             if(sys_weight_formula != "1" || sys_mode !=""){
                 syst_vector.back().SetWeightFormula(sys_weight_formula);
                 syst_vector.back().SetMode(sys_mode);
             }
             if(sys_mode == "spline") {
                 if(map_systematic_knob_vals.find(sys_name) == map_systematic_knob_vals.end()) {
-                  log<LOG_ERROR>(L"%1% || Expected %2% to have knob vals associated with it, but couldn't find any. Will use -3 to +3 as default.") % __func__ % sys_name.c_str();
+                  log<LOG_WARNING>(L"%1% || Expected %2% to have knob vals associated with it, but couldn't find any. Will use -3 to +3 as default.") % __func__ % sys_name.c_str();
                   map_systematic_knob_vals[sys_name] = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
                 }
                 syst_vector.back().knob_index = map_systematic_knob_vals[sys_name];
@@ -644,8 +643,9 @@ namespace PROfit {
 
 
             // loop over all entries
+            size_t to_print = nevents / 5;
             for(long int i=0; i < nevents; ++i) {
-                if(i%1000==0){
+                if(i%to_print==0){
                     time_t time_passed = time(nullptr) - time_stamp;
                     log<LOG_INFO>(L"%1% || File %2% -- uni : %3% / %4%  took %5% seconds") % __func__ % fid % i % nevents % time_passed;
                     time_stamp = time(nullptr);
