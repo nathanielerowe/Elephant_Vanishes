@@ -78,7 +78,7 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 
       // Collapse Covariance and Spectra 
       Eigen::MatrixXf collapsed_full_covariance =  CollapseMatrix(*config,full_covariance);  
-      log<LOG_DEBUG>(L"%1% || Collapsed second matrix") % __func__;
+      //log<LOG_DEBUG>(L"%1% || Collapsed second matrix") % __func__;
 
       //std::cout<<"cFull: "<<collapsed_full_covariance.size()<<std::endl;
       //std::cout<<collapsed_full_covariance<<std::endl;

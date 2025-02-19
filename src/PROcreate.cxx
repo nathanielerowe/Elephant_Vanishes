@@ -13,6 +13,21 @@
 #include <string>
 namespace PROfit {
 
+
+
+
+    std::string convertToXRootD(std::string fname_orig){
+        std::string fname_use = fname_orig;
+        if(fname_orig.find("pnfs")!=std::string::npos){
+            std::string p = "/pnfs";
+            std::string::size_type i = fname_orig.find(p);
+            fname_orig.erase(i,p.length());
+            fname_use = "root://fndca1.fnal.gov:1094/pnfs/fnal.gov/usr"+fname_orig;
+        }
+        return fname_use;
+    }
+
+
     void SystStruct::CleanSpecs(){
         if(p_cv)  p_cv.reset();
         p_multi_spec.clear();
@@ -332,7 +347,7 @@ namespace PROfit {
 
         std::vector<long int> nentries(num_files,0);
         std::vector<std::unique_ptr<TFile>> files(num_files);
-        std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
+        //std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
         std::vector<TChain*> chains(num_files,nullptr);
 
 
@@ -347,19 +362,34 @@ namespace PROfit {
         for(int fid=0; fid < num_files; ++fid) {
             const auto& fn = inconfig.m_mcgen_file_name.at(fid);
 
-           
-            if (fn.find(".root") != std::string::npos) {
-                files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
-                trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
-                nentries[fid]= (long int)trees.at(fid)->GetEntries();
+          
+            std::vector<std::string> filesForChain;
 
-                if(files[fid]->IsOpen()){
-                    log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
-                }else{
-                    log<LOG_ERROR>(L"%1% || Failed to open root file: %2%") % __func__  % fn.c_str();
-                    exit(EXIT_FAILURE);
+            if (fn.find(".root") != std::string::npos) {
+                log<LOG_INFO>(L"%1% || Starting a (single) TCHain, loading file %2%") % __func__  % fn.c_str();
+                filesForChain.push_back(fn);
+            }else{
+             
+                log<LOG_INFO>(L"%1% || Starting a TCHain, loading from filelist %2%") % __func__  % fn.c_str();
+                std::ifstream infile(fn.c_str()); 
+                if (!infile) {
+                       log<LOG_ERROR>(L"%1% || Failed to open input filelist %2%") % __func__  % fn.c_str();
+                        exit(EXIT_FAILURE);
                 }
 
+                std::string line;
+                while (std::getline(infile, line)) {
+                       log<LOG_INFO>(L"%1% || Loading file %2% into TChain") %__func__ % line.c_str();
+                       filesForChain.push_back(line);
+                }
+
+                infile.close();
+            }
+
+            chains[fid] = new TChain(inconfig.m_mcgen_tree_name.at(fid).c_str());
+            for(auto &file: filesForChain){ 
+
+                chains[fid]->Add(file.c_str()); 
 
                 //first, grab friend trees
                 if(inconfig.m_mcgen_numfriends[fid]>0){
@@ -376,50 +406,14 @@ namespace PROfit {
                         for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
                             std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
                             std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                            log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from file %3%") % __func__ %  treefriendname.c_str() % treefriendfile.c_str();
-                            trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str()); 
+                            log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from THE SAME FILE %3%") % __func__ %  treefriendname.c_str() % file.c_str();
+                            chains[fid]->AddFriend(treefriendname.c_str(),file.c_str()); 
                         }
                     }
-                }
-            } else {
-                log<LOG_INFO>(L"%1% || Starting a TCHain, loading from filelist %2%") % __func__  % fn.c_str();
-              
-                chains[fid] = new TChain(inconfig.m_mcgen_tree_name.at(fid).c_str());
-                std::ifstream infile(fn.c_str()); 
-
-                if (!infile) {
-                       log<LOG_ERROR>(L"%1% || Failed to open input filelist %2%") % __func__  % fn.c_str();
-                        exit(EXIT_FAILURE);
-                }
-                std::string line;
-                while (std::getline(infile, line)) {
-                       log<LOG_INFO>(L"%1% || Loading file %2% into TChain") %__func__ % line.c_str();
-                        chains[fid]->Add(line.c_str()); 
+                }//end friend mess
 
 
-                        //first, grab friend trees
-                        if(inconfig.m_mcgen_numfriends[fid]>0){
-                            auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
-                            if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
-
-                                auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
-                                if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
-                                    log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
-                                    log<LOG_ERROR>(L"Terminating.");
-                                    exit(EXIT_FAILURE);
-                                }
-
-                                for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
-                                    std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
-                                    std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                                    log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from THE SAME FILE %3%") % __func__ %  treefriendname.c_str() % line.c_str();
-                                    chains[fid]->AddFriend(treefriendname.c_str(),line.c_str()); 
-                                }
-                            }
-                        }
-                    }
-                infile.close();
-            }
+            }//end chain filling
 
 
 
