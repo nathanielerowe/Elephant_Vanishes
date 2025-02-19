@@ -22,8 +22,6 @@ namespace PROfit {
                 //anycovar=true;
             }
         }
-        log<LOG_ERROR>(L"%1% || No systematics?") % __func__ ;
-
         fractional_covariance = this->SumMatrices();
     }
 
@@ -87,7 +85,7 @@ namespace PROfit {
         Eigen::MatrixXf sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
-            log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
+            log<LOG_DEBUG>(L"%1% || NBINS:    %2%") % __func__ % nbins;
 
             sum_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
             for(auto& p : covmat){
@@ -105,7 +103,7 @@ namespace PROfit {
         Eigen::MatrixXf sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
-            log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
+            log<LOG_DEBUG>(L"%1% || NBINS:    %2%") % __func__ % nbins;
 
             sum_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
         }
