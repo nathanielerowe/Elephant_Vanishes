@@ -2,13 +2,12 @@
 #include "PROconfig.h"
 #include "PROcreate.h"
 #include "PROlog.h"
-#include "PROtocall.h"
 
 namespace PROfit {
 
     PROsyst::PROsyst(const std::vector<SystStruct>& systs) {
         for(const auto& syst: systs) {
-            log<LOG_ERROR>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
+            log<LOG_INFO>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
             if(syst.mode == "spline") {
                 log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
@@ -235,7 +234,7 @@ namespace PROfit {
 
         //check for nan and infinite
         if(!in_matrix.allFinite()){
-            log<LOG_ERROR>(L"%1% || Matrix has Nan or non-finite values.") % __func__ ;
+            log<LOG_WARNING>(L"%1% || Matrix has Nan or non-finite values.") % __func__ ;
             return false;
         }
         return true;

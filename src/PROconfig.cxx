@@ -506,7 +506,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 const char* badditional_weight = pBranch->Attribute("additional_weight");
 
                 if(bwname== NULL){
-                    log<LOG_WARNING>(L"%1% || WARNING: No eventweight branch name passed, defaulting to 'weights' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                    //log<LOG_WARNING>(L"%1% || WARNING: No eventweight branch name passed, defaulting to 'weights' @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
                     TEMP_eventweight_branch_names.push_back("weights");
                 }else{
                     log<LOG_DEBUG>(L"%1% || Setting eventweight branch name %2%") %__func__ % bnam;
@@ -1339,7 +1339,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
     void PROconfig::construct_collapsing_matrix(){
 
         collapsing_matrix = Eigen::MatrixXf::Zero(m_num_bins_total, m_num_bins_total_collapsed);
-        log<LOG_ERROR>(L"%1% || Creating Collapsing Matrix. m_num_bins_total, m_num_bins_total_collapsed:  %2%  %3%") % __func__ % m_num_bins_total % m_num_bins_total_collapsed;
+        log<LOG_INFO>(L"%1% || Creating Collapsing Matrix. m_num_bins_total, m_num_bins_total_collapsed:  %2%  %3%") % __func__ % m_num_bins_total % m_num_bins_total_collapsed;
 
         //construct the matrix by detector block
         Eigen::MatrixXf block_collapser = Eigen::MatrixXf::Zero(m_num_bins_detector_block, m_num_bins_detector_block_collapsed);
