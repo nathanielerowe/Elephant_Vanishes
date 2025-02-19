@@ -871,7 +871,8 @@ namespace PROfit {
                     int pdg_id = branches[ib]->GetTruePDG<int>();
                     float true_param = branches[ib]->GetTrueValue<float>();
                     float baseline = branches[ib]->GetTrueL<float>();
->>>>>>> ac455f1e0ba82a523498e84cae05c4949753ab37
+		    float pmom = branches[ib]->GetTrueLeadProtonMom<float>();
+		    float pcosth = branches[ib]->GetTrueLeadProtonCosth<float>();
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
                     int model_rule = branches[ib]->GetModelRule();
 
@@ -1124,6 +1125,8 @@ namespace PROfit {
         float baseline = branch->GetTrueL<float>();
         float true_value = baseline / true_param;
         float pdg_id = branch->GetTruePDG();//No need, depreciated
+	float pmom = branch->GetTrueLeadProtonMom<double>();
+	float pcosth = branch->GetTrueLeadProtonCosth<double>();
         int run_syst = branch->GetIncludeSystematics();
         float mc_weight = branch->GetMonteCarloWeight();
         mc_weight *= inconfig.m_plot_pot / mcpot;

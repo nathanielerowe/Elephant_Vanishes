@@ -115,10 +115,10 @@ namespace PROfit{
       // Function: evaluate additional weight setup in the branch and return in floating precision 
       // Note: if no additional weight is set, value of 1.0 will be returned.
       inline
-      double GetMonteCarloWeight() const{
+      float GetMonteCarloWeight() const{
 	if(branch_monte_carlo_weight_formula){ 
 	  branch_monte_carlo_weight_formula->GetNdata();
-	  return (double)branch_monte_carlo_weight_formula->EvalInstance();
+	  return (float)branch_monte_carlo_weight_formula->EvalInstance();
 	}
 	return 1.0;
       }
@@ -126,30 +126,30 @@ namespace PROfit{
       
       //Function: evaluate branch 'name' and return the value. Usually its reconstructed quantity
       //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-      template <typename T=double>
+      template <typename T=float>
 	T GetValue() const;
 
 
       //Function: evaluate formula 'true_L_name' and return the value. Usually it's true baseline.
       //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-      template <typename T=double>
+      template <typename T=float>
 	T GetTrueL() const;
       
 
       //Function: evaluate formula 'true_param_name' and return the value. Usually it's true energy  
       //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-      template <typename T=double>
+      template <typename T=float>
 	T GetTrueValue() const;
 
       //Function: evaluate formula 'true_proton_mom_name' and return the value. Used for reweighting
       //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-      template <typename T=double>
+      template <typename T=float>
 	T GetTrueLeadProtonMom() const;
 
 
       //Function: evaluate formula 'true_proton_costh_name' and return the value. Used for reweighting
       //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
-      template <typename T=double>
+      template <typename T=float>
 	T GetTrueLeadProtonCosth() const;
 
     };
@@ -292,15 +292,9 @@ namespace PROfit{
             std::vector<std::string> m_mcgen_tree_name;	
             std::vector<std::string> m_mcgen_file_name;	
             std::vector<long int> m_mcgen_maxevents;	
-<<<<<<< HEAD
-            std::vector<double> m_mcgen_pot;	
-            std::vector<double> m_mcgen_scale;
-            std::vector<int> m_mcgen_numfriends;
-=======
             std::vector<float> m_mcgen_pot;	
             std::vector<float> m_mcgen_scale;	
             std::vector<int> m_mcgen_numfriends;	
->>>>>>> ac455f1e0ba82a523498e84cae05c4949753ab37
             std::vector<bool> m_mcgen_fake;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_map;
             std::map<std::string,std::vector<std::string>> m_mcgen_file_friend_treename_map;

@@ -75,8 +75,11 @@ namespace PROfit {
         return myspectrum;
     }
 
-  PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, const PROsc *inosc, std::vector<TH2D*> inweighthists, std::vector<float> &physparams, bool binned){
+  PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, std::vector<TH2D*> inweighthists, const PROmodel &inmodel, const Eigen::VectorXf &params, bool binned){
     PROspec myspectrum(inconfig.m_num_bins_total);
+    Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);
+    Eigen::VectorXf shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
+
 
     if (binned) {
       log<LOG_WARNING>(L"%1% || WARNING: Binned fit is requested but not supported for histogram reweights. Returning empty spectrum so things will likely fail ") % __func__ ;
@@ -84,8 +87,10 @@ namespace PROfit {
     }
     else {
       for(size_t i = 0; i<inprop.truth.size(); ++i){
-	
-	float oscw  = physparams.size() != 0 ? GetOscWeight(i, inprop, *inosc, physparams) : 1;
+
+	float oscw  = phys.size() != 0 ? 
+	  inmodel.model_functions[inprop.model_rule[i]](phys, inprop.baseline[i] / inprop.truth[i]) :
+	  1;	
 	float add_w = inprop.added_weights[i];
 	float hist_w = 1.0 ;
 
