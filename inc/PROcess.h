@@ -1,19 +1,14 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
-// C++ include 
-#include <algorithm>
-#include <unordered_map>
-#include <string>
+#include <Eigen/Eigen>
 
 // PROfit include 
-#include "PROlog.h"
 #include "PROconfig.h"
-#include "PROsc.h"
+#include "PROmodel.h"
 #include "PROpeller.h"
 #include "PROspec.h"
 #include "PROsyst.h"
-#include "PROcreate.h"
 
 #include "TH2D.h"
 
@@ -25,20 +20,12 @@ namespace PROfit{
 
     PROspec FillCVSpectrum(const PROconfig &inconfig, const PROpeller &inprop, bool binned = false);
 
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsc *inosc, const std::vector<float> &physparams, bool binned = false);
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, const std::vector<float> &inshifts, const std::vector<float> &physparams, bool binned = false);
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROsc *inosc, const std::map<std::string, float> &inshifts, const std::vector<float> &physparams, bool binned = false);
-    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const std::map<std::string, float> &inshifts, bool binned = false);
-
   //ETW 1/22/2025 Add function to fill spectrum using weights from input histogram
-  PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, const PROsc *inosc, std::vector<TH2D*> inweighthists, std::vector<float> &physparams, bool binned = false);
+    PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, const PROsc *inosc, std::vector<TH2D*> inweighthists, std::vector<float> &physparams, bool binned = false);
 
-  PROspec FillSystRandomThrow(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst);
-
-  float GetOscWeight(int rule, float le, const PROsc &inosc, const std::vector<float> &inphysparams);
-  float GetOscWeight(int ev_idx, const PROpeller &inprop, const PROsc &inosc, const std::vector<float> &inphysparams);
-  float GetSystWeight(int ev_idx, const PROpeller &inprop, const PROsyst &insyst, float inshift, std::string insystname);
-
+    PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROmodel &inmodel, const Eigen::VectorXf &params, bool binned = true);
+    PROspec FillSystRandomThrow(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst);
+>>>>>>> 71f12c6c446206394fa7fb6851d14f33af78a9a1
 };
 
 #endif

@@ -11,7 +11,7 @@
 #include "PROconfig.h"
 #include "PROsyst.h"
 #include "PROpeller.h"
-#include "PROsc.h"
+#include "PROmodel.h"
 #include "PROcess.h"
 #include "PROmetric.h"
 
@@ -26,10 +26,8 @@ namespace PROfit{
             const PROconfig *config;
             const PROpeller *peller;
             const PROsyst *syst; 
-            const PROsc *osc;
+            const PROmodel *model;
             const PROspec data;
-            int nparams;
-            int nsyst;
             EvalStrategy strat;
             std::vector<float> physics_param_fixed;
                         //Do we want to fix any param?
@@ -46,7 +44,7 @@ namespace PROfit{
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROCNP(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROsc *oscin, const PROspec &datain, int nparams, int nsyst, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROCNP(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
             virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient);
@@ -55,7 +53,14 @@ namespace PROfit{
             PROmetric *Clone() const {
                 return new PROCNP(*this);
             }
-            const PROsc * getModel() const override {return osc;};
+
+            virtual const PROmodel &GetModel() const {
+                return *model;
+            }
+
+            virtual const PROsyst &GetSysts() const {
+                return *syst;
+            }
 
             void reset() {
                 physics_param_fixed.clear();
@@ -63,23 +68,13 @@ namespace PROfit{
                 last_param = Eigen::VectorXf::Constant(last_param.size(), 0);
             }
 
-            void set_physics_param_fixed(const std::vector<float> &physics_param) {
-                physics_param_fixed = physics_param;
-            }
-
             void override_systs(const PROsyst &new_syst) {
-                nparams -= nsyst;
                 syst = &new_syst;
-                nsyst = syst->GetNSplines();
-                nparams += nsyst;
             }
 
             float Pull(const Eigen::VectorXf &systs);
 
             void fixSpline(int fix, float valin);
-
-            int nParams() const {return nparams;}
-
     };
 
 

@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
                 x[which_spline] = which_value;
 
 
-                PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
+                PROchi chi("3plus1", &config, &prop, &systs, &osc, data, PROchi::BinnedChi2, physics_params);
                 chi.fixSpline(which_spline,which_value);
 
                 log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
@@ -207,33 +207,33 @@ int main(int argc, char* argv[])
         std::vector<float> param = {0,0};
         std::vector<float> nulpram;
 
-        PROspec CVe = FillRecoSpectra(config, prop, systs, &osc, nulpram, nulpram, false);
-        CVe.plotSpectrum(config,"CVe");
-        CVe.Print();
-        PROspec CVb = FillRecoSpectra(config, prop, systs, &osc, nulpram, nulpram, true);
-        CVb.plotSpectrum(config,"CVb");
-        CVb.Print();
+        //PROspec CVe = FillRecoSpectra(config, prop, systs, &osc, nulpram, nulpram, false);
+        //CVe.plotSpectrum(config,"CVe");
+        //CVe.Print();
+        //PROspec CVb = FillRecoSpectra(config, prop, systs, &osc, nulpram, nulpram, true);
+        //CVb.plotSpectrum(config,"CVb");
+        //CVb.Print();
 
-        PROspec SYe = FillRecoSpectra(config, prop, systs, &osc, shift, nulpram, false);
-        SYe.plotSpectrum(config,"SYe");
-        SYe.Print();
-        PROspec SYb = FillRecoSpectra(config, prop, systs, &osc, shift, nulpram, true);
-        SYb.plotSpectrum(config,"SYb");
-        SYb.Print();
+        //PROspec SYe = FillRecoSpectra(config, prop, systs, &osc, shift, nulpram, false);
+        //SYe.plotSpectrum(config,"SYe");
+        //SYe.Print();
+        //PROspec SYb = FillRecoSpectra(config, prop, systs, &osc, shift, nulpram, true);
+        //SYb.plotSpectrum(config,"SYb");
+        //SYb.Print();
 
-        PROspec OSe = FillRecoSpectra(config, prop, systs, &osc, nulpram, param, false);
-        OSe.plotSpectrum(config,"OSe");
-        OSe.Print();
-        PROspec OSb = FillRecoSpectra(config, prop, systs, &osc, nulpram, param, true);
-        OSb.plotSpectrum(config,"OSb");
-        OSb.Print();
+        //PROspec OSe = FillRecoSpectra(config, prop, systs, &osc, nulpram, param, false);
+        //OSe.plotSpectrum(config,"OSe");
+        //OSe.Print();
+        //PROspec OSb = FillRecoSpectra(config, prop, systs, &osc, nulpram, param, true);
+        //OSb.plotSpectrum(config,"OSb");
+        //OSb.Print();
 
-        PROspec FUe = FillRecoSpectra(config, prop, systs, &osc, shift, param, false);
-        FUe.plotSpectrum(config,"FUe");
-        FUe.Print();
-        PROspec FUb = FillRecoSpectra(config, prop, systs, &osc, shift, param, true);
-        FUb.plotSpectrum(config,"FUb");
-        FUb.Print();
+        //PROspec FUe = FillRecoSpectra(config, prop, systs, &osc, shift, param, false);
+        //FUe.plotSpectrum(config,"FUe");
+        //FUe.Print();
+        //PROspec FUb = FillRecoSpectra(config, prop, systs, &osc, shift, param, true);
+        //FUb.plotSpectrum(config,"FUb");
+        //FUb.Print();
     }
 
     //test matrix generation 

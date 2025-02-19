@@ -207,6 +207,5 @@ int main(int argc, char* argv[])
     PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),PROfit::PROchi::BinnedChi2);
     PROfile(config,prop,systs,osc,data,chi,filename+"_PROfile");
   }
-
   return 0;
 }
