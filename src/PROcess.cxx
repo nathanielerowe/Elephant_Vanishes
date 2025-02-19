@@ -55,13 +55,12 @@ namespace PROfit {
             }
         } else {
             for(size_t i = 0; i<inprop.truth.size(); ++i){
-
                 float oscw  = phys.size() != 0 ? 
                     inmodel.model_functions[inprop.model_rule[i]](phys, inprop.baseline[i] / inprop.truth[i]) :
                     1;
                 float add_w = inprop.added_weights[i]; 
                 const int true_bin = inprop.true_bin_indices[i]; 
-                
+
                 float systw = 1;
                 for(int j = 0; j < shifts.size(); ++j) {
                     systw *= insyst.GetSplineShift(j, shifts(j), true_bin);
