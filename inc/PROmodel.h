@@ -52,8 +52,7 @@ public:
         sinsq2thmumu = std::pow(10.0f, sinsq2thmumu);
 
         if(sinsq2thmumu > 1) {
-            log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is greater than 1. Setting to 1.") 
-                % __func__ % sinsq2thmumu;
+            //log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is greater than 1. Setting to 1.")     % __func__ % sinsq2thmumu;
             sinsq2thmumu = 1;
         }
         if(sinsq2thmumu < 0) {
@@ -106,8 +105,7 @@ public:
         sinsq2thmue = std::pow(10.0f, sinsq2thmue);
 
         if(sinsq2thmue > 1) {
-            log<LOG_ERROR>(L"%1% || sinsq2thmue is %2% which is greater than 1. Setting to 1.") 
-                % __func__ % sinsq2thmue;
+            //log<LOG_ERROR>(L"%1% || sinsq2thmue is %2% which is greater than 1. Setting to 1.")  % __func__ % sinsq2thmue;
             sinsq2thmue = 1;
         }
         if(sinsq2thmue < 0) {

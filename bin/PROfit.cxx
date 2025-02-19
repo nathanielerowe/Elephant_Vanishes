@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
     p.Draw();
     c.Print((filename+"_pulls.pdf").c_str(), "pdf");
 
-    PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread);
+    PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread, best_fit);
 
     return 0;
 }
