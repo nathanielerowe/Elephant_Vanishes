@@ -508,14 +508,14 @@ namespace PROfit {
             std::string sys_weight_formula = "1";
             std::string sys_mode = inconfig.m_mcgen_variation_type_map.at(sys_name);
 
-            log<LOG_ERROR>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
+            log<LOG_INFO>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
             if(sys_weight_formula != "1" || sys_mode !=""){
                 syst_vector.back().SetWeightFormula(sys_weight_formula);
                 syst_vector.back().SetMode(sys_mode);
             }
             if(sys_mode == "spline") {
                 if(map_systematic_knob_vals.find(sys_name) == map_systematic_knob_vals.end()) {
-                  log<LOG_ERROR>(L"%1% || Expected %2% to have knob vals associated with it, but couldn't find any. Will use -3 to +3 as default.") % __func__ % sys_name.c_str();
+                  log<LOG_WARNING>(L"%1% || Expected %2% to have knob vals associated with it, but couldn't find any. Will use -3 to +3 as default.") % __func__ % sys_name.c_str();
                   map_systematic_knob_vals[sys_name] = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
                 }
                 syst_vector.back().knob_index = map_systematic_knob_vals[sys_name];
