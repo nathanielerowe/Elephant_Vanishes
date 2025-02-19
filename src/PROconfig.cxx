@@ -32,7 +32,7 @@ PROconfig::PROconfig(const std::string &xml):
     //TODO: check corr=init for multi detector
 
 
-    /*collapsingVector = Eigen::MatrixXd::Zero(num_bins_total,num_bins_total_collapsed);
+    /*collapsingVector = Eigen::MatrixXf::Zero(num_bins_total,num_bins_total_collapsed);
 
       for(int im = 0; im < num_modes; im++){
       for(int id =0; id < num_detectors; id++){
@@ -225,27 +225,58 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             // What are the bin edges and bin widths (bin widths just calculated from edges now)
             tinyxml2::XMLElement *pBin = pChan->FirstChildElement("bins");
-            std::stringstream iss(pBin->Attribute("edges"));
 
-            double number;
-            std::vector<double> binedge;
-            std::vector<double> binwidth;
-            std::string binstring = "";
-            while ( iss >> number ){
-                binedge.push_back( number );
-                binstring+=" "+std::to_string(number);
+            log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning.   ") % __func__  ;
+            const char* rmin = pBin->Attribute("min");
+            const char* rmax = pBin->Attribute("max");
+            const char* rnbins = pBin->Attribute("nbins");
+            const char* redges =pBin->Attribute("edges");
+
+            int nbinsp;
+            std::vector<float> binedge, binwidth;
+
+            // use edges if defined, otherwise use min-max-nbins 
+            if(redges != NULL){
+
+                std::stringstream reco_iss(redges);
+                float number;
+                while ( reco_iss >> number ){
+                    binedge.push_back(number);
+                }
+
+                nbinsp = binedge.size() - 1;
+                for(int i = 0; i != nbinsp; ++i){
+                    binwidth.push_back(binedge[i+1] - binedge[i]);
+                }
+
+                log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with  %2% bins, Edges defined as %3%    ") % __func__ % nbinsp % binedge ;
+
+                m_channel_num_bins.push_back(nbinsp);
+                m_channel_bin_edges.push_back(binedge);
+                m_channel_bin_widths.push_back(binwidth);
+
+            }else if (rmin!=NULL && rmax!=NULL && rnbins!=NULL ){
+
+                float minp = strtod(rmin, &end);
+                float maxp = strtod(rmax, &end);
+                nbinsp = (int)strtod(rnbins, &end);
+                float step = (maxp-minp)/(float)nbinsp;
+                for(int i=0; i<nbinsp; i++){
+                    binedge.push_back(minp+i*step);
+                }
+                binedge.push_back(maxp);
+                binwidth.resize(nbinsp, step);
+                log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
+                log<LOG_DEBUG>(L"%1% || Which corresponds to edges %2%   ") % __func__ % binedge ;
+
+                m_channel_num_bins.push_back(nbinsp);
+                m_channel_bin_edges.push_back(binedge);
+                m_channel_bin_widths.push_back(binwidth);
+            }else{
+                log<LOG_ERROR>(L"%1% || ERROR: You need to define a reco binning using either edges or min/max/nsteps @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
             }
-
-            log<LOG_DEBUG>(L"%1% || Loading Bins with edges %2%  ") % __func__ % binstring.c_str();
-
-            for(size_t b = 0; b<binedge.size()-1; b++){
-                binwidth.push_back(fabs(binedge.at(b)-binedge.at(b+1)));
-            }
-
-            m_channel_num_bins.push_back(binedge.size()-1);
-
-            m_channel_bin_edges.push_back(binedge);
-            m_channel_bin_widths.push_back(binwidth);
 
 
             tinyxml2::XMLElement *pBinT = pChan->FirstChildElement("truebins");
@@ -258,20 +289,20 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 {
                     log<LOG_DEBUG>(L"%1% || This variable has a NO truth binning (or attribute min,max,nbins)  ") % __func__ ;
                     m_channel_num_truebins.push_back(0);
-                    m_channel_truebin_edges.push_back(std::vector<double>());
-                    m_channel_truebin_widths.push_back(std::vector<double>());
+                    m_channel_truebin_edges.push_back(std::vector<float>());
+                    m_channel_truebin_widths.push_back(std::vector<float>());
                 }else{
 
                     log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning.   ") % __func__  ;
 
                     int nbinsp;
-                    std::vector<double> binedge, binwidth;
+                    std::vector<float> binedge, binwidth;
 
                     // use edges if defined, otherwise use min-max-nbins 
                     if(tedges != NULL){
 
                         std::stringstream true_iss(tedges);
-                        double number;
+                        float number;
                         while ( true_iss >> number ){
                             binedge.push_back(number );
                         }
@@ -281,17 +312,22 @@ int PROconfig::LoadFromXML(const std::string &filename){
                             binwidth.push_back(binedge[i+1] - binedge[i]);
                         }
 
+                        log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with  %2% bins, Edges defined as %3%    ") % __func__ % nbinsp % binedge ;
+
+
                     }else{
-                        double minp = strtod(tmin, &end);
-                        double maxp = strtod(tmax, &end);
+                        float minp = strtod(tmin, &end);
+                        float maxp = strtod(tmax, &end);
                         nbinsp = (int)strtod(tnbins, &end);
-                        double step = (maxp-minp)/(double)nbinsp;
+                        float step = (maxp-minp)/(float)nbinsp;
                         for(int i=0; i<nbinsp; i++){
                             binedge.push_back(minp+i*step);
                         }
                         binedge.push_back(maxp);
                         binwidth.resize(nbinsp, step);
                         log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
+                        log<LOG_DEBUG>(L"%1% || Which corresponds to edges %2%   ") % __func__ % binedge ;
+
                     }
 
                     m_channel_num_truebins.push_back(nbinsp);
@@ -302,8 +338,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 }
             }else{
                 m_channel_num_truebins.push_back(0);
-                m_channel_truebin_edges.push_back(std::vector<double>());
-                m_channel_truebin_widths.push_back(std::vector<double>());
+                m_channel_truebin_edges.push_back(std::vector<float>());
+                m_channel_truebin_widths.push_back(std::vector<float>());
             }
 
             // Now loop over all this channels subchanels. Not the names must be UNIQUE!!
@@ -533,15 +569,15 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 }
 
 
-                    if(use_universe){
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "double", bhist ) );
-                    } else  if((std::string)bcentral == "true"){
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "double", bhist,bsyst, true) );
-                        log<LOG_DEBUG>(L"%1% || Setting as  CV for det sys.") % __func__ ;
-                    } else {
-                        TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "double", bhist,bsyst, false) );
-                        log<LOG_DEBUG>(L"%1% || Setting as individual (not CV) for det sys.") % __func__ ;
-                    }
+                if(use_universe){
+                    TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist ) );
+                } else  if((std::string)bcentral == "true"){
+                    TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist,bsyst, true) );
+                    log<LOG_DEBUG>(L"%1% || Setting as  CV for det sys.") % __func__ ;
+                } else {
+                    TEMP_branch_variables.push_back( std::make_shared<BranchVariable>(bnam, "float", bhist,bsyst, false) );
+                    log<LOG_DEBUG>(L"%1% || Setting as individual (not CV) for det sys.") % __func__ ;
+                }
 
                 TEMP_branch_variables.back()->SetIncludeSystematics(TEMP_eventweight_branch_syst.back());
 
@@ -641,14 +677,14 @@ int PROconfig::LoadFromXML(const std::string &filename){
             while (getline(tup, s, ' ')) split.push_back(s);
 
             if (split.size() != 3) {
-              throw std::invalid_argument(std::string("Correlations should be formed as <Systematic A> <Systematic B> <Correlation>. Could not parse: ") + std::string(pCorrelations->GetText()));
+                throw std::invalid_argument(std::string("Correlations should be formed as <Systematic A> <Systematic B> <Correlation>. Could not parse: ") + std::string(pCorrelations->GetText()));
             }
 
             m_mcgen_correlations.push_back(std::make_tuple(split[0], split[1], std::stof(split[2])));
 
             pCorrelations = pCorrelations->NextSiblingElement("correlation");
         }
-        
+
 
         //weightMaps
         if(!pWeiMaps){
@@ -908,6 +944,18 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return m_vec_global_reco_index_start[index];
     }
 
+    size_t PROconfig::GetCollapsedGlobalBinStart(size_t channel_index) const{
+        if(channel_index >= m_num_channels) {
+            log<LOG_ERROR>(L"%1% || Requested bin start of channel %2%, but only %3% channels are known.")
+                % __func__ % channel_index % m_num_channels;
+            log<LOG_ERROR>(L"Terminating.");
+            exit(EXIT_FAILURE);
+        }
+        size_t index = 0;
+        for(size_t i = 0; i < channel_index; ++i) index += m_channel_num_bins[i];
+        return index;
+    }
+
     size_t PROconfig::GetGlobalTrueBinStart(size_t subchannel_index) const{
         size_t index = this->find_equal_index(m_vec_subchannel_index, subchannel_index);
         return m_vec_global_true_index_start[index];
@@ -923,7 +971,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return m_vec_subchannel_index[index];
     }
 
-    const std::vector<double>& PROconfig::GetChannelBinEdges(size_t channel_index) const{
+    const std::vector<float>& PROconfig::GetChannelBinEdges(size_t channel_index) const{
 
         if( channel_index >= m_num_channels){
             log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
@@ -945,7 +993,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         return m_channel_num_truebins[channel_index];
     }
 
-    const std::vector<double>& PROconfig::GetChannelTrueBinEdges(size_t channel_index) const{
+    const std::vector<float>& PROconfig::GetChannelTrueBinEdges(size_t channel_index) const{
 
         //check for out of bound
         if(channel_index >= m_num_channels){
@@ -1009,12 +1057,12 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
             //update channel-related info
             std::vector<size_t> temp_channel_num_bins(m_num_channels, 0);
-            std::vector<std::vector<double>> temp_channel_bin_edges(m_num_channels, std::vector<double>());
-            std::vector<std::vector<double>> temp_channel_bin_widths(m_num_channels, std::vector<double>());
+            std::vector<std::vector<float>> temp_channel_bin_edges(m_num_channels, std::vector<float>());
+            std::vector<std::vector<float>> temp_channel_bin_widths(m_num_channels, std::vector<float>());
 
             std::vector<size_t> temp_channel_num_truebins(m_num_channels, 0);
-            std::vector<std::vector<double>> temp_channel_truebin_edges(m_num_channels, std::vector<double>());
-            std::vector<std::vector<double>> temp_channel_truebin_widths(m_num_channels, std::vector<double>());
+            std::vector<std::vector<float>> temp_channel_truebin_edges(m_num_channels, std::vector<float>());
+            std::vector<std::vector<float>> temp_channel_truebin_widths(m_num_channels, std::vector<float>());
 
             std::vector<std::string> temp_channel_names(m_num_channels);
             std::vector<std::string> temp_channel_plotnames(m_num_channels);
@@ -1124,8 +1172,8 @@ int PROconfig::LoadFromXML(const std::string &filename){
             std::vector<std::string> temp_tree_name;
             std::vector<std::string> temp_file_name;
             std::vector<long int> temp_maxevents;
-            std::vector<double> temp_pot;
-            std::vector<double> temp_scale;
+            std::vector<float> temp_pot;
+            std::vector<float> temp_scale;
             std::vector<int> temp_numfriends;
             std::vector<bool> temp_fake;
             std::map<std::string,std::vector<std::string>> temp_file_friend_map;
@@ -1314,11 +1362,11 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
     void PROconfig::construct_collapsing_matrix(){
 
-        collapsing_matrix = Eigen::MatrixXd::Zero(m_num_bins_total, m_num_bins_total_collapsed);
+        collapsing_matrix = Eigen::MatrixXf::Zero(m_num_bins_total, m_num_bins_total_collapsed);
         log<LOG_ERROR>(L"%1% || Creating Collapsing Matrix. m_num_bins_total, m_num_bins_total_collapsed:  %2%  %3%") % __func__ % m_num_bins_total % m_num_bins_total_collapsed;
 
         //construct the matrix by detector block
-        Eigen::MatrixXd block_collapser = Eigen::MatrixXd::Zero(m_num_bins_detector_block, m_num_bins_detector_block_collapsed);
+        Eigen::MatrixXf block_collapser = Eigen::MatrixXf::Zero(m_num_bins_detector_block, m_num_bins_detector_block_collapsed);
 
         size_t channel_row_start = 0, channel_col_start = 0;
         for(size_t ic =0; ic != m_num_channels; ++ic){
@@ -1326,7 +1374,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
             //first, build matrix for each channel block
             size_t total_num_bins_channel = m_num_subchannels[ic] * m_channel_num_bins[ic];
 
-            Eigen::MatrixXd channel_collapser = Eigen::MatrixXd::Zero(total_num_bins_channel, m_channel_num_bins[ic]);
+            Eigen::MatrixXf channel_collapser = Eigen::MatrixXf::Zero(total_num_bins_channel, m_channel_num_bins[ic]);
             for(size_t col = 0; col != m_channel_num_bins[ic]; ++col){
                 for(size_t subch = 0; subch != m_num_subchannels[ic]; ++subch){
                     size_t row = subch * m_channel_num_bins[ic] + col;

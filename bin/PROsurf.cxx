@@ -1,26 +1,19 @@
 #include "PROconfig.h"
 #include "PROlog.h"
+#include "PROmetric.h"
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROtocall.h"
 #include "PROcreate.h"
 #include "PROpeller.h"
 #include "PROchi.h"
+#include "PROCNP.h"
 #include "PROcess.h"
 #include "PROsurf.h"
 
 #include "CLI11.h"
-#include "LBFGSB.h"
 
-#include <Eigen/Dense>
 #include <Eigen/Eigen>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
-#include <Eigen/Core>
-#include <algorithm>
-#include <numeric>
-#include <random>
-#include <thread>
 
 #include "TH2D.h"
 #include "TCanvas.h"
@@ -33,7 +26,6 @@ log_level_t GLOBAL_LEVEL = LOG_ERROR;
 
 int main(int argc, char* argv[])
 {
-
     gStyle->SetOptStat(0);
     CLI::App app{"Test for PROfit"}; 
 
@@ -47,6 +39,7 @@ int main(int argc, char* argv[])
     std::map<std::string, float> injected_systs;
     std::vector<std::string> syst_list, systs_excluded;
     bool eventbyevent=false, statonly = false, logx=true, logy=true;
+    std::string chi2;
 
     app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.")->required();
     app.add_option("-m, --max",       maxevents, "Max number of events to run over.")->default_val(50000);
@@ -54,6 +47,7 @@ int main(int argc, char* argv[])
     app.add_option("-t, --nthread",   nthread, "Number of fits.")->default_val(1);
     app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name")->default_val("");
     app.add_option("-g, --grid", grid_size, "Set grid size. If one dimension passed, grid assumed to be square, else rectangular")->expected(0, 2)->default_val(40);
+    app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
     CLI::Option *xlim_opt = app.add_option("--xlims", xlims, "Limits for x-axis");
     CLI::Option *ylim_opt = app.add_option("--ylims", ylims, "Limits for y-axis");
     app.add_option("--xlo", xlo, "Lower limit for x-axis")->excludes(xlim_opt)->default_val(1e-4);
@@ -112,16 +106,16 @@ int main(int argc, char* argv[])
     PROsc osc(prop);
     
     std::vector<float> pparams = {std::log10(injected_pt[0]), std::log10(injected_pt[1])};
-    std::cout << "Injected point: sinsq2t = " << injected_pt[0] << " dmsq = " << injected_pt[1] << std::endl;
+    log<LOG_INFO>(L"%1% || Injected point: sinsq2t = %2%, dmsq = %3%") % __func__ % injected_pt[0] % injected_pt[1];
     for(const auto& [name, shift]: injected_systs)
-      std::cout << "Injected syst: " << name << " shifted by " << shift << " sigma\n";
+      log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
     //Grab Asimov Data
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? FillRecoSpectra(config, prop, systs, &osc, injected_systs, pparams, !eventbyevent) :
                    injected_systs.size() ? FillRecoSpectra(config, prop, systs, injected_systs, !eventbyevent) :
                    FillCVSpectrum(config, prop, !eventbyevent);
-    Eigen::VectorXd data_vec = CollapseMatrix(config, data.Spec());
-    Eigen::VectorXd err_vec_sq = data.Error().array().square();
-    Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+    Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
+    Eigen::VectorXf err_vec_sq = data.Error().array().square();
+    Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
     data = PROspec(data_vec, err_vec);
 
     if(syst_list.size()) {
@@ -130,22 +124,30 @@ int main(int argc, char* argv[])
       systs = systs.excluding(systs_excluded);
     }
 
+    PROmetric *metric;
+    if(chi2 == "PROchi") {
+        metric = new PROchi("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+    } else if(chi2 == "PROCNP") {
+        metric = new PROCNP("", &config, &prop, &systs, &osc, data, systs.GetNSplines(), systs.GetNSplines(), PROmetric::BinnedChi2);
+    } else {
+        log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
+        abort();
+    }
+
     //Define grid and Surface
     size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
-    PROsurf surface(nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+    PROsurf surface(*metric, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
                     nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
     
     if(statonly)
-        surface.FillSurfaceStat(config, prop, osc, data, !savetoroot ? filename : "", !eventbyevent);
+        surface.FillSurfaceStat(config, !savetoroot ? filename : "");
     else
-        surface.FillSurface(config, prop, systs, osc, data, !savetoroot ? filename : "", !eventbyevent, nthread);
+        surface.FillSurface(systs, !savetoroot ? filename : "", nthread);
 
     //And do a PROfile of pulls at the data also
     //PROfile(config,prop,systs,osc,data,filename+"_PROfile");
 
-    //Fit is done here. Below is
-    //root plotting code
-    std::vector<double> binedges_x, binedges_y;
+    std::vector<float> binedges_x, binedges_y;
     for(size_t i = 0; i < surface.nbinsx+1; i++)
         binedges_x.push_back(logx ? std::pow(10, surface.edges_x(i)) : surface.edges_x(i));
     for(size_t i = 0; i < surface.nbinsy+1; i++)
@@ -160,6 +162,7 @@ int main(int argc, char* argv[])
     }
 
     if(savetoroot) {
+      log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % filename.c_str();
       TFile fout(filename.c_str(), "RECREATE");
       surf.Write();
     }
@@ -172,6 +175,8 @@ int main(int argc, char* argv[])
     c.SetLogz();
     surf.Draw("colz");
     c.Print("PROfit_surface.pdf");
+
+    delete metric;
 
     return 0;
 }

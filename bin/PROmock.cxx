@@ -48,7 +48,6 @@ int main(int argc, char* argv[])
   std::string filename;
   bool binned=false;
   bool plotonly=false;
-  bool floatosc=false;
   std::vector<int> grid_size;
   std::vector<std::string> mockparams;
   std::vector<float> mockshifts;
@@ -68,7 +67,6 @@ int main(int argc, char* argv[])
   app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data")->expected(-1);
   app.add_option("-p, --pparams",   physics_params, "deltam^2, sin^22thetamumu, default no osc")->expected(-1);
   app.add_option("-q, --plotonly", plotonly, "Skip the fit and just produce the plots")->expected(false);
-  app.add_option("-c, --floatosc", floatosc, "Float oscillation parameters for dis fit")->expected(false);
 
   app.add_flag(  "-b, --binned",    binned, "Do you want to weight event-by-event?");
 
@@ -204,7 +202,10 @@ int main(int argc, char* argv[])
     Eigen::VectorXd err_vec_sq = data.Error().array().square();
     Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
     data = PROspec(data_vec, err_vec);
-    PROfile(config,prop,systs,osc,data,filename+"_PROfile",floatosc);
+
+    //Define a metric
+    PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),PROfit::PROchi::BinnedChi2);
+    PROfile(config,prop,systs,osc,data,chi,filename+"_PROfile");
   }
 
   return 0;

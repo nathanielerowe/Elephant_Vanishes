@@ -1,14 +1,17 @@
 #include "PROsurf.h"
+#include "Eigen/src/Core/Matrix.h"
 #include "PROfitter.h"
+#include "PROCNP.h"
+#include "PROlog.h"
 
 using namespace PROfit;
 
-std::vector<std::vector<double>> latin_hypercube_sampling(size_t num_samples, size_t dimensions, std::uniform_real_distribution<float>&dis, std::mt19937 &gen) {
-    std::vector<std::vector<double>> samples(num_samples, std::vector<double>(dimensions));
+std::vector<std::vector<float>> latin_hypercube_sampling(size_t num_samples, size_t dimensions, std::uniform_real_distribution<float>&dis, std::mt19937 &gen) {
+    std::vector<std::vector<float>> samples(num_samples, std::vector<float>(dimensions));
 
     for (size_t d = 0; d < dimensions; ++d) {
 
-        std::vector<double> perm(num_samples);
+        std::vector<float> perm(num_samples);
         for (size_t i = 0; i < num_samples; ++i) {
             perm[i] = (i + dis(gen)) / num_samples;  
         }
@@ -21,7 +24,7 @@ std::vector<std::vector<double>> latin_hypercube_sampling(size_t num_samples, si
     return samples;
 }
 
-std::vector<int> sorted_indices(const std::vector<double>& vec) {
+std::vector<int> sorted_indices(const std::vector<float>& vec) {
     std::vector<int> indices(vec.size());
     for (size_t i = 0; i < vec.size(); ++i) {
         indices[i] = i;
@@ -30,9 +33,7 @@ std::vector<int> sorted_indices(const std::vector<double>& vec) {
     return indices;
 }
 
-
-
-PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbinsy, LogLin lly, double y_lo, double y_hi) : nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXd::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXd::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
+PROsurf::PROsurf(PROmetric &metric, size_t nbinsx, LogLin llx, float x_lo, float x_hi, size_t nbinsy, LogLin lly, float y_lo, float y_hi) : metric(metric), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXf::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXf::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
     if(llx == LogAxis) {
         x_lo = std::log10(x_lo);
         x_hi = std::log10(x_hi);
@@ -47,94 +48,164 @@ PROsurf::PROsurf(size_t nbinsx, LogLin llx, double x_lo, double x_hi, size_t nbi
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceStat(const PROconfig &config, const PROpeller &prop, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting) {
+void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
     std::ofstream chi_file;
-    PROchi::EvalStrategy strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
-
     if(!filename.empty()){
         chi_file.open(filename);
     }
 
     PROsyst dummy_syst;
-    dummy_syst.fractional_covariance = Eigen::MatrixXd::Constant(config.m_num_bins_total, config.m_num_bins_total, 0);
-    Eigen::VectorXd empty_vec;
+    dummy_syst.fractional_covariance = Eigen::MatrixXf::Constant(config.m_num_bins_total, config.m_num_bins_total, 0);
+    Eigen::VectorXf empty_vec;
+
+    PROmetric *local_metric = metric.Clone();
+    local_metric->override_systs(dummy_syst);
 
     for(size_t i = 0; i < nbinsx; i++) {
         for(size_t j = 0; j < nbinsy; j++) {
             std::vector<float> physics_params = {(float)edges_y(j), (float)edges_x(i)};//deltam^2, sin^22thetamumu
-            PROchi chi("3plus1",&config,&prop,&dummy_syst,&osc, data, 0, 0, strat, physics_params);
-            double fx = chi(empty_vec, empty_vec, false);
+            local_metric->set_physics_param_fixed(physics_params);
+            float fx = (*local_metric)(empty_vec, empty_vec, false);
             surface(i, j) = fx;
             if(!filename.empty()){
                 chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx<<std::flush;
             }
         }
     }
+    delete local_metric;
 }
 
-std::vector<surfOut> PROsurf::PointHelper(const PROconfig *config, const PROpeller *prop, const PROsyst *systs, const PROsc *osc, const PROspec *data, std::vector<surfOut> multi_physics_params, PROchi::EvalStrategy strat, bool binned_weighting, int start, int end){
 
-    strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
+std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc, int nparams){
 
-    std::vector<surfOut> outs;
+    std::vector<profOut> outs;
+    // Make a local copy for this thread
+    PROmetric *local_metric = metric.Clone();
+
 
     for(int i=start; i<end;i++){
+        local_metric->reset();
+        int which_spline= i;
+        profOut output;
+
+
+
+        Eigen::VectorXf last_bf;// = Eigen::VectorXf::Constant(nparams,0);
+        for(int i=0; i<=30;i++){
+            Eigen::VectorXf ub, lb;
+
+            if(with_osc) {
+                nparams = 2 + systs->GetNSplines();
+                lb = Eigen::VectorXf::Constant(nparams, -3.0);
+                lb(0) = local_metric->getModel()->lb(0); lb(1) = local_metric->getModel()->lb(1);
+                ub = Eigen::VectorXf::Constant(nparams, 3.0);
+                ub(0) = local_metric->getModel()->ub(0); ub(1) = local_metric->getModel()->ub(1);
+                for(int i = 2; i < nparams; ++i) {
+                    lb(i) = systs->spline_lo[i-2];
+                    ub(i) = systs->spline_hi[i-2];
+                }
+            } else {
+                ub = Eigen::VectorXf::Map(systs->spline_hi.data(), systs->spline_hi.size());
+                lb = Eigen::VectorXf::Map(systs->spline_lo.data(), systs->spline_lo.size());
+                nparams = systs->GetNSplines();
+            }
+            Eigen::VectorXf x = Eigen::VectorXf::Constant(nparams, 0.0);
+            Eigen::VectorXf grad = Eigen::VectorXf::Constant(nparams, 0.0);
+            Eigen::VectorXf bestx = Eigen::VectorXf::Constant(nparams, 0.0);
+
+            float which_value = which_spline == 1 ? -5.0 + i / 6.0 : lb(which_spline) + (ub(which_spline) - lb(which_spline)) * i / 30.0;
+            float fx;
+            output.knob_vals.push_back(with_osc && which_spline == 1 ? std::pow(10, which_value) : which_value);
+
+            lb[which_spline] = which_value;
+            ub[which_spline] = which_value;
+            x[which_spline] = which_value;
+
+            LBFGSpp::LBFGSBParam<float> param;
+            param.epsilon = 1e-6;
+            param.max_iterations = 100;
+            param.max_linesearch = 50;
+            param.delta = 1e-6;
+
+            local_metric->fixSpline(which_spline,which_value);
+
+            PROfitter fitter(ub, lb, param);
+            if(last_bf.norm()>0){
+                fx = fitter.Fit(*local_metric,last_bf);
+            }else{
+                fx = fitter.Fit(*local_metric);
+            }
+            output.knob_chis.push_back(fx);
+            last_bf = fitter.best_fit;
+          
+
+            std::string spec_string = "";
+            for(auto &f : x) spec_string+=" "+std::to_string(f); 
+            log<LOG_INFO>(L"%1% || Fixed value of %2% for spline %3% was post  : %4% ") % __func__ % which_spline % which_value % fx;
+            log<LOG_INFO>(L"%1% || BF splines @ %2%") % __func__ %  spec_string.c_str();
+
+        }    //end spline loop        
+
+       outs.push_back(output);
+
+    }//end thread
+
+    delete local_metric;
+
+    return outs;
+}
+
+std::vector<surfOut> PROsurf::PointHelper(const PROsyst *systs, std::vector<surfOut> multi_physics_params, int start, int end){
+    std::vector<surfOut> outs;
+
+    // Make a local copy for this thread
+    PROmetric *local_metric = metric.Clone();
+
+    for(int i=start; i<end;i++){
+        local_metric->reset();
 
         surfOut output;
         std::vector<float> physics_params = multi_physics_params[i].grid_val;
         output.grid_val = physics_params;
         output.grid_index = multi_physics_params[i].grid_index;
 
+        local_metric->set_physics_param_fixed(physics_params);
+
         int nparams = systs->GetNSplines();
-        PROchi chi("3plus1",config,prop,systs,osc,*data, nparams, systs->GetNSplines(), strat, physics_params);
 
         if(nparams == 0) {
-            Eigen::VectorXd empty_vec;
-            output.chi = chi(empty_vec, empty_vec, false);
+            Eigen::VectorXf empty_vec;
+            output.chi = (*local_metric)(empty_vec, empty_vec, false);
             outs.push_back(output);
             continue;
         }
 
-        LBFGSpp::LBFGSBParam<double> param;
+        LBFGSpp::LBFGSBParam<float> param;
         param.epsilon = 1e-6;
         param.max_iterations = 100;
         param.max_linesearch = 50;
         param.delta = 1e-6;
 
-        //Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-        //Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-        Eigen::VectorXd lb = Eigen::VectorXd::Map(systs->spline_lo.data(), systs->spline_lo.size());
-        Eigen::VectorXd ub = Eigen::VectorXd::Map(systs->spline_hi.data(), systs->spline_hi.size());
+        Eigen::VectorXf lb = Eigen::VectorXf::Map(systs->spline_lo.data(), systs->spline_lo.size());
+        Eigen::VectorXf ub = Eigen::VectorXf::Map(systs->spline_hi.data(), systs->spline_hi.size());
 
         PROfitter fitter(ub, lb, param);
-        output.chi = fitter.Fit(chi);
+        output.chi = fitter.Fit(*local_metric);
         outs.push_back(output);
 
     }
+    
+    delete local_metric;
 
     return outs;
-
 }
 
 
-void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, bool binned_weighting, int nThreads) {
-
-    std::random_device rd{};
-    std::mt19937 rng{rd()};
-    std::normal_distribution<float> d;
-    std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
-    PROchi::EvalStrategy strat = binned_weighting ? PROchi::BinnedChi2 : PROchi::EventByEvent;
-
-    int nparams = systs.GetNSplines();
-    Eigen::VectorXd lastx = Eigen::VectorXd::Constant(nparams, 0.01);
-
+void PROsurf::FillSurface(const PROsyst &systs, std::string filename, int nThreads) {
     std::ofstream chi_file;
-
     if(!filename.empty()){
         chi_file.open(filename);
     }
-
-    //data.plotSpectrum(config,"TTCV");
 
     std::vector<surfOut> grid;
     for(size_t i = 0; i < nbinsx; i++) {
@@ -149,8 +220,6 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
     int loopSize = grid.size();
     int chunkSize = loopSize / nThreads;
 
-    //std::vector<surfOut> PointHelper(const PROconfig *config, const PROpeller *prop, const PROsyst *systs, const PROosc *osc, const PROspec *data, std::vector<surfOut>> multi_physics_params, PROchi::EvalStrategy strat, bool binned_weighting, int start, int end);
-
     std::vector<std::future<std::vector<surfOut>>> futures; 
 
     log<LOG_INFO>(L"%1% || Starting THREADS  : %2% , Loops %3%, Chunks %4%") % __func__ % nThreads % loopSize % chunkSize;
@@ -159,8 +228,8 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-                    return this->PointHelper(&config, &prop, &systs, &osc, &data, grid, strat, binned_weighting, start, end);
-                    }));
+            return this->PointHelper(&systs, grid, start, end);
+        }));
 
     }
 
@@ -178,14 +247,14 @@ void PROsurf::FillSurface(const PROconfig &config, const PROpeller &prop, const 
 
 }
 
-std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
-    double step = 0.001;
+std::vector<float> findMinAndBounds(TGraph *g, float val,float range) {
+    float step = 0.001;
     range = range+step;
     int n = g->GetN();
-    double minY = 1e9, minX = 0;
+    float minY = 1e9, minX = 0;
     for (int i = 0; i < n; ++i) {
         double x, y;
-        g->GetPoint(i, x, y);
+        g->GetPoint(i, x,y);
         if (y < minY) {
             minY = y;
             minX = x;
@@ -193,11 +262,11 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     }
     //..ok so minX is the min and Currentl minY is the chi^2. Want this to be delta chi^2
 
-    double leftX = minX, rightX = minX;
+    float leftX = minX, rightX = minX;
     
     // Search to the left of the minimum
-    for (double x = minX; x >= -range; x -= step) {
-        double y = g->Eval(x) - minY; //DeltaChi^2
+    for (float x = minX; x >= -range; x -= step) {
+        float y = g->Eval(x) - minY; //DeltaChi^2
         if (y >= val) {
             leftX = x;
             break;
@@ -206,8 +275,8 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
     
 
     // Search to the right of the minimum
-    for (double x = minX; x <= range; x += step) {
-        double y = g->Eval(x)-minY;
+    for (float x = minX; x <= range; x += step) {
+        float y = g->Eval(x)-minY;
         if (y >= val) {
             rightX = x;
             break;
@@ -218,137 +287,72 @@ std::vector<double> findMinAndBounds(TGraph *g, double val,double range) {
 }
 
 
-int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, std::string filename, const bool floatosc) {
+PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads) : metric(metric) {
 
-
-    LBFGSpp::LBFGSBParam<double> param;
+    LBFGSpp::LBFGSBParam<float> param;
     param.epsilon = 1e-6;
     param.max_iterations = 100;
     param.max_linesearch = 50;
     param.delta = 1e-6;
 
-    LBFGSpp::LBFGSBSolver<double> solver(param);
-    size_t nparams = systs.GetNSplines();
-    if (floatosc) {
-      nparams += 2;
-    }
+    LBFGSpp::LBFGSBSolver<float> solver(param);
+    int nparams = systs.GetNSplines() + 2 * with_osc;
     std::vector<float> physics_params; 
-    Eigen::MatrixXd invH;
 
-
-    int depth = std::ceil(nparams/4.0);
-    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
-    c->Divide(4,depth);
-
-
-    std::vector<std::unique_ptr<TGraph>> graphs; 
+      std::vector<std::unique_ptr<TGraph>> graphs; 
 
     //hack
-    std::vector<double> priorX;
-    std::vector<double> priorY;
+    std::vector<float> priorX;
+    std::vector<float> priorY;
 
     for(int i=0; i<=30;i++){
-        double which_value = -3.0+0.2*i;
+        float which_value = -3.0+0.2*i;
         priorX.push_back(which_value);
         priorY.push_back(which_value*which_value);
 
     }
     std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
 
+    std::vector<std::string> names;
+    if(with_osc) for(const auto& name: osc.param_names) names.push_back(name);
+    for(const auto &name: systs.spline_names) names.push_back(name);
+
+    int loopSize = nparams;
+    int chunkSize = loopSize / nThreads;
+
+    std::vector<std::future<std::vector<profOut>>> futures; 
+
+    log<LOG_INFO>(L"%1% || Starting THREADS  : %2% , Loops %3%, Chunks %4%") % __func__ % nThreads % loopSize % chunkSize;
+
+    for (int t = 0; t < nThreads; ++t) {
+        int start = t * chunkSize;
+        int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
+        futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
+            return this->PROfilePointHelper(&systs, start, end,with_osc,nparams);
+        }));
+
+    }
+
+    std::vector<profOut> combinedResults;
+    for (auto& fut : futures) {
+        std::vector<profOut> result = fut.get();
+        combinedResults.insert(combinedResults.end(), result.begin(), result.end());
+    }
 
 
-    for(size_t w=0; w<nparams;w++){
-        int which_spline = w;
+    int depth = std::ceil(nparams/4.0);
+    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
+    c->Divide(4,depth);
 
-        std::vector<double> knob_vals;
-        std::vector<double> knob_chis;
-
-        for(int i=0; i<=30;i++){
-
-            Eigen::VectorXd lb = Eigen::VectorXd::Constant(nparams, -3.0);
-            Eigen::VectorXd ub = Eigen::VectorXd::Constant(nparams, 3.0);
-	    if (floatosc) {
-	      lb(0) = -2;
-	      lb(1) = -std::numeric_limits<double>::infinity();
-	      ub(0) = 2;
-	      ub(1) = 0;	      
-	      for (size_t i=2; i < nparams; ++i) {
-		lb(i) = systs.spline_lo[i-2];
-		ub(i) = systs.spline_hi[i-2];
-	      }
-	    }
-	    else {
-	      ub = Eigen::VectorXd::Map(systs.spline_hi.data(), systs.spline_hi.size());
-	      lb = Eigen::VectorXd::Map(systs.spline_lo.data(), systs.spline_lo.size());
-	    }
-            Eigen::VectorXd x = Eigen::VectorXd::Constant(nparams, 0.0);
-            Eigen::VectorXd grad = Eigen::VectorXd::Constant(nparams, 0.0);
-            Eigen::VectorXd bestx = Eigen::VectorXd::Constant(nparams, 0.0);
-
-
-	    double which_value;
-	    if (floatosc) {
-	      if (w==0) {
-		which_value = -2. + i*0.133;
-	      }
-	      else if (w==1) { 
-		which_value = -1. + i*0.133;
-	      }
-	      else {
-		which_value = -3.0+0.2*i;
-	      }
-	    }
-	    else {
-	      which_value = -3.0+0.2*i;
-	    }
-            double fx;
-            knob_vals.push_back(which_value);
-
-            lb[which_spline] = which_value;
-            ub[which_spline] = which_value;
-            x[which_spline] = which_value;
-
-
-            PROchi chi("3plus1", &config, &prop, &systs, &osc, data, nparams, systs.GetNSplines(), PROchi::BinnedChi2, physics_params);
-            chi.fixSpline(which_spline,which_value);
-
-            log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
-            try {
-                x = Eigen::VectorXd::Constant(nparams, 0.012);
-                solver.minimize(chi, x, fx, lb, ub);
-		invH = solver.final_approx_inverse_hessian();
-            } catch(std::runtime_error &except) {
-                log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
-            }
-
-            std::string spec_string = "";
-            for(auto &f : x) spec_string+=" "+std::to_string(f); 
-            log<LOG_INFO>(L"%1% || Fixed value of %2% for spline %3% was post  : %4% ") % __func__ % which_spline % which_value % fx;
-            log<LOG_INFO>(L"%1% || BF splines @ %2%") % __func__ %  spec_string.c_str();
-
-            knob_chis.push_back(fx);
-        }            
-
-        log<LOG_INFO>(L"%1% || Knob Values: %2%") % __func__ %  knob_vals;
-        log<LOG_INFO>(L"%1% || Knob Chis: %2%") % __func__ %  knob_chis;
+    int w = 0;
+    for(auto & out: combinedResults){
+        
+        log<LOG_INFO>(L"%1% || Knob Values: %2%") % __func__ %  out.knob_vals;
+        log<LOG_INFO>(L"%1% || Knob Chis: %2%") % __func__ %  out.knob_chis;
 
         c->cd(w+1);
-        std::unique_ptr<TGraph> g = std::make_unique<TGraph>(knob_vals.size(), knob_vals.data(), knob_chis.data());
-	std::string tit;
-	if (floatosc) {
-	  if (which_spline == 0) {
-	    tit = "dmsq; #sigma Shift; #Chi^{2}";
-	  }
-	  else if (which_spline == 1) {
-	    tit = "sin22thmm; #sigma Shift; #Chi^{2}";
-	  }
-	  else {
-	    tit = systs.spline_names[which_spline-2]+ ";#sigma Shift; #Chi^{2}";
-	  }
-	}
-	else {
-	  tit = systs.spline_names[which_spline]+ ";#sigma Shift; #Chi^{2}";
-	}
+        std::unique_ptr<TGraph> g = std::make_unique<TGraph>(out.knob_vals.size(), out.knob_vals.data(), out.knob_chis.data());
+        std::string tit = names[w]+ ";#sigma Shift; #Chi^{2}";
         g->SetTitle(tit.c_str());
         graphs.push_back(std::move(g));
         graphs.back()->Draw("AL");
@@ -357,7 +361,7 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
         gprior->Draw("L same");
         gprior->SetLineStyle(2);
         gprior->SetLineWidth(1);
-
+        w++;
     }
 
     c->SaveAs((filename+".pdf").c_str(),"pdf");
@@ -372,41 +376,41 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
     int nBins = systs.spline_names.size();
-    if (floatosc){
-      nBins += 2;
-    }
 
-    std::vector<double> bfvalues;
-    std::vector<double> values1_up;
-    std::vector<double> values1_down;
+    std::vector<float> bfvalues;
+    std::vector<float> values1_up;
+    std::vector<float> values1_down;
 
-    std::vector<double> values2_up;
-    std::vector<double> values2_down;
+    std::vector<float> values2_up;
+    std::vector<float> values2_down;
 
     log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two igma turned on? : %2% ") % __func__ % twosig;
 
+    int count = 0;
     for(auto &g:graphs){
-        std::vector<double> tmp = findMinAndBounds(g.get(),1.0,3.0);
+        float range = count == 0 ? 2.0 : count == 1 ? 1.0 : 3.0;
+        std::vector<float> tmp = findMinAndBounds(g.get(),1.0, range);
         bfvalues.push_back(tmp[0]);
         values1_down.push_back(tmp[1]);
         values1_up.push_back(tmp[2]);
 
         if(twosig){
-            std::vector<double> tmp2 = findMinAndBounds(g.get(),4.0,3.0);
+            std::vector<float> tmp2 = findMinAndBounds(g.get(),4.0,3.0);
             values2_down.push_back(tmp2[1]);
             values2_up.push_back(tmp2[2]);
         }
+        count++;
     }
 
     
     log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% ") % __func__ % nBins % bfvalues.size() % values1_down.size() % values1_up.size() ;
 
-    double minVal = *std::min_element(values1_down.begin(), values1_down.end());
-    double maxVal = *std::max_element(values1_up.begin(), values1_up.end());
+    float minVal = *std::min_element(values1_down.begin(), values1_down.end());
+    float maxVal = *std::max_element(values1_up.begin(), values1_up.end());
 
-    double wid = twosig? 0.4  : 0.8;
-    double off1 = twosig?0.1   : 0.0;
-    double off2 = twosig?0.5  : 0.0;
+    float wid = twosig? 0.4  : 0.8;
+    float off1 = twosig?0.1   : 0.0;
+    float off2 = twosig?0.5  : 0.0;
 
     TH1D *h1up = new TH1D("hup", "Bar Chart", nBins, 0, nBins);
     TH1D *h1down = new TH1D("hdown", "Bar Chart", nBins, 0, nBins);
@@ -437,6 +441,9 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     h2down->SetBarOffset(off2);
     h2down->SetStats(0);
 
+
+
+
     // Fill the histogram with values from the vector
     for (int i = 0; i < nBins; ++i) {
         h1up->SetBinContent(i+1, values1_up[i]); 
@@ -448,21 +455,8 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
             h2down->SetBinContent(i+1, values2_down[i]); 
         }
 
-	if (floatosc) {
-	  if (i == 0) {
-	    h1up->GetXaxis()->SetBinLabel(i+1,"dmsq");	    
-	  }
-	  else if (i == 1) {
-	    h1up->GetXaxis()->SetBinLabel(i+1,"sin22thmm");	    	    
-	  }
-	  else {
-	    h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i-2].c_str());	    
-	  }
-	}
-	else {
-	  h1up->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
-	}
-	
+        h1up->GetXaxis()->SetBinLabel(i+1,names[i].c_str());
+
     }
     h1up->SetTitle("");
     h1up->Draw("b");
@@ -505,48 +499,6 @@ int PROfit::PROfile(const PROconfig &config, const PROpeller &prop, const PROsys
     c2->SaveAs((filename+"_1sigma.pdf").c_str(),"pdf");
     delete c2;
 
-    //Plot correlations
-    TCanvas *c3 =  new TCanvas((filename+"invh").c_str(), (filename+"invh").c_str() , 40*nparams, 40*nparams);
-    c3->cd();
-    c3->SetBottomMargin(0.25);
-    c3->SetLeftMargin(0.35);    
-    int hsize = invH.rows();
-    TH2D *h_cov = new TH2D("h_cov", "Variance-Covariance Matrix;Parameter Index;Parameter Index", hsize, 0, hsize, hsize, 0, hsize);
-    for (int i = 0; i < hsize; ++i) {
-      for (int j = 0; j < hsize; ++j) {
-	h_cov->SetBinContent(i + 1, j + 1, invH(i, j));  // ROOT bins start from 1
-	if (floatosc) {
-	  if (i==0) {
-	    h_cov->GetXaxis()->SetBinLabel(i+1,"dmsq");
-	  }
-	  else if (i==1) {
-	    h_cov->GetXaxis()->SetBinLabel(i+1,"sin22thmm");
-	  }
-	  else {
-	    h_cov->GetXaxis()->SetBinLabel(i-1,systs.spline_names[i].c_str());
-	  }
-	  if (j==0) {
-	    h_cov->GetYaxis()->SetBinLabel(j+1,"dmsq");
-	  }
-	  else if (j==1) {
-	    h_cov->GetYaxis()->SetBinLabel(j+1,"sin22thmm");
-	  }
-	  else {
-	    h_cov->GetYaxis()->SetBinLabel(j-1,systs.spline_names[j].c_str());
-	  }
-	}
-	else {
-	  h_cov->GetXaxis()->SetBinLabel(i+1,systs.spline_names[i].c_str());
-	  h_cov->GetYaxis()->SetBinLabel(j+1,systs.spline_names[j].c_str());	  
-	}
-      }
-    }
-
-
-    h_cov->Draw("COLZ");
-    c3->SaveAs((filename+"_invh.pdf").c_str(),"pdf");
-    delete c3;
-    
-    return 0;
+    return ;
 }
 

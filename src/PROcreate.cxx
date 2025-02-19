@@ -36,12 +36,12 @@ namespace PROfit {
         return *(p_multi_spec.at(universe));
     }
 
-    void SystStruct::FillCV(int global_bin, double event_weight){
+    void SystStruct::FillCV(int global_bin, float event_weight){
         p_cv->Fill(global_bin, event_weight);
         return;
     }
 
-    void SystStruct::FillUniverse(int universe, int global_bin, double event_weight){
+    void SystStruct::FillUniverse(int universe, int global_bin, float event_weight){
         p_multi_spec.at(universe)->QuickFill(global_bin, event_weight);
         return;
     }
@@ -261,7 +261,7 @@ namespace PROfit {
 
 
             // set up systematic weight formula
-            std::vector<double> sys_weight_value(total_num_systematics, 1.0);
+            std::vector<float> sys_weight_value(total_num_systematics, 1.0);
             std::vector<std::unique_ptr<TTreeFormula>> sys_weight_formula;
             for(const auto& s : syst_vector){
                 if(s.HasWeightFormula())
@@ -553,14 +553,14 @@ namespace PROfit {
             s.CreateSpecs(s.mode == "spline" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
-        inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
-        inprop.histLE = Eigen::VectorXd::Constant(inconfig.m_num_truebins_total, 0);
+        inprop.hist = Eigen::MatrixXf::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
+        inprop.histLE = Eigen::VectorXf::Constant(inconfig.m_num_truebins_total, 0);
         size_t LE_bin = 0;
         for(size_t i = 0; i < inconfig.m_num_channels; ++i) {
-            const std::vector<double> &edges = inconfig.m_channel_truebin_edges[i];
+            const std::vector<float> &edges = inconfig.m_channel_truebin_edges[i];
             for(size_t j = 0; j < edges.size() - 1; ++j){
                 inprop.histLE(LE_bin++) = (edges[j+1] + edges[j])/2;
-                //double kk = (edges[j+1] + edges[j])/2;
+                //float kk = (edges[j+1] + edges[j])/2;
                 //log<LOG_INFO>(L"%1% || AGGGGGH %2% %3% %4% %5% %6% %7%") % __func__ % i % j % edges[j+1] % edges[j] % LE_bin % kk ;
             }
         }
@@ -574,7 +574,7 @@ namespace PROfit {
 
 
             // set up systematic weight formula
-            std::vector<double> sys_weight_value(total_num_systematics, 1.0);
+            std::vector<float> sys_weight_value(total_num_systematics, 1.0);
             std::vector<std::unique_ptr<TTreeFormula>> sys_weight_formula;
             for(const auto& s : syst_vector){
                 if(s.HasWeightFormula())
@@ -648,7 +648,7 @@ namespace PROfit {
         std::vector<std::unique_ptr<TFile>> files(num_files);
         std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
         std::map<std::string, int> map_systematic_num_universe;
-        std::vector<double> pot_scale(num_files, 1.0);
+        std::vector<float> pot_scale(num_files, 1.0);
 
         //CAFANA related things
         std::vector<int> pset_indices_tmp;
@@ -824,11 +824,11 @@ namespace PROfit {
             s.CreateSpecs(s.mode == "multisigma" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
-        inprop.hist = Eigen::MatrixXd::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
-        inprop.histLE = Eigen::VectorXd::Constant(inconfig.m_num_truebins_total, 0);
+        inprop.hist = Eigen::MatrixXf::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
+        inprop.histLE = Eigen::VectorXf::Constant(inconfig.m_num_truebins_total, 0);
         size_t LE_bin = 0;
         for(size_t i = 0; i < inconfig.m_num_channels; ++i) {
-            const std::vector<double> &edges = inconfig.m_channel_truebin_edges[i];
+            const std::vector<float> &edges = inconfig.m_channel_truebin_edges[i];
             for(size_t j = 0; j < edges.size() - 1; ++j)
                 inprop.histLE(LE_bin++) = (edges[j+1] - edges[j])/2;
         }
@@ -864,15 +864,14 @@ namespace PROfit {
                 if(i%1000==0)log<LOG_DEBUG>(L"%1% || ---- universe %2%/%3% ") % __func__  % files[fid]->GetName() % nevents ;
 
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    double reco_value = branches[ib]->GetValue<double>();
+                    float reco_value = branches[ib]->GetValue<float>();
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     int pdg_id = branches[ib]->GetTruePDG<int>();
-                    double true_param = branches[ib]->GetTrueValue<double>();
-                    double baseline = branches[ib]->GetTrueL<double>();
-		    double pmom = branches[ib]->GetTrueLeadProtonMom<double>();
-		    double pcosth = branches[ib]->GetTrueLeadProtonCosth<double>();
+                    float true_param = branches[ib]->GetTrueValue<float>();
+                    float baseline = branches[ib]->GetTrueL<float>();
+>>>>>>> ac455f1e0ba82a523498e84cae05c4949753ab37
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
                     int model_rule = branches[ib]->GetModelRule();
 
@@ -915,7 +914,7 @@ namespace PROfit {
     }
 
 
-    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, double add_weight, long int global_bin, long int global_true_bin){
+    int PROcess_CAF_Event(std::vector<std::unique_ptr<TTreeFormula>> & formulas, std::vector<SystStruct> &syst_vector, CAFweightHelper &caf_helper, float add_weight, long int global_bin, long int global_true_bin){
 
 
         int is = 0;
@@ -923,7 +922,7 @@ namespace PROfit {
             long bin = ((syst.mode == "multisigma") ? global_true_bin : global_bin);
             syst.FillCV(bin, add_weight);
             formulas[is]->GetNdata();
-            double sys_weight_value =formulas[is]->EvalInstance();
+            float sys_weight_value =formulas[is]->EvalInstance();
 
             if(std::isinf(sys_weight_value) || sys_weight_value != sys_weight_value){
                 log<LOG_ERROR>(L"%1% || Input values to histogram is NAN or inf %2% !") % __func__  % sys_weight_value ;
@@ -953,7 +952,7 @@ namespace PROfit {
 
     PROspec CreatePROspecCV(const PROconfig& inconfig){
 
-        double spec_pot = inconfig.m_plot_pot;
+        float spec_pot = inconfig.m_plot_pot;
         log<LOG_INFO>(L"%1% || Start generating central value spectrum") % __func__ ;
         log<LOG_INFO>(L"%1% || Spectrum will be generated with %2% POT") % __func__ % spec_pot;
 
@@ -963,7 +962,7 @@ namespace PROfit {
 
 
         std::vector<long int> nentries(num_files,0);
-        std::vector<double> pot_scale(num_files, 1.0);
+        std::vector<float> pot_scale(num_files, 1.0);
         std::vector<std::unique_ptr<TFile>> files(num_files);
         std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
 
@@ -1087,8 +1086,8 @@ namespace PROfit {
                 for(int ib = 0; ib != num_branch; ++ib) {
 
                     //guanqun: why have different types for branch_variables 
-                    double reco_value = branches[ib]->GetValue<double>();
-                    double additional_weight = branches[ib]->GetMonteCarloWeight();
+                    float reco_value = branches[ib]->GetValue<float>();
+                    float additional_weight = branches[ib]->GetMonteCarloWeight();
                     additional_weight *= pot_scale[fid];
 
                     if(additional_weight == 0) //skip on event failing cuts
@@ -1117,20 +1116,16 @@ namespace PROfit {
         return spec;
     }
 
-    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, double mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight, PROpeller& inprop){
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop){
 
         int total_num_sys = syst_vector.size(); 
-      	double reco_value = branch->GetValue<double>();
-        double true_param = branch->GetTrueValue<double>();
-        double baseline = branch->GetTrueL<double>();
-        double true_value = baseline / true_param;
-
-	double pmom = branch->GetTrueLeadProtonMom<double>();
-	double pcosth = branch->GetTrueLeadProtonCosth<double>();
-
-        double pdg_id = branch->GetTruePDG();//No need, depreciated
+      	float reco_value = branch->GetValue<float>();
+        float true_param = branch->GetTrueValue<float>();
+        float baseline = branch->GetTrueL<float>();
+        float true_value = baseline / true_param;
+        float pdg_id = branch->GetTruePDG();//No need, depreciated
         int run_syst = branch->GetIncludeSystematics();
-        double mc_weight = branch->GetMonteCarloWeight();
+        float mc_weight = branch->GetMonteCarloWeight();
         mc_weight *= inconfig.m_plot_pot / mcpot;
 
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
@@ -1158,7 +1153,7 @@ namespace PROfit {
 
         for(int i = 0; i != total_num_sys; ++i){
             SystStruct& syst_obj = syst_vector[i];
-            double additional_weight = syst_additional_weight.at(i);
+            float additional_weight = syst_additional_weight.at(i);
 
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
 
@@ -1168,14 +1163,14 @@ namespace PROfit {
                     size_t u = 0;
                     for(; u < syst_obj.knobval.size(); ++u)
                         if(syst_obj.knobval[u] == syst_obj.knob_index[i]) break;
-                    syst_obj.FillUniverse(u, global_true_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second->at(i)));
+                    syst_obj.FillUniverse(u, global_true_bin, mc_weight * additional_weight * static_cast<float>(map_iter->second->at(i)));
                 }
                 continue;
             }else{
 
                 syst_obj.FillCV(global_bin, mc_weight);
                 for(int iuni = 0; iuni < syst_obj.GetNUniverse(); ++iuni){
-                    double sys_wei = run_syst ? additional_weight * static_cast<double>(map_iter->second->at(iuni) ) :  1.0;
+                    float sys_wei = run_syst ? additional_weight * static_cast<float>(map_iter->second->at(iuni) ) :  1.0;
                     syst_obj.FillUniverse(iuni, global_bin, mc_weight *sys_wei );
                 }
             }
@@ -1186,18 +1181,18 @@ namespace PROfit {
         return;
     }
 
-    void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<double>& syst_additional_weight){
+    void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight){
 
         int total_num_sys = syst_vector.size(); 
-        double reco_value = branch->GetValue<double>();
-        double mc_weight = branch->GetMonteCarloWeight();
+        float reco_value = branch->GetValue<float>();
+        float mc_weight = branch->GetMonteCarloWeight();
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         if(global_bin < 0 )  //out of range
             return;
 
         for(int i = 0; i != total_num_sys; ++i){
             SystStruct& syst_obj = syst_vector[i];
-            double additional_weight = syst_additional_weight.at(i);
+            float additional_weight = syst_additional_weight.at(i);
 
             syst_obj.FillCV(global_bin, mc_weight);
 
@@ -1205,7 +1200,7 @@ namespace PROfit {
             int map_variation_size = (map_iter == eventweight_map.end()) ? 0 : map_iter->second.size();
             int iuni = 0;
             for(; iuni != std::min(map_variation_size, syst_obj.GetNUniverse()); ++iuni){
-                syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight * static_cast<double>(map_iter->second.at(iuni)));
+                syst_obj.FillUniverse(iuni, global_bin, mc_weight * additional_weight * static_cast<float>(map_iter->second.at(iuni)));
             }
 
             while(iuni != syst_obj.GetNUniverse()){

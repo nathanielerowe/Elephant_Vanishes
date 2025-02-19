@@ -6,8 +6,8 @@ using namespace PROfit;
 
 PROspec::PROspec(size_t num_bins):
     nbins(num_bins),
-    spec(Eigen::VectorXd::Zero(num_bins)),
-    error(Eigen::VectorXd::Zero(num_bins)){
+    spec(Eigen::VectorXf::Zero(num_bins)),
+    error(Eigen::VectorXf::Zero(num_bins)){
     }
 
 PROspec PROspec::PoissonVariation(const PROspec &s) {
@@ -43,7 +43,7 @@ void PROspec::Print() const {
 }
 
 
-void PROspec::Fill(int bin_index, double weight){
+void PROspec::Fill(int bin_index, float weight){
     //Removed to help speed up filling
     spec(bin_index) += weight;
     float tmp_err = error(bin_index);
@@ -52,9 +52,28 @@ void PROspec::Fill(int bin_index, double weight){
     return;
 }
 
-void PROspec::QuickFill(int bin_index, double weight){
+void PROspec::QuickFill(int bin_index, float weight){
     spec(bin_index) += weight;
     return;
+}
+
+TH1D PROspec::toTH1D_Collapsed(const PROconfig &inconfig, int channel_index) const {
+    int global_bin_start = inconfig.GetCollapsedGlobalBinStart(channel_index);
+    //set up hist specs
+    int nbins = inconfig.m_channel_num_bins[channel_index];
+    const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
+    std::string hist_name = inconfig.m_channel_names[channel_index];
+    std::string xaxis_title = inconfig.m_channel_units[channel_index];
+
+    //fill 1D hist
+    TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
+    hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());
+    for(int i = 1; i <= nbins; ++i){
+        hSpec.SetBinContent(i, spec(global_bin_start + i -1));
+        hSpec.SetBinError(i, error(global_bin_start + i -1));
+    }
+
+    return hSpec;
 }
 
 
@@ -65,7 +84,7 @@ TH1D PROspec::toTH1D(PROconfig const & inconfig, int subchannel_index) const{
 
     //set up hist specs
     int nbins = inconfig.m_channel_num_bins[channel_index];
-    const std::vector<double>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
+    const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
     std::string hist_name = inconfig.m_fullnames[subchannel_index];
     std::string xaxis_title = inconfig.m_channel_units[channel_index];
 
@@ -123,8 +142,8 @@ PROspec PROspec::operator+(const PROspec& b) const{
     }
 
 
-    Eigen::VectorXd sum_spec = this->spec + b.spec;
-    Eigen::VectorXd error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
+    Eigen::VectorXf sum_spec = this->spec + b.spec;
+    Eigen::VectorXf error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
     return PROspec(sum_spec, error_spec);
 }
 
@@ -150,8 +169,8 @@ PROspec PROspec::operator-(const PROspec& b) const{
     }
 
 
-    Eigen::VectorXd sum_spec = this->spec - b.spec;
-    Eigen::VectorXd error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
+    Eigen::VectorXf sum_spec = this->spec - b.spec;
+    Eigen::VectorXf error_spec = this->eigenvector_sqrt_quadrature_sum(this->error, b.error); 
     return PROspec(sum_spec, error_spec);
 }
 
@@ -177,13 +196,13 @@ PROspec PROspec::operator/(const PROspec& b) const{
     }
 
 
-    Eigen::VectorXd ratio_spec = this->eigenvector_division(this->spec, b.spec);
+    Eigen::VectorXf ratio_spec = this->eigenvector_division(this->spec, b.spec);
 
     //calculate relative error, and sqrt of quadratic sum of relative error
-    Eigen::VectorXd this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
-    Eigen::VectorXd ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
+    Eigen::VectorXf this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
+    Eigen::VectorXf ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
 
-    Eigen::VectorXd ratio_error = this->eigenvector_multiplication(ratio_spec, ratio_relative_error);
+    Eigen::VectorXf ratio_error = this->eigenvector_multiplication(ratio_spec, ratio_relative_error);
     return PROspec(ratio_spec, ratio_error); 
 }
 
@@ -198,36 +217,36 @@ PROspec& PROspec::operator/=(const PROspec& b) {
 
     this->spec =  this->eigenvector_division(this->spec, b.spec);
     //calculate relative error, and sqrt of quadratic sum of relative error
-    Eigen::VectorXd this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
-    Eigen::VectorXd ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
+    Eigen::VectorXf this_relative_error = this->eigenvector_division(this->error, this->spec), b_relative_error = this->eigenvector_division(b.error, b.spec);
+    Eigen::VectorXf ratio_relative_error = this->eigenvector_sqrt_quadrature_sum(this_relative_error, b_relative_error);
 
     this->error  = this->eigenvector_multiplication(this->spec, ratio_relative_error);
     return *this; 
 }
 
-PROspec PROspec::operator*(double scale) const{
+PROspec PROspec::operator*(float scale) const{
 
-    Eigen::VectorXd scaled_spec = scale * this->spec, scaled_error = scale * this->error;
+    Eigen::VectorXf scaled_spec = scale * this->spec, scaled_error = scale * this->error;
     return PROspec(scaled_spec, scaled_error);
 }
 
-PROspec& PROspec::operator*=(double scale){
+PROspec& PROspec::operator*=(float scale){
 
     this->spec *= scale; 
     this->error *= scale;
     return *this;
 }
 
-Eigen::VectorXd PROspec::eigenvector_sqrt_quadrature_sum(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const{
+Eigen::VectorXf PROspec::eigenvector_sqrt_quadrature_sum(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const{
     int nbin = a.size();
-    Eigen::VectorXd error_spec = Eigen::VectorXd::Zero(nbin); 
+    Eigen::VectorXf error_spec = Eigen::VectorXf::Zero(nbin); 
     error_spec = ((a.array()).square() + (b.array()).square()).sqrt();
     return error_spec;
 }
 
-Eigen::VectorXd PROspec::eigenvector_division(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const{
+Eigen::VectorXf PROspec::eigenvector_division(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const{
     int nbin = a.size();
-    Eigen::VectorXd ratio_spec = Eigen::VectorXd::Zero(nbin);
+    Eigen::VectorXf ratio_spec = Eigen::VectorXf::Zero(nbin);
     for(int i = 0; i != nbin; ++i){
         if(b(i) == 0){
             if(a(i) !=0 ){
@@ -244,9 +263,9 @@ Eigen::VectorXd PROspec::eigenvector_division(const Eigen::VectorXd& a, const Ei
     return ratio_spec;
 }
 
-Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, const Eigen::VectorXd& b) const{
+Eigen::VectorXf PROspec::eigenvector_multiplication(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const{
     int nbin = a.size();
-    Eigen::VectorXd ratio_spec = Eigen::VectorXd::Zero(nbin);
+    Eigen::VectorXf ratio_spec = Eigen::VectorXf::Zero(nbin);
     for(int i = 0; i != nbin; ++i){
         ratio_spec(i) = a(i) * b(i);
     }
@@ -255,6 +274,7 @@ Eigen::VectorXd PROspec::eigenvector_multiplication(const Eigen::VectorXd& a, co
 
 void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_name) const{
 
+    bool collapsed = spec.size() == inconfig.m_num_bins_total_collapsed;
     bool div_bin = true;
     int n_subplots = inconfig.m_num_channels*inconfig.m_num_modes*inconfig.m_num_detectors;
     log<LOG_DEBUG>(L"%1% || Creatign canvas with  %2% subplots") % __func__ % n_subplots;
@@ -280,53 +300,69 @@ void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_
                 leg->SetFillStyle(0);
                 leg->SetLineWidth(0);
                 legs.push_back(std::move(leg));
-            
 
-                for(size_t sc = 0; sc < inconfig.m_num_subchannels[ic]; sc++){
-                    const std::string& subchannel_name  = inconfig.m_fullnames[global_subchannel_index];
-                    const std::string& color = inconfig.m_subchannel_colors[ic][sc];
-                    int rcolor = 0;
-                    if(color=="NONE"){
-                        rcolor = kRed-7; 
-                    }else{
-                        rcolor = inconfig.HexToROOTColor(color);
-                    }
-
-
-                    std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(toTH1D(inconfig, global_subchannel_index));
-                    htmp->SetLineWidth(1);
+                if(collapsed) {
+                    std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(toTH1D_Collapsed(inconfig, ic));
+                    htmp->SetLineWidth(3);
                     htmp->SetLineColor(kBlack);
-                    htmp->SetFillColor(rcolor);
-
-
                     hists.push_back(std::move(htmp));  // Move the unique_ptr into the vector
+                } else {
+                    for(size_t sc = 0; sc < inconfig.m_num_subchannels[ic]; sc++){
+                        const std::string& subchannel_name  = inconfig.m_fullnames[global_subchannel_index];
+                        const std::string& color = inconfig.m_subchannel_colors[ic][sc];
+                        int rcolor = 0;
+                        if(color=="NONE"){
+                            rcolor = kRed-7; 
+                        }else{
+                            rcolor = inconfig.HexToROOTColor(color);
+                        }
 
-                    log<LOG_DEBUG>(L"%1% || Printot %2% %3% %4% %5% %6% : Integral %7% ") % __func__ % global_channel_index % global_subchannel_index % subchannel_name.c_str() % sc % ic % hists.back()->Integral();
-            
-                    stacks.back()->Add(hists.back().get());
-                    legs.back()->AddEntry(hists.back().get(), inconfig.m_subchannel_plotnames[ic][sc].c_str() ,"f");
+
+                        std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(toTH1D(inconfig, global_subchannel_index));
+                        htmp->SetLineWidth(1);
+                        htmp->SetLineColor(kBlack);
+                        htmp->SetFillColor(rcolor);
 
 
-                    ++global_subchannel_index;
-                }//end subchan
+                        hists.push_back(std::move(htmp));  // Move the unique_ptr into the vector
 
+                        log<LOG_DEBUG>(L"%1% || Printot %2% %3% %4% %5% %6% : Integral %7% ") % __func__ % global_channel_index % global_subchannel_index % subchannel_name.c_str() % sc % ic % hists.back()->Integral();
+                
+                        stacks.back()->Add(hists.back().get());
+                        legs.back()->AddEntry(hists.back().get(), inconfig.m_subchannel_plotnames[ic][sc].c_str() ,"f");
+
+
+                        ++global_subchannel_index;
+                    }//end subchan
+                }
 
                 if(div_bin){
-                    TList *stlists = (TList*)stacks.back()->GetHists();
-                    for(const auto&& obj: *stlists){
-                        ((TH1*)obj)->Scale(1,"width");
-                        log<LOG_DEBUG>(L"%1% || Stack contains  %2% ") % __func__ % obj->GetName();
+                    if(collapsed) {
+                        hists.back()->Scale(1, "width");
+                    } else {
+                        TList *stlists = (TList*)stacks.back()->GetHists();
+                        for(const auto&& obj: *stlists){
+                            ((TH1*)obj)->Scale(1,"width");
+                            log<LOG_DEBUG>(L"%1% || Stack contains  %2% ") % __func__ % obj->GetName();
+                        }
                     }
                 }
 
-                log<LOG_DEBUG>(L"%1% || Stack Draw ") % __func__ ;
-                stacks.back()->Draw("hist");
-                log<LOG_DEBUG>(L"%1% || Legend Draw ") % __func__ ;
-                legs.back()->Draw();
+                if(collapsed) {
+                    hists.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
+                    hists.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
+                    hists.back()->GetYaxis()->SetTitle("Events");
+                    hists.back()->Draw("hist");
+                } else {
+                    log<LOG_DEBUG>(L"%1% || Stack Draw ") % __func__ ;
+                    stacks.back()->Draw("hist");
+                    log<LOG_DEBUG>(L"%1% || Legend Draw ") % __func__ ;
+                    legs.back()->Draw();
 
-                stacks.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
-                stacks.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
-                stacks.back()->GetYaxis()->SetTitle("Events/GeV");
+                    stacks.back()->SetTitle((inconfig.m_mode_names[im]  +" "+ inconfig.m_detector_names[id]+" "+ inconfig.m_channel_names[ic]).c_str());
+                    stacks.back()->GetXaxis()->SetTitle(inconfig.m_channel_units[ic].c_str());
+                    stacks.back()->GetYaxis()->SetTitle("Events/GeV");
+                }
 
                 ++global_channel_index;
             }//end chan
