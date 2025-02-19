@@ -2,28 +2,23 @@
 #include "PROconfig.h"
 #include "PROcreate.h"
 #include "PROlog.h"
-#include "PROtocall.h"
 
 namespace PROfit {
 
     PROsyst::PROsyst(const std::vector<SystStruct>& systs) {
         for(const auto& syst: systs) {
-            log<LOG_ERROR>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
+            log<LOG_DEBUG>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
             if(syst.mode == "spline") {
-                log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
                 spline_names.push_back(syst.systname); 
                 spline_lo.push_back(syst.knobval[0]);
                 spline_hi.push_back(syst.knobval.back());
                 //anyspline=true;
             } else if(syst.mode == "covariance") {
-                log<LOG_INFO>(L"%1% || Entering covariance syst world?") % __func__;
                 this->CreateMatrix(syst);
                 //anycovar=true;
             }
         }
-        log<LOG_ERROR>(L"%1% || No systematics?") % __func__ ;
-
         fractional_covariance = this->SumMatrices();
     }
 
@@ -87,7 +82,7 @@ namespace PROfit {
         Eigen::MatrixXf sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
-            log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
+            log<LOG_DEBUG>(L"%1% || NBINS:    %2%") % __func__ % nbins;
 
             sum_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
             for(auto& p : covmat){
@@ -105,7 +100,7 @@ namespace PROfit {
         Eigen::MatrixXf sum_matrix;
         if(covmat.size()){
             int nbins = (covmat.begin())->rows();
-            log<LOG_ERROR>(L"%1% || NBINS:    %2%") % __func__ % nbins;
+            log<LOG_DEBUG>(L"%1% || NBINS:    %2%") % __func__ % nbins;
 
             sum_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
         }
@@ -237,7 +232,7 @@ namespace PROfit {
 
         //check for nan and infinite
         if(!in_matrix.allFinite()){
-            log<LOG_ERROR>(L"%1% || Matrix has Nan or non-finite values.") % __func__ ;
+            log<LOG_WARNING>(L"%1% || Matrix has Nan or non-finite values.") % __func__ ;
             return false;
         }
         return true;

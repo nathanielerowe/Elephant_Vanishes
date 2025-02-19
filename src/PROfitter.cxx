@@ -73,8 +73,12 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
     //Sort so we can take the best N_localfits for further zoning
     std::vector<int> best_multistart = sorted_indices(chi2s_multistart);    
 
-    log<LOG_INFO>(L"%1% || Ending MultiGlobal Best two are : %2% and %3%") % __func__ % chi2s_multistart[best_multistart[0]] %   chi2s_multistart[best_multistart[1]];
-    log<LOG_INFO>(L"%1% || Best Points is  : %2% ") % __func__ % latin_samples[best_multistart[0]];
+    std::string local_fits = "";
+    for(int i = 0; i < n_localfit; ++i) {
+        local_fits += " " + std::to_string(chi2s_multistart[best_multistart[i]]);
+    }
+    log<LOG_INFO>(L"%1% || Ending MultiGlobal. Best %2% are:%3%") % __func__ % n_localfit % local_fits.c_str();
+    log<LOG_DEBUG>(L"%1% || Best Points is  : %2% ") % __func__ % latin_samples[best_multistart[0]];
 
     std::vector<float> chi2s_localfits;
     chi2s_localfits.reserve(n_localfit);
@@ -89,7 +93,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         try {
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
-            log<LOG_ERROR>(L"%1% || Fit failed on niter,%2% : %3%") % __func__ % niter % except.what();
+            log<LOG_WARNING>(L"%1% || Fit failed on niter,%2% : %3%") % __func__ % niter % except.what();
         }
         chi2s_localfits.push_back(fx);
         if(fx<chimin){
@@ -99,7 +103,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         log<LOG_INFO>(L"%1% ||  LocalGrad Run : %2% has a chi %3%") % __func__ % s % fx;
         std::string spec_string = "";
         for(auto &f : x) spec_string+=" "+std::to_string(f); 
-        log<LOG_INFO>(L"%1% || Best Point is  : %2% ") % __func__ % spec_string.c_str();
+        log<LOG_DEBUG>(L"%1% || Best Point is  : %2% ") % __func__ % spec_string.c_str();
     }
 
 
@@ -114,7 +118,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
             x = seed_pt;   
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
-            log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+            log<LOG_WARNING>(L"%1% || Fit failed, %2%") % __func__ % except.what();
         }
         chi2s_localfits.push_back(fx);
         if(fx < chimin){
@@ -125,7 +129,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         log<LOG_INFO>(L"%1% ||  Seed Run has a chi %2%") % __func__ %  fx;
         std::string spec_string = "";
         for(auto &f : x) spec_string+=" "+std::to_string(f); 
-        log<LOG_INFO>(L"%1% || Best Point post Seed is  : %2% ") % __func__ % spec_string.c_str();
+        log<LOG_DEBUG>(L"%1% || Best Point post Seed is  : %2% ") % __func__ % spec_string.c_str();
     }
 
 
@@ -135,7 +139,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         x = Eigen::VectorXf::Constant(best_fit.size(), 0.012);
         niter = solver.minimize(metric, x, fx, lb, ub);
     } catch(std::runtime_error &except) {
-        log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+        log<LOG_WARNING>(L"%1% || Fit failed, %2%") % __func__ % except.what();
     }
     chi2s_localfits.push_back(fx);
     if(fx < chimin){
@@ -146,14 +150,14 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
     log<LOG_INFO>(L"%1% ||  CV Run has a chi %2%") % __func__ %  fx;
     std::string spec_string = "";
     for(auto &f : x) spec_string+=" "+std::to_string(f); 
-    log<LOG_INFO>(L"%1% || Best Point post CV is  : %2% ") % __func__ % spec_string.c_str();
+    log<LOG_DEBUG>(L"%1% || Best Point post CV is  : %2% ") % __func__ % spec_string.c_str();
 
 
 
     log<LOG_INFO>(L"%1% || FINAL has a chi %2%") % __func__ %  chimin;
     spec_string = "";
     for(auto &f : best_fit) spec_string+=" "+std::to_string(f); 
-    log<LOG_INFO>(L"%1% || FINAL is  : %2% ") % __func__ % spec_string.c_str();
+    log<LOG_DEBUG>(L"%1% || FINAL is  : %2% ") % __func__ % spec_string.c_str();
 
     return chimin;
 }
