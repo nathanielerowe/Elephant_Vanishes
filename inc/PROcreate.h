@@ -209,6 +209,7 @@ namespace PROfit{
 
     void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop);
 
+    std::string convertToXRootD(std::string fname_orig);
 
 
 };

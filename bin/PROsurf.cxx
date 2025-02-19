@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     std::map<std::string, float> injected_systs;
     std::vector<std::string> syst_list, systs_excluded;
     bool eventbyevent=false, statonly = false, logx=true, logy=true;
-    std::string chi2;
+    std::string chi2 = "PROchi";
 
     app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.")->required();
     app.add_option("-m, --max",       maxevents, "Max number of events to run over.")->default_val(50000);
