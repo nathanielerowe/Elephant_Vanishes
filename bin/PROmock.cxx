@@ -67,6 +67,7 @@ int main(int argc, char* argv[])
   app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data")->expected(-1);
   app.add_option("-p, --pparams",   physics_params, "deltam^2, sin^22thetamumu, default no osc")->expected(-1);
   app.add_option("-q, --plotonly", plotonly, "Skip the fit and just produce the plots")->expected(false);
+  app.add_option("-c, --floatosc", floatosc, "Let oscillation parameters float in the fit")->expected(false);
 
   app.add_flag(  "-b, --binned",    binned, "Do you want to weight event-by-event?");
 
@@ -205,7 +206,7 @@ int main(int argc, char* argv[])
 
     //Define a metric
     PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),PROfit::PROchi::BinnedChi2);
-    PROfile(config,prop,systs,osc,data,chi,filename+"_PROfile");
+    PROfile(config, prop, systs, osc, data, chi, filename, floatosc, nthread);
   }
   return 0;
 }
