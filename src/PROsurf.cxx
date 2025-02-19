@@ -47,36 +47,41 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
     delete local_metric;
 }
 
-std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc, int nparams){
+std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc){
 
     std::vector<profOut> outs;
     // Make a local copy for this thread
     PROmetric *local_metric = metric.Clone();
-
+    int nparams = local_metric->GetModel().nparams + systs->GetNSplines();
+    int nstep = 20;
 
     for(int i=start; i<end;i++){
         local_metric->reset();
 
-
         int which_spline= i;
+        bool isphys = which_spline < local_metric->GetModel().nparams;
+        if(isphys) nstep=3*nstep;
         profOut output;
 
         log<LOG_INFO>(L"%1% || THREADS %2% in this batch if ( %3%,%4% )") % __func__ %  i % start % end;
+        
 
-
-        Eigen::VectorXf last_bf;// = Eigen::VectorXf::Constant(nparams,0);
-        for(int i=0; i<=30;i++){
+        Eigen::VectorXf last_bf;
+        for(int i=0; i<=nstep;i++){
             Eigen::VectorXf ub, lb;
 
             if(with_osc) {
-                nparams = 2 + systs->GetNSplines();
                 lb = Eigen::VectorXf::Constant(nparams, -3.0);
-                lb(0) = local_metric->GetModel().lb(0); lb(1) = local_metric->GetModel().lb(1);
                 ub = Eigen::VectorXf::Constant(nparams, 3.0);
-                ub(0) = local_metric->GetModel().ub(0); ub(1) = local_metric->GetModel().ub(1);
-                for(int i = 2; i < nparams; ++i) {
-                    lb(i) = systs->spline_lo[i-2];
-                    ub(i) = systs->spline_hi[i-2];
+                //set physics to correct values
+                for(int j=0; j<local_metric->GetModel().nparams; j++){
+                    ub(j) = local_metric->GetModel().ub(j);
+                    lb(j) = local_metric->GetModel().lb(j); 
+                }
+                //upper lower bounds for splines
+                for(int j = local_metric->GetModel().nparams; j < nparams; ++j) {
+                    lb(j) = systs->spline_lo[j-2];
+                    ub(j) = systs->spline_hi[j-2];
                 }
             } else {
                 ub = Eigen::VectorXf::Map(systs->spline_hi.data(), systs->spline_hi.size());
@@ -87,9 +92,9 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start
             Eigen::VectorXf grad = Eigen::VectorXf::Constant(nparams, 0.0);
             Eigen::VectorXf bestx = Eigen::VectorXf::Constant(nparams, 0.0);
 
-            float which_value = which_spline == 1 ? -5.0 + i / 6.0 : lb(which_spline) + (ub(which_spline) - lb(which_spline)) * i / 30.0;
+            float which_value = lb(which_spline) + (ub(which_spline) - lb(which_spline)) * i / (float)nstep;
             float fx;
-            output.knob_vals.push_back(with_osc && which_spline == 1 ? std::pow(10, which_value) : which_value);
+            output.knob_vals.push_back(which_value);
 
             lb[which_spline] = which_value;
             ub[which_spline] = which_value;
@@ -277,7 +282,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     int nparams = systs.GetNSplines() + model.nparams*with_osc;
     std::vector<float> physics_params; 
 
-      std::vector<std::unique_ptr<TGraph>> graphs; 
+    std::vector<std::unique_ptr<TGraph>> graphs; 
 
     //hack
     std::vector<float> priorX;
@@ -311,7 +316,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-            return this->PROfilePointHelper(&systs, start, end,with_osc,nparams);
+            return this->PROfilePointHelper(&systs, start, end,with_osc);
         }));
 
     }
@@ -335,7 +340,8 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 
         c->cd(w+1);
         std::unique_ptr<TGraph> g = std::make_unique<TGraph>(out.knob_vals.size(), out.knob_vals.data(), out.knob_chis.data());
-        std::string tit = names[w]+ ";#sigma Shift; #Chi^{2}";
+        std::string xval = w < model.nparams ? model.param_names[w] :"#sigma Shift"  ;
+        std::string tit = names[w]+ ";"+xval+"; #Chi^{2}";
         g->SetTitle(tit.c_str());
         graphs.push_back(std::move(g));
         graphs.back()->Draw("AL");
