@@ -2,7 +2,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
-#include "PROsc.h"
+#include "PROmodel.h"
 #include "PROpeller.h"
 #include "PROchi.h"
 #include "PROcess.h"
@@ -56,8 +56,7 @@ int main(int argc, char* argv[])
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
 
-    //Define the model (currently 3+1 SBL)
-    PROsc osc(myprop);
+    std::unique_ptr<PROmodel> model = get_model_from_string(myConf.m_model_tag, myprop);
 
     //Setup minimization parameetrsM
     LBFGSpp::LBFGSBParam<float> param;  
@@ -87,7 +86,7 @@ int main(int argc, char* argv[])
     newSpec.Print();
 
     //Build chi^2 object
-    PROchi chi("3plus1",myConf,myprop,&systs,osc, newSpec);
+    PROchi chi("3plus1",myConf,myprop,&systs,*model, newSpec);
 
     // Bounds
     Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);

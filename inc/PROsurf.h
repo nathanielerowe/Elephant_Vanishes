@@ -2,7 +2,6 @@
 #define PROSURF_H
 
 #include "PROconfig.h"
-#include "PROsc.h"
 #include "PROspec.h"
 #include "PROpeller.h"
 #include "PROsyst.h"

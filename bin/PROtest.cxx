@@ -1,5 +1,5 @@
 #include "PROcess.h"
-#include "PROsc.h"
+#include "PROmodel.h"
 #include "PROspec.h"
 #include "PROcreate.h"
 #include "PROtocall.h"
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
         PROsyst systs(systsstructs);
 
         //Define the model (currently 3+1 SBL)
-        PROsc osc(prop);
+        std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
         //
         PROspec data = systsstructs.back().CV();
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
                 x[which_spline] = which_value;
 
 
-                PROchi chi("3plus1", config, prop, &systs, osc, data, PROchi::BinnedChi2, physics_params);
+                PROchi chi("3plus1", config, prop, &systs, *model, data, PROchi::BinnedChi2, physics_params);
                 chi.fixSpline(which_spline,which_value);
 
                 log<LOG_INFO>(L"%1% || Starting Fixed fit ") % __func__  ;
@@ -190,7 +190,7 @@ int main(int argc, char* argv[])
         PROsyst systs(systsstructs);
 
         //Define the model (currently 3+1 SBL)
-        PROsc osc(prop);
+        std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
         PROspec data = systsstructs.back().CV();
 
