@@ -274,7 +274,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     param.delta = 1e-6;
 
     LBFGSpp::LBFGSBSolver<float> solver(param);
-    int nparams = systs.GetNSplines() + osc.nparams*with_osc;
+    int nparams = systs.GetNSplines() + model.nparams*with_osc;
     std::vector<float> physics_params; 
 
       std::vector<std::unique_ptr<TGraph>> graphs; 
