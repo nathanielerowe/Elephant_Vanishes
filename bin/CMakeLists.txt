@@ -4,11 +4,6 @@ target_compile_features(PROfit PRIVATE cxx_std_17)
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROfit PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict ${libraries})
 
-add_executable(PROfit_CAFAna PROfit_CAFAna.cxx )
-target_include_directories(PROfit_CAFAna PRIVATE ${HIGHFIVE_INCLUDE_DIR})
-target_compile_features(PROfit_CAFAna PRIVATE cxx_std_17)
-target_link_libraries(PROfit_CAFAna PRIVATE PROfitLib tinyxml2 eigen lbfgspp ${libraries})
-
 add_executable(PROfc PROfc.cxx )
 target_include_directories(PROfc PRIVATE ${HIGHFIVE_INCLUDE_DIR})
 target_compile_features(PROfc PRIVATE cxx_std_17)
@@ -55,5 +50,5 @@ target_compile_features(PROtest PRIVATE cxx_std_17)
 target_link_directories(PROfit_dict PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(PROtest PRIVATE PROfitLib tinyxml2 eigen lbfgspp PROfit_dict ${libraries})
 
-install(TARGETS PROfit PROfit_CAFAna PROfc PROsurf PROmock PROplot PROtest
+install(TARGETS PROfit PROfc PROsurf PROmock PROplot PROtest
     LIBRARY DESTINATION ${CMAKE_BINARY_DIR})

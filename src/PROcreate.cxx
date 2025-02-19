@@ -911,7 +911,6 @@ namespace PROfit {
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
-                    int pdg_id = branches[ib]->GetTruePDG<int>();
                     float true_param = branches[ib]->GetTrueValue<float>();
                     float baseline = branches[ib]->GetTrueL<float>();
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
@@ -922,12 +921,9 @@ namespace PROfit {
                     if(additional_weight == 0 || global_bin < 0)
                         continue;
 
-                    inprop.reco.push_back((float)reco_value);
                     inprop.added_weights.push_back(additional_weight);
                     inprop.bin_indices.push_back(global_bin);
-                    inprop.pdg.push_back(pdg_id);
-                    inprop.truth.push_back((float)true_param);
-                    inprop.baseline.push_back((float)baseline);
+                    inprop.trueLE.push_back((float)(baseline/true_param));
                     inprop.model_rule.push_back((int)model_rule);
                     inprop.true_bin_indices.push_back((int)global_true_bin);
                     inprop.hist(global_true_bin, global_bin) += additional_weight;
@@ -1162,7 +1158,6 @@ namespace PROfit {
         float true_param = branch->GetTrueValue<float>();
         float baseline = branch->GetTrueL<float>();
         float true_value = baseline / true_param;
-        float pdg_id = branch->GetTruePDG();//No need, depreciated
         int run_syst = branch->GetIncludeSystematics();
         float mc_weight = branch->GetMonteCarloWeight();
         mc_weight *= inconfig.m_plot_pot / mcpot;
@@ -1175,12 +1170,9 @@ namespace PROfit {
         if(global_true_bin < 0)
             return;
 
-        inprop.reco.push_back((float)reco_value);
         inprop.added_weights.push_back(mc_weight);
         inprop.bin_indices.push_back(global_bin);
-        inprop.pdg.push_back(pdg_id);
-        inprop.truth.push_back((float)true_param);
-        inprop.baseline.push_back((float)baseline);
+        inprop.trueLE.push_back((float)(baseline/true_param));
         inprop.model_rule.push_back((int)model_rule);
         inprop.true_bin_indices.push_back((int)global_true_bin);
         inprop.hist(global_true_bin, global_bin) += mc_weight;
