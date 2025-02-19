@@ -7,16 +7,14 @@ namespace PROfit {
 
     PROsyst::PROsyst(const std::vector<SystStruct>& systs) {
         for(const auto& syst: systs) {
-            log<LOG_INFO>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
+            log<LOG_DEBUG>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
             if(syst.mode == "spline") {
-                log<LOG_INFO>(L"%1% || Entering multisigma?") % __func__;
                 FillSpline(syst);
                 spline_names.push_back(syst.systname); 
                 spline_lo.push_back(syst.knobval[0]);
                 spline_hi.push_back(syst.knobval.back());
                 //anyspline=true;
             } else if(syst.mode == "covariance") {
-                log<LOG_INFO>(L"%1% || Entering covariance syst world?") % __func__;
                 this->CreateMatrix(syst);
                 //anycovar=true;
             }
