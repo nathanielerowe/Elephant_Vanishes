@@ -63,7 +63,6 @@ namespace PROfit{
         std::shared_ptr<TTreeFormula> branch_true_L_formula=nullptr;
         std::shared_ptr<TTreeFormula> branch_true_pdg_formula=nullptr;
 
-        bool oscillate;
         std::string true_param_name;
         std::string true_L_name;
         std::string pdg_name;
@@ -71,16 +70,14 @@ namespace PROfit{
         int include_systematics;
 
         //constructor
-        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), include_systematics(1){}
-        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9),include_systematics(1){}
+        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), model_rule(-9), include_systematics(1){}
+        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), model_rule(-9),include_systematics(1){}
 
         /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
         std::shared_ptr<TTreeFormula> GetFormula(){
             return branch_formula;
         }
 
-        void SetOscillate(bool inbool){ oscillate = inbool; return;}
-        bool GetOscillate() const { return oscillate;}
         void SetTrueParam(const std::string& true_parameter_def){ true_param_name = true_parameter_def; return;}
         void SetPDG(const std::string& pdg_def){ pdg_name = pdg_def; return;}
         void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
