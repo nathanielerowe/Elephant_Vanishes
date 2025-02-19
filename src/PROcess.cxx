@@ -86,10 +86,10 @@ namespace PROfit {
       // ETW Can't handle binned for now - will just return an empty spec
     }
     else {
-      for(size_t i = 0; i<inprop.truth.size(); ++i){
+      for(size_t i = 0; i<inprop.trueLE.size(); ++i){
 
 	float oscw  = phys.size() != 0 ? 
-	  inmodel.model_functions[inprop.model_rule[i]](phys, inprop.baseline[i] / inprop.truth[i]) :
+	  inmodel.model_functions[inprop.model_rule[i]](phys, inprop.trueLE[i]) :
 	  1;	
 	float add_w = inprop.added_weights[i];
 	float hist_w = 1.0 ;

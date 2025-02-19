@@ -48,13 +48,14 @@ int main(int argc, char* argv[])
   std::string filename;
   bool binned=false;
   bool plotonly=false;
+  bool floatosc=false;
   std::vector<int> grid_size;
   std::vector<std::string> mockparams;
   std::vector<float> mockshifts;
   std::string reweights_file;
   std::vector<std::string> mockreweights;
   std::vector<TH2D*> weighthists;
-  std::vector<float> physics_params;
+  std::vector<float> physics_params_in;
   
   app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.");
   app.add_option("-m, --max",       maxevents, "Max number of events to run over.");
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
   app.add_option("-u, --mockvals",  mockshifts, "Vector of size of shifts. Default +1")->expected(-1);
   app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting")->expected(-1);
   app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data")->expected(-1);
-  app.add_option("-p, --pparams",   physics_params, "deltam^2, sin^22thetamumu, default no osc")->expected(-1);
+  app.add_option("-p, --pparams",   physics_params_in, "deltam^2, sin^22thetamumu, default no osc")->expected(-1);
   app.add_option("-q, --plotonly", plotonly, "Skip the fit and just produce the plots")->expected(false);
   app.add_option("-c, --floatosc", floatosc, "Let oscillation parameters float in the fit")->expected(false);
 
@@ -73,12 +74,17 @@ int main(int argc, char* argv[])
 
   CLI11_PARSE(app, argc, argv);
 
+  //Convert to eigen
+  Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
 
   //Initilize configuration from the XML;
   PROconfig config(xmlname);
 
   //Inititilize PROpeller to keep MC
   PROpeller prop;
+
+  //Define the model (currently 3+1 SBL)
+  std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
   //Initilize objects for systematics storage
   std::vector<SystStruct> systsstructs;
@@ -97,7 +103,6 @@ int main(int argc, char* argv[])
   }
   
   PROspec data, cv;
-  //Define the model (currently 3+1 SBL)
 
   cv = systsstructs.back().CV();
   if (mockparams.empty() && mockreweights.empty()) {
@@ -116,7 +121,7 @@ int main(int argc, char* argv[])
       weighthists.push_back(rwhist);
       log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
     }
-    data = FillWeightedSpectrumFromHist(config,prop,&osc,weighthists,physics_params,false);
+    data = FillWeightedSpectrumFromHist(config,prop,weighthists,*model,physics_params,false);
   }
   else{
     if (mockshifts.size() != mockparams.size()) {
@@ -198,13 +203,11 @@ int main(int argc, char* argv[])
   c->SaveAs((filename+"_spec.pdf").c_str());
 
   if (!plotonly) {
-    Eigen::VectorXd data_vec = CollapseMatrix(config, data.Spec());
-    Eigen::VectorXd err_vec_sq = data.Error().array().square();
-    Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+    Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
+    Eigen::VectorXf err_vec_sq = data.Error().array().square();
+    Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
     data = PROspec(data_vec, err_vec);
 
-    //Define the model (currently 3+1 SBL)
-    std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
     
     //Define a metric
     PROchi chi("", config, prop, &systs, *model, data, PROfit::PROchi::BinnedChi2);
