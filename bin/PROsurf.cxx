@@ -10,6 +10,7 @@
 #include "PROCNP.h"
 #include "PROcess.h"
 #include "PROsurf.h"
+#include "PROmodel.h"
 
 #include "CLI11.h"
 
@@ -102,12 +103,11 @@ int main(int argc, char* argv[])
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
     
-    //Define the model (currently 3+1 SBL)
-    PROsc osc(prop);
+    std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
     
     Eigen::VectorXf pparams{{std::log10(injected_pt[0]), std::log10(injected_pt[1])}};
     log<LOG_INFO>(L"%1% || Injected point: sinsq2t = %2%, dmsq = %3%") % __func__ % injected_pt[0] % injected_pt[1];
-    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(osc.nparams + systs.GetNSplines(), 0);
+    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
     for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
     for(const auto& [name, shift]: injected_systs) {
         log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
     }
     //Grab Asimov Data
     PROspec data = (injected_pt[0] != 0 && injected_pt[1] != 0) || injected_systs.size() ? 
-        FillRecoSpectra(config, prop, systs, osc, allparams, !eventbyevent) :
+        FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :
         FillCVSpectrum(config, prop, !eventbyevent);
     Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
     Eigen::VectorXf err_vec_sq = data.Error().array().square();
@@ -136,9 +136,9 @@ int main(int argc, char* argv[])
 
     PROmetric *metric;
     if(chi2 == "PROchi") {
-        metric = new PROchi("", &config, &prop, &systs, &osc, data, PROmetric::BinnedChi2);
+        metric = new PROchi("", config, prop, &systs, *model, data, PROmetric::BinnedChi2);
     } else if(chi2 == "PROCNP") {
-        metric = new PROCNP("", &config, &prop, &systs, &osc, data, PROmetric::BinnedChi2);
+        metric = new PROCNP("", config, prop, &systs, *model, data, PROmetric::BinnedChi2);
     } else {
         log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
         abort();

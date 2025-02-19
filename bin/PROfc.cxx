@@ -5,7 +5,7 @@
 #include "PROtocall.h"
 #include "PROcreate.h"
 #include "PROpeller.h"
-#include "PROsc.h"
+#include "PROmodel.h"
 #include "PROchi.h"
 #include "PROcess.h"
 #include "PROfitter.h"
@@ -46,7 +46,7 @@ struct fc_args {
 void fc_worker(fc_args args) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
-    PROsc osc(args.prop);
+    std::unique_ptr<PROmodel> model = get_model_from_string(args.config.m_model_tag, args.prop);
     PROchi::EvalStrategy strat = args.binned ? PROchi::BinnedChi2 : PROchi::EventByEvent;
     Eigen::VectorXf throws = Eigen::VectorXf::Constant(args.phy_params.size() + args.systs.GetNSplines(), 0);
     for(size_t u = 0; u < args.todo; ++u) {
@@ -57,7 +57,7 @@ void fc_worker(fc_args args) {
             throws(i+args.phy_params.size()) = d(rng);
         for(size_t i = 0; i < args.config.m_num_bins_total; i++)
             throwC(i) = d(rng);
-        PROspec shifted = FillRecoSpectra(args.config, args.prop, args.systs, osc, throws, strat);
+        PROspec shifted = FillRecoSpectra(args.config, args.prop, args.systs, *model, throws, strat);
         PROspec newSpec = PROspec::PoissonVariation(PROspec(CollapseMatrix(args.config, shifted.Spec()) + args.L * throwC, CollapseMatrix(args.config, shifted.Error())));
 
         // No oscillations
@@ -72,7 +72,7 @@ void fc_worker(fc_args args) {
         Eigen::VectorXf ub = Eigen::VectorXf::Map(args.systs.spline_hi.data(), args.systs.spline_hi.size());
         PROfitter fitter(ub, lb, param);
 
-        PROchi chi("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, strat);
+        PROchi chi("3plus1",args.config,args.prop,&args.systs, *model, newSpec, strat);
         float chi2_syst = fitter.Fit(chi);
 
         // With oscillations
@@ -93,7 +93,7 @@ void fc_worker(fc_args args) {
         }
         PROfitter fitter_osc(ub_osc, lb_osc, param);
 
-        PROchi chi_osc("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, strat);
+        PROchi chi_osc("3plus1",args.config,args.prop,&args.systs, *model, newSpec, strat);
         float chi2_osc = fitter_osc.Fit(chi_osc); 
 
         Eigen::VectorXf t = Eigen::VectorXf::Map(throws.data(), throws.size());
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
     PROcess_CAFAna(myConf, systsstructs, myprop);
 
     PROsyst systs(systsstructs);
-    PROsc osc(myprop);
+    std::unique_ptr<PROmodel> model = get_model_from_string(myConf.m_model_tag, myprop);
 
     std::vector<float> pparams = {std::log10(injected_pt[0]), std::log10(injected_pt[1])};
     log<LOG_INFO>(L"%1% | Injected point: sinsq2t = %2% and dmsq = %3%\n") % __func__ % injected_pt[0] % injected_pt[1];

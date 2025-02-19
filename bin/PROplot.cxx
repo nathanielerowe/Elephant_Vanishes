@@ -3,7 +3,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
-#include "PROsc.h"
+#include "PROmodel.h"
 #include "PROpeller.h"
 #include "PROcess.h"
 #include "PROtocall.h"
@@ -88,11 +88,11 @@ int main(int argc, char* argv[])
     PROcess_CAFAna(config, systsstructs, prop);
 
     PROsyst systs(systsstructs);
-    PROsc osc(prop);
+    std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
     Eigen::VectorXf pparams{{std::log10(apply_osc[0]), std::log10(apply_osc[1])}};
     log<LOG_INFO>(L"%1% || Injected point: sinsq2t = %2%, dmsq = %3%") % __func__ % apply_osc[0] % apply_osc[1];
-    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(osc.nparams + systs.GetNSplines(), 0);
+    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
     for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
     for(const auto& [name, shift]: apply_shift) {
         log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
         allparams(idx) = shift;
     }
     PROspec spec = (apply_osc[0] != 0 && apply_osc[1] != 0) || apply_shift.size() ? 
-        FillRecoSpectra(config, prop, systs, osc, allparams, !eventbyevent) :
+        FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :
         FillCVSpectrum(config, prop, !eventbyevent);
 
     if(syst_list.size()) {
