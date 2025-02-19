@@ -42,6 +42,8 @@ int main(int argc, char* argv[])
 
     CLI11_PARSE(app, argc, argv);
 
+    log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, outfile: %3%, nthread: %4% ") % __func__ % xmlname.c_str() % filename.c_str() % nthread ;
+
     //Initilize configuration from the XML;
     PROconfig myConf(xmlname);
 
@@ -61,7 +63,7 @@ int main(int argc, char* argv[])
     PROsc osc(myprop);
 
     Eigen::VectorXf pparams{{std::log10(injected_pt[0]), std::log10(injected_pt[1])}};
-    std::cout << "Injected point: sinsq2t = " << injected_pt[0] << " dmsq = " << injected_pt[1] << std::endl;
+    log<LOG_INFO>(L"%1% || PROfit Injected point: sinsq2t  %2% dmsq %3%") % __func__ % injected_pt[0] % injected_pt[1] ;
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? 
         FillRecoSpectra(myConf, myprop, systs, osc, pparams, true) :
         FillCVSpectrum(myConf, myprop, true);
@@ -173,7 +175,7 @@ int main(int argc, char* argv[])
     p.Draw();
     c.Print((filename+"_pulls.pdf").c_str(), "pdf");
 
-    PROfile(myConf, myprop, systs, osc, data, chi,filename, true, nthread);
+    PROfile(myConf, myprop, systs, osc, data, chi, filename, true, nthread);
 
     return 0;
 }

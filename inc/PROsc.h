@@ -22,8 +22,6 @@
 #include "PROpeller.h"
 
 namespace PROfit{
-
-
     /* 
      * Class: Oscillation Class for oscillating event-by-event MC and prodice PROspec
      * Note:
@@ -86,11 +84,11 @@ namespace PROfit{
                 sinsq2thmumu =std::pow(10, sinsq2thmumu);
 
                 if(sinsq2thmumu > 1) {
-                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is greater than 1") % __func__ % sinsq2thmumu;
+                    //log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is greater than 1") % __func__ % sinsq2thmumu;
                     sinsq2thmumu = 1;
                 }
                 if(sinsq2thmumu < 0) {
-                    log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is less than 0") % __func__ % sinsq2thmumu;
+                    //log<LOG_ERROR>(L"%1% || sinsq2thmumu is %2% which is less than 0") % __func__ % sinsq2thmumu;
                     sinsq2thmumu = 0;
                 }
 

@@ -83,9 +83,12 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start
 
     for(int i=start; i<end;i++){
         local_metric->reset();
+
+
         int which_spline= i;
         profOut output;
 
+        log<LOG_INFO>(L"%1% || THREADS %2% in this batch if ( %3%,%4% )") % __func__ %  i % start % end;
 
 
         Eigen::VectorXf last_bf;// = Eigen::VectorXf::Constant(nparams,0);
@@ -298,7 +301,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     param.delta = 1e-6;
 
     LBFGSpp::LBFGSBSolver<float> solver(param);
-    int nparams = systs.GetNSplines() + 2 * with_osc;
+    int nparams = systs.GetNSplines() + osc.nparams*with_osc;
     std::vector<float> physics_params; 
 
       std::vector<std::unique_ptr<TGraph>> graphs; 
@@ -320,6 +323,11 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     for(const auto &name: systs.spline_names) names.push_back(name);
 
     int loopSize = nparams;
+    if(nThreads>loopSize){
+        nThreads = loopSize;
+        log<LOG_INFO>(L"%1% || nThreads is < loopSize (nparams) : %2% <  %3%. Setting equal ") % __func__ % nThreads % loopSize ;
+    }
+
     int chunkSize = loopSize / nThreads;
 
     std::vector<std::future<std::vector<profOut>>> futures; 
