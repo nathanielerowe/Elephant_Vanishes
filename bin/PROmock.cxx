@@ -74,8 +74,6 @@ int main(int argc, char* argv[])
 
   CLI11_PARSE(app, argc, argv);
 
-  //Convert to eigen
-  Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
 
   //Initilize configuration from the XML;
   PROconfig config(xmlname);
@@ -85,6 +83,15 @@ int main(int argc, char* argv[])
 
   //Define the model (currently 3+1 SBL)
   std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
+
+  //Convert to eigen
+  if (physics_params_in.size() < model->nparams) {
+    for (size_t i=0; i<model->nparams; ++i) {
+      physics_params_in[i] = 0.0;
+    }
+  }
+  Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
+
 
   //Initilize objects for systematics storage
   std::vector<SystStruct> systsstructs;
