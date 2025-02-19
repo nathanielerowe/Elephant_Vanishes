@@ -93,7 +93,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         try {
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
-            log<LOG_ERROR>(L"%1% || Fit failed on niter,%2% : %3%") % __func__ % niter % except.what();
+            log<LOG_WARNING>(L"%1% || Fit failed on niter,%2% : %3%") % __func__ % niter % except.what();
         }
         chi2s_localfits.push_back(fx);
         if(fx<chimin){
@@ -118,7 +118,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
             x = seed_pt;   
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
-            log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+            log<LOG_WARNING>(L"%1% || Fit failed, %2%") % __func__ % except.what();
         }
         chi2s_localfits.push_back(fx);
         if(fx < chimin){
@@ -139,7 +139,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         x = Eigen::VectorXf::Constant(best_fit.size(), 0.012);
         niter = solver.minimize(metric, x, fx, lb, ub);
     } catch(std::runtime_error &except) {
-        log<LOG_ERROR>(L"%1% || Fit failed, %2%") % __func__ % except.what();
+        log<LOG_WARNING>(L"%1% || Fit failed, %2%") % __func__ % except.what();
     }
     chi2s_localfits.push_back(fx);
     if(fx < chimin){
