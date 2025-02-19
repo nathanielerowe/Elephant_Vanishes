@@ -417,7 +417,7 @@ namespace PROfit {
 
 
             }//end chain filling
-
+            nentries[fid] = chains[fid]->GetEntries();
 
 
             
