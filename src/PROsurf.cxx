@@ -6,33 +6,6 @@
 
 using namespace PROfit;
 
-std::vector<std::vector<float>> latin_hypercube_sampling(size_t num_samples, size_t dimensions, std::uniform_real_distribution<float>&dis, std::mt19937 &gen) {
-    std::vector<std::vector<float>> samples(num_samples, std::vector<float>(dimensions));
-
-    for (size_t d = 0; d < dimensions; ++d) {
-
-        std::vector<float> perm(num_samples);
-        for (size_t i = 0; i < num_samples; ++i) {
-            perm[i] = (i + dis(gen)) / num_samples;  
-        }
-        std::shuffle(perm.begin(), perm.end(), gen);  
-        for (size_t i = 0; i < num_samples; ++i) {
-            samples[i][d] = perm[i]; 
-        }
-    }
-
-    return samples;
-}
-
-std::vector<int> sorted_indices(const std::vector<float>& vec) {
-    std::vector<int> indices(vec.size());
-    for (size_t i = 0; i < vec.size(); ++i) {
-        indices[i] = i;
-    }
-    std::sort(indices.begin(), indices.end(), [&vec](int i1, int i2) { return vec[i1] < vec[i2]; });
-    return indices;
-}
-
 PROsurf::PROsurf(PROmetric &metric, size_t x_idx, size_t y_idx, size_t nbinsx, LogLin llx, float x_lo, float x_hi, size_t nbinsy, LogLin lly, float y_lo, float y_hi) : metric(metric), x_idx(x_idx), y_idx(y_idx), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXf::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXf::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
     if(llx == LogAxis) {
         x_lo = std::log10(x_lo);
@@ -289,7 +262,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val,float range) {
 }
 
 
-PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROsc &osc, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads) : metric(metric) {
+PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads) : metric(metric) {
 
     LBFGSpp::LBFGSBParam<float> param;
     param.epsilon = 1e-6;
@@ -316,7 +289,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
 
     std::vector<std::string> names;
-    if(with_osc) for(const auto& name: osc.param_names) names.push_back(name);
+    if(with_osc) for(const auto& name: model.param_names) names.push_back(name);
     for(const auto &name: systs.spline_names) names.push_back(name);
 
     int loopSize = nparams;

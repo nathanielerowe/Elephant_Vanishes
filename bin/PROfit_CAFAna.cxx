@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     newSpec.Print();
 
     //Build chi^2 object
-    PROchi chi("3plus1",&myConf,&myprop,&systs,oscillate ? &osc : NULL, newSpec);
+    PROchi chi("3plus1",myConf,myprop,&systs,osc, newSpec);
 
     // Bounds
     Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);

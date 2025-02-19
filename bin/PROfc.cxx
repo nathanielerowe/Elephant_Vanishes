@@ -72,7 +72,7 @@ void fc_worker(fc_args args) {
         Eigen::VectorXf ub = Eigen::VectorXf::Map(args.systs.spline_hi.data(), args.systs.spline_hi.size());
         PROfitter fitter(ub, lb, param);
 
-        PROchi chi("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, strat);
+        PROchi chi("3plus1",args.config,args.prop,&args.systs,osc, newSpec, strat);
         float chi2_syst = fitter.Fit(chi);
 
         // With oscillations
@@ -93,7 +93,7 @@ void fc_worker(fc_args args) {
         }
         PROfitter fitter_osc(ub_osc, lb_osc, param);
 
-        PROchi chi_osc("3plus1",&args.config,&args.prop,&args.systs,&osc, newSpec, strat);
+        PROchi chi_osc("3plus1",args.config,args.prop,&args.systs,osc, newSpec, strat);
         float chi2_osc = fitter_osc.Fit(chi_osc); 
 
         Eigen::VectorXf t = Eigen::VectorXf::Map(throws.data(), throws.size());

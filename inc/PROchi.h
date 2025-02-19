@@ -12,7 +12,6 @@
 #include "PROsyst.h"
 #include "PROpeller.h"
 #include "PROmodel.h"
-#include "PROcess.h"
 #include "PROmetric.h"
 
 namespace PROfit{
@@ -36,10 +35,10 @@ namespace PROfit{
 
             std::string model_tag;
 
-            const PROconfig *config;
-            const PROpeller *peller;
+            const PROconfig &config;
+            const PROpeller &peller;
             const PROsyst *syst; 
-            const PROmodel *model;
+            const PROmodel &model;
             const PROspec data;
             EvalStrategy strat;
             std::vector<float> physics_param_fixed;
@@ -57,7 +56,7 @@ namespace PROfit{
 
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROchi(const std::string tag, const PROconfig &conin, const PROpeller &pin, const PROsyst *systin, const PROmodel &modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
 
             /*Function: operator() is what is passed to minimizer.*/
@@ -75,7 +74,7 @@ namespace PROfit{
             }
 
             virtual const PROmodel &GetModel() const {
-                return *model;
+                return model;
             }
 
             virtual const PROsyst &GetSysts() const {

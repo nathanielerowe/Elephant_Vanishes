@@ -7,6 +7,7 @@
 #include "PROcess.h"
 #include "PROsurf.h"
 #include "PROfitter.h"
+#include "PROmodel.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -58,12 +59,13 @@ int main(int argc, char* argv[])
     PROsyst systs(systsstructs);
 
     //Define the model (currently 3+1 SBL)
-    PROsc osc(myprop);
+    //PROsc osc(myprop);
+    std::unique_ptr<PROmodel> model = get_model_from_string(myConf.m_model_tag, myprop);
 
     Eigen::VectorXf pparams{{std::log10(injected_pt[0]), std::log10(injected_pt[1])}};
     std::cout << "Injected point: sinsq2t = " << injected_pt[0] << " dmsq = " << injected_pt[1] << std::endl;
     PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? 
-        FillRecoSpectra(myConf, myprop, systs, osc, pparams, true) :
+        FillRecoSpectra(myConf, myprop, systs, *model, pparams, true) :
         FillCVSpectrum(myConf, myprop, true);
     Eigen::VectorXf data_vec = CollapseMatrix(myConf, data.Spec());
     Eigen::VectorXf err_vec_sq = data.Error().array().square();
@@ -82,7 +84,7 @@ int main(int argc, char* argv[])
 
     //PROfile(myConf, myprop, systs, osc, data, "profit_test", true);
     
-    PROchi chi("", &myConf, &myprop, &systs, &osc, data, PROfit::PROchi::BinnedChi2);
+    PROchi chi("", myConf, myprop, &systs, *model, data, PROfit::PROchi::BinnedChi2);
 
     LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;
@@ -115,7 +117,7 @@ int main(int argc, char* argv[])
     Eigen::VectorXf subvector2 = best_fit.segment(2, systs.GetNSplines());
     std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
 
-    Eigen::VectorXf post_fit = CollapseMatrix(myConf, FillRecoSpectra(myConf, myprop, systs, osc, best_fit, true).Spec());
+    Eigen::VectorXf post_fit = CollapseMatrix(myConf, FillRecoSpectra(myConf, myprop, systs, *model, best_fit, true).Spec());
     TH1D post_hist("ph", hname.c_str(), myConf.m_num_bins_total_collapsed, myConf.m_channel_bin_edges[0].data());
     for(size_t i = 0; i < myConf.m_num_bins_total_collapsed; ++i) {
         post_hist.SetBinContent(i+1, post_fit(i));
@@ -141,7 +143,7 @@ int main(int argc, char* argv[])
     c1.Print((filename+"_cov.pdf").c_str(), "pdf");
 
     std::vector<std::string> names;
-    for(size_t i = 0; i < osc.nparams; ++i) names.push_back(osc.param_names[i]);
+    for(size_t i = 0; i < model->nparams; ++i) names.push_back(model->param_names[i]);
     for(size_t i = 0; i < systs.GetNSplines(); ++i) names.push_back(systs.spline_names[i]);
   
     TH1D *hsyst_pre  = new TH1D("hp", hname.c_str(), nparams, 0, nparams);
@@ -173,7 +175,7 @@ int main(int argc, char* argv[])
     p.Draw();
     c.Print((filename+"_pulls.pdf").c_str(), "pdf");
 
-    PROfile(myConf, myprop, systs, osc, data, chi,filename, true, nthread);
+    PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread);
 
     return 0;
 }
