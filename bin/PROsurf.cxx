@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
     if(chi2 == "PROchi") {
         metric = new PROchi("", config, prop, &systs, osc, data, PROmetric::BinnedChi2);
     } else if(chi2 == "PROCNP") {
-        metric = new PROCNP("", &config, &prop, &systs, &osc, data, PROmetric::BinnedChi2);
+        metric = new PROCNP("", config, prop, &systs, osc, data, PROmetric::BinnedChi2);
     } else {
         log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
         abort();
