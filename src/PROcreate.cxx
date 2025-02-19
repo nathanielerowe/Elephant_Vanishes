@@ -6,9 +6,27 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TFriendElement.h"
+#include "TChain.h"
 #include <algorithm>
-
+#include <iostream>
+#include <fstream>
+#include <string>
 namespace PROfit {
+
+
+
+
+    std::string convertToXRootD(std::string fname_orig){
+        std::string fname_use = fname_orig;
+        if(fname_orig.find("pnfs")!=std::string::npos){
+            std::string p = "/pnfs";
+            std::string::size_type i = fname_orig.find(p);
+            fname_orig.erase(i,p.length());
+            fname_use = "root://fndca1.fnal.gov:1094/pnfs/fnal.gov/usr"+fname_orig;
+        }
+        return fname_use;
+    }
+
 
     void SystStruct::CleanSpecs(){
         if(p_cv)  p_cv.reset();
@@ -18,7 +36,7 @@ namespace PROfit {
 
     void SystStruct::CreateSpecs(int num_bins){
         this->CleanSpecs();
-        log<LOG_INFO>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
+        log<LOG_DEBUG>(L"%1% || Creating multi-universe spectrum with dimension (%2% x %3%)") % __func__ % n_univ % num_bins;
 
         p_cv = std::make_shared<PROspec>(num_bins);
         for(int i = 0; i != n_univ; ++i){
@@ -53,8 +71,7 @@ namespace PROfit {
             exit(EXIT_FAILURE);
         }
 
-        log<LOG_INFO>(L"%1% || Systematic variation %2% passed sanity check!!") % __func__ % systname.c_str();
-        log<LOG_INFO>(L"%1% || Systematic variation %2% has %3% universes, and is in %4% mode with weight formula: %5%") % __func__ % systname.c_str() % n_univ % mode.c_str() % weight_formula.c_str();
+        log<LOG_DEBUG>(L"%1% || Systematic variation %2% has %3% universes, and is in %4% mode with weight formula: %5%") % __func__ % systname.c_str() % n_univ % mode.c_str() % weight_formula.c_str();
         return;
     }
 
@@ -329,7 +346,10 @@ namespace PROfit {
 
         std::vector<long int> nentries(num_files,0);
         std::vector<std::unique_ptr<TFile>> files(num_files);
-        std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
+        //std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
+        std::vector<TChain*> chains(num_files,nullptr);
+
+
         std::vector<std::vector<std::map<std::string, std::vector<eweight_type>*>>> f_event_weights(num_files);
         std::vector<std::vector<std::map<std::string, std::vector<float>*>>> f_knob_vals(num_files);
         std::map<std::string, int> map_systematic_num_universe;
@@ -338,41 +358,69 @@ namespace PROfit {
 
         //open files, and link trees and branches
         int good_event = 0;
+        bool useXrootD = true;
+
         for(int fid=0; fid < num_files; ++fid) {
             const auto& fn = inconfig.m_mcgen_file_name.at(fid);
 
-            files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
-            trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
-            nentries[fid]= (long int)trees.at(fid)->GetEntries();
+          
+            std::vector<std::string> filesForChain;
 
-            if(files[fid]->IsOpen()){
-                log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
+            if (fn.find(".root") != std::string::npos) {
+                log<LOG_INFO>(L"%1% || Starting a (single) TCHain, loading file %2%") % __func__  % fn.c_str();
+                filesForChain.push_back(useXrootD ? convertToXRootD(fn) : fn);
             }else{
-                log<LOG_ERROR>(L"%1% || Failed to open root file: %2%") % __func__  % fn.c_str();
-                exit(EXIT_FAILURE);
-            }
-
-
-            //first, grab friend trees
-            if(inconfig.m_mcgen_numfriends[fid]>0){
-                auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
-                if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
-
-                    auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
-                    if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
-                        log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
-                        log<LOG_ERROR>(L"Terminating.");
+             
+                log<LOG_INFO>(L"%1% || Starting a TCHain, loading from filelist %2%") % __func__  % fn.c_str();
+                std::ifstream infile(fn.c_str()); 
+                if (!infile) {
+                       log<LOG_ERROR>(L"%1% || Failed to open input filelist %2%") % __func__  % fn.c_str();
                         exit(EXIT_FAILURE);
-                    }
-
-                    for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
-                        std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
-                        std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                        log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from file %3%") % __func__ %  treefriendname.c_str() % treefriendfile.c_str();
-                        trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
-                    }
                 }
+
+                std::string line;
+                while (std::getline(infile, line)) {
+                       if(useXrootD) line = convertToXRootD(line);
+                       log<LOG_INFO>(L"%1% || Loading file %2% into TChain") %__func__ % line.c_str();
+                       filesForChain.push_back(line);
+                }
+
+                infile.close();
             }
+
+            chains[fid] = new TChain(inconfig.m_mcgen_tree_name.at(fid).c_str());
+            for(auto &file: filesForChain){ 
+
+                chains[fid]->Add(file.c_str()); 
+
+                //first, grab friend trees
+                if(inconfig.m_mcgen_numfriends[fid]>0){
+                    auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
+                    if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
+
+                        auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
+                        if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
+                            log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
+                            log<LOG_ERROR>(L"Terminating.");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+                            std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
+                            std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
+                            log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from THE SAME FILE %3%") % __func__ %  treefriendname.c_str() % file.c_str();
+                            chains[fid]->AddFriend(treefriendname.c_str(),file.c_str()); 
+                        }
+                    }
+                }//end friend mess
+
+
+            }//end chain filling
+            nentries[fid] = chains[fid]->GetEntries();
+
+
+            
+
             // grab branches 
             int num_branch = inconfig.m_branch_variables[fid].size();
             f_event_weights[fid].resize(num_branch);
@@ -401,13 +449,13 @@ namespace PROfit {
                     exit(EXIT_FAILURE);
                 }
 
-                branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), trees[fid]);
+                branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), chains[fid]);
                 log<LOG_INFO>(L"%1% || Setting up reco variable for this branch: %2%") % __func__ %  branch_variable->name.c_str();
-                branch_variable->branch_true_L_formula = std::make_shared<TTreeFormula>(("branch_L_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_L_name.c_str(), trees[fid]);
+                branch_variable->branch_true_L_formula = std::make_shared<TTreeFormula>(("branch_L_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_L_name.c_str(), chains[fid]);
                 log<LOG_INFO>(L"%1% || Setting up L variable for this branch: %2%") % __func__ %  branch_variable->true_L_name.c_str();
-                branch_variable->branch_true_value_formula = std::make_shared<TTreeFormula>(("branch_true_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_param_name.c_str(), trees[fid]);
+                branch_variable->branch_true_value_formula = std::make_shared<TTreeFormula>(("branch_true_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_param_name.c_str(), chains[fid]);
                 log<LOG_INFO>(L"%1% || Setting up true E variable for this branch: %2%") % __func__ %  branch_variable->true_param_name.c_str();
-                branch_variable->branch_true_pdg_formula = std::make_shared<TTreeFormula>(("branch_pdg_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->pdg_name.c_str(), trees[fid]);
+                branch_variable->branch_true_pdg_formula = std::make_shared<TTreeFormula>(("branch_pdg_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->pdg_name.c_str(), chains[fid]);
                 log<LOG_INFO>(L"%1% || Setting up PDG variable for this branch: %2%") % __func__ %  branch_variable->pdg_name.c_str();
                 branch_variable->branch_true_proton_mom_formula = std::make_shared<TTreeFormula>(("branch_pmom_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_proton_mom_name.c_str(), trees[fid]);
                 log<LOG_INFO>(L"%1% || Setting up leading proton momentum variable for this branch: %2%") % __func__ %  branch_variable->true_proton_mom_name.c_str();
@@ -418,38 +466,38 @@ namespace PROfit {
 
                 //grab monte carlo weight
                 if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
-                    branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][ib].c_str(),trees[fid]);
+                    branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][ib].c_str(),chains[fid]);
                     log<LOG_INFO>(L"%1% || Setting up additional monte carlo weight for this branch: %2%") % __func__ %  inconfig.m_mcgen_additional_weight_name[fid][ib].c_str();
                 }
 
 
                 //grab eventweight branch
-                for(const TObject* branch: *trees[fid]->GetListOfBranches()) {
+                for(const TObject* branch: *chains[fid]->GetListOfBranches()) {
                     log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
 
                     if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
                         log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
-                        trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                        chains[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
                     } else if(strlen(branch->GetName()) > 6 && strcmp(branch->GetName() + strlen(branch->GetName()) - 6, "_sigma") == 0) {
                         log<LOG_INFO>(L"%1% || Setting up knob val list using branch %2%") % __func__ % branch->GetName();
-                        trees[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
+                        chains[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
                     }
                 }
                 if(inconfig.m_mcgen_numfriends[fid]>0){
-                    for(const TObject* friend_: *trees[fid]->GetListOfFriends()) {
+                    for(const TObject* friend_: *chains[fid]->GetListOfFriends()) {
                         for(const TObject* branch: *((TFriendElement*)friend_)->GetTree()->GetListOfBranches()) {
                             log<LOG_DEBUG>(L"%1% || Checking if branch %2% is in allowlist") % __func__ %  branch->GetName();
 
                             if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
                                 if(branch_variable->GetIncludeSystematics()){
                                     log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
-                                    trees[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                                    chains[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
                                 }else{
                                     log<LOG_INFO>(L"%1% || EXPLICITLY NOT Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                                 }
                             } else if(strlen(branch->GetName()) > 6 && strcmp(branch->GetName() + strlen(branch->GetName()) - 6, "_sigma") == 0) {
                                 log<LOG_INFO>(L"%1% || Setting up knob val list using branch %2%") % __func__ % branch->GetName();
-                                trees[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
+                                chains[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
                             }
                         }
                     }
@@ -461,7 +509,7 @@ namespace PROfit {
 
             //calculate how many universes each systematic has.
             log<LOG_INFO>(L"%1% || Start calculating number of universes for systematics") % __func__;
-            trees.at(fid)->GetEntry(good_event);
+            chains.at(fid)->GetEntry(good_event);
 
             for(int ib = 0; ib != num_branch; ++ib) {
                 const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
@@ -513,14 +561,14 @@ namespace PROfit {
             std::string sys_weight_formula = "1";
             std::string sys_mode = inconfig.m_mcgen_variation_type_map.at(sys_name);
 
-            log<LOG_ERROR>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
+            log<LOG_INFO>(L"%1% || found mode %2% for systematic %3%: ") % __func__ % sys_mode.c_str() % sys_name.c_str();
             if(sys_weight_formula != "1" || sys_mode !=""){
                 syst_vector.back().SetWeightFormula(sys_weight_formula);
                 syst_vector.back().SetMode(sys_mode);
             }
             if(sys_mode == "spline") {
                 if(map_systematic_knob_vals.find(sys_name) == map_systematic_knob_vals.end()) {
-                  log<LOG_ERROR>(L"%1% || Expected %2% to have knob vals associated with it, but couldn't find any. Will use -3 to +3 as default.") % __func__ % sys_name.c_str();
+                  log<LOG_WARNING>(L"%1% || Expected %2% to have knob vals associated with it, but couldn't find any. Will use -3 to +3 as default.") % __func__ % sys_name.c_str();
                   map_systematic_knob_vals[sys_name] = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
                 }
                 syst_vector.back().knob_index = map_systematic_knob_vals[sys_name];
@@ -578,7 +626,7 @@ namespace PROfit {
             std::vector<std::unique_ptr<TTreeFormula>> sys_weight_formula;
             for(const auto& s : syst_vector){
                 if(s.HasWeightFormula())
-                    sys_weight_formula.push_back(std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+ s.GetSysName()).c_str(), s.GetWeightFormula().c_str(),trees[fid]));
+                    sys_weight_formula.push_back(std::make_unique<TTreeFormula>(("weightMapsFormulas_"+std::to_string(fid)+"_"+ s.GetSysName()).c_str(), s.GetWeightFormula().c_str(),chains[fid]));
                 else
                     sys_weight_formula.push_back(nullptr);
             }
@@ -600,17 +648,19 @@ namespace PROfit {
 
 
             // loop over all entries
+            size_t to_print = nevents / 5;
             for(long int i=0; i < nevents; ++i) {
-                if(i%1000==0){
+                if(i%to_print==0){
                     time_t time_passed = time(nullptr) - time_stamp;
                     log<LOG_INFO>(L"%1% || File %2% -- uni : %3% / %4%  took %5% seconds") % __func__ % fid % i % nevents % time_passed;
                     time_stamp = time(nullptr);
                 }
-                trees[fid]->GetEntry(i);
+                chains[fid]->GetEntry(i);
 
                 //grab additional weight for systematics
                 for(size_t is = 0; is != total_num_systematics; ++is){
                     if(syst_vector[is].HasWeightFormula()){
+                        //sys_weight_formula[is]->UpdateFormulaLeaves();// not neede
                         sys_weight_formula[is]->GetNdata();	
                         sys_weight_value[is] = sys_weight_formula[is]->EvalInstance();
                     }
@@ -868,7 +918,6 @@ namespace PROfit {
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
-                    int pdg_id = branches[ib]->GetTruePDG<int>();
                     float true_param = branches[ib]->GetTrueValue<float>();
                     float baseline = branches[ib]->GetTrueL<float>();
 		    float pmom = branches[ib]->GetTrueLeadProtonMom<float>();
@@ -882,12 +931,9 @@ namespace PROfit {
                     if(additional_weight == 0 || global_bin < 0)
                         continue;
 
-                    inprop.reco.push_back((float)reco_value);
                     inprop.added_weights.push_back(additional_weight);
                     inprop.bin_indices.push_back(global_bin);
-                    inprop.pdg.push_back(pdg_id);
-                    inprop.truth.push_back((float)true_param);
-                    inprop.baseline.push_back((float)baseline);
+                    inprop.trueLE.push_back((float)(baseline/true_param));
                     inprop.model_rule.push_back((int)model_rule);
 		    inprop.pmom.push_back((float)pmom);
 		    inprop.pcosth.push_back((float)pcosth);
@@ -1124,7 +1170,6 @@ namespace PROfit {
         float true_param = branch->GetTrueValue<float>();
         float baseline = branch->GetTrueL<float>();
         float true_value = baseline / true_param;
-        float pdg_id = branch->GetTruePDG();//No need, depreciated
 	float pmom = branch->GetTrueLeadProtonMom<double>();
 	float pcosth = branch->GetTrueLeadProtonCosth<double>();
         int run_syst = branch->GetIncludeSystematics();
@@ -1140,12 +1185,9 @@ namespace PROfit {
         if(global_true_bin < 0)
             return;
 
-        inprop.reco.push_back((float)reco_value);
         inprop.added_weights.push_back(mc_weight);
         inprop.bin_indices.push_back(global_bin);
-        inprop.pdg.push_back(pdg_id);
-        inprop.truth.push_back((float)true_param);
-        inprop.baseline.push_back((float)baseline);
+        inprop.trueLE.push_back((float)(baseline/true_param));
         inprop.model_rule.push_back((int)model_rule);
         inprop.true_bin_indices.push_back((int)global_true_bin);
         inprop.hist(global_true_bin, global_bin) += mc_weight;

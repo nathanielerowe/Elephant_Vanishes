@@ -23,10 +23,10 @@ namespace PROfit{
         private:
             std::string model_tag;
 
-            const PROconfig *config;
-            const PROpeller *peller;
+            const PROconfig config;
+            const PROpeller peller;
             const PROsyst *syst; 
-            const PROmodel *model;
+            const PROmodel model;
             const PROspec data;
             EvalStrategy strat;
             std::vector<float> physics_param_fixed;
@@ -44,7 +44,7 @@ namespace PROfit{
         public:
 
             /*Function: Constructor bringing all objects together*/
-            PROCNP(const std::string tag, const PROconfig *conin, const PROpeller *pin, const PROsyst *systin, const PROmodel *modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROCNP(const std::string tag, const PROconfig &conin, const PROpeller &pin, const PROsyst *systin, const PROmodel &modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
             /*Function: operator() is what is passed to minimizer.*/
             virtual float operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient);
@@ -55,7 +55,7 @@ namespace PROfit{
             }
 
             virtual const PROmodel &GetModel() const {
-                return *model;
+                return model;
             }
 
             virtual const PROsyst &GetSysts() const {

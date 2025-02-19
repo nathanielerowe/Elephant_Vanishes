@@ -98,7 +98,6 @@ int main(int argc, char* argv[])
   
   PROspec data, cv;
   //Define the model (currently 3+1 SBL)
-  PROsc osc(prop);
 
   cv = systsstructs.back().CV();
   if (mockparams.empty() && mockreweights.empty()) {
@@ -204,9 +203,13 @@ int main(int argc, char* argv[])
     Eigen::VectorXd err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
     data = PROspec(data_vec, err_vec);
 
+    //Define the model (currently 3+1 SBL)
+    std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
+    
     //Define a metric
-    PROchi chi("", &config, &prop, &systs, &osc, data, systs.GetNSplines()+2, systs.GetNSplines(),PROfit::PROchi::BinnedChi2);
-    PROfile(config, prop, systs, osc, data, chi, filename, floatosc, nthread);
+    PROchi chi("", config, prop, &systs, *model, data, PROfit::PROchi::BinnedChi2);
+    PROfile(config, prop, systs, *model, data, chi, filename, floatosc, nthread);
   }
+  
   return 0;
 }
