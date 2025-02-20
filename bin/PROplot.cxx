@@ -20,6 +20,7 @@
 #include "TFile.h"
 #include "TStyle.h"
 
+#include <cstdlib>
 #include <exception>
 #include <map>
 #include <memory>
@@ -42,15 +43,16 @@ int main(int argc, char* argv[])
 
     // Define options
     std::string xmlname, filename; 
-    std::array<float, 2> apply_osc{0, 0};
+    std::vector<float> osc_params;
     std::map<std::string, float> apply_shift;
     std::vector<std::string> syst_list, systs_excluded;
-    bool eventbyevent = false, with_splines = false, all_scale = false, cv_scale = false, err_scale = false;
+    bool eventbyevent = false, with_splines = false, all_scale = false, cv_scale = false, err_scale = false, osc_scale = false;
 
     CLI::App *cv_command = app.add_subcommand("cv", "Make CV histograms");
     CLI::App *cov_command = app.add_subcommand("covariance", "Make 2D histogram of covariance matrix");
     CLI::App *spline_command = app.add_subcommand("splines", "Make graphs of the splines");
     CLI::App *errband_command = app.add_subcommand("error-band", "Make error band");
+    CLI::App *osc_command = app.add_subcommand("osc", "Plot spectrum with an injected signal.");
     CLI::App *all = app.add_subcommand("all", "Make all plots (splines optional) using default options.");
 
     // Options for whole application
@@ -64,8 +66,11 @@ int main(int argc, char* argv[])
 
     cv_command->add_flag("--scale-by-width", cv_scale, "Scale histgrams by 1/(bin width).");
     errband_command->add_flag("--scale-by-width", err_scale, "Scale histgrams by 1/(bin width).");
+    osc_command->add_flag("--scale-by-width", osc_scale, "Scale histograms by 1/(bin width).");
+    osc_command->add_option("--signal", osc_params, "Oscillation parameters to use.")->expected(-1);
     all->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
     all->add_flag("--scale-by-width", all_scale, "Scale histgrams by 1/(bin width).");
+    all->add_option("--signal", osc_params, "Oscillation parameters to use.")->expected(-1);
 
 
     //app.add_option("--apply-osc", apply_osc, "Apply oscillations with these paramters to the CV spectrum.")->default_str("0 0");
@@ -90,30 +95,27 @@ int main(int argc, char* argv[])
     PROsyst systs(systsstructs);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
-    Eigen::VectorXf pparams{{std::log10(apply_osc[0]), std::log10(apply_osc[1])}};
-    log<LOG_INFO>(L"%1% || Injected point: sinsq2t = %2%, dmsq = %3%") % __func__ % apply_osc[0] % apply_osc[1];
-    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
-    for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
-    for(const auto& [name, shift]: apply_shift) {
-        log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
-        auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
-        if(it == systs.spline_names.end()) {
-            log<LOG_ERROR>(L"%1% || Error: Unrecognized spline %2%. Ignoring this injected shift.") % __func__ % name.c_str();
-            continue;
-        }
-        int idx = std::distance(systs.spline_names.begin(), it);
-        allparams(idx) = shift;
-    }
-    PROspec spec = (apply_osc[0] != 0 && apply_osc[1] != 0) || apply_shift.size() ? 
-        FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :
-        FillCVSpectrum(config, prop, !eventbyevent);
-
     if(syst_list.size()) {
       systs = systs.subset(syst_list);
     } else if(systs_excluded.size()) {
       systs = systs.excluding(systs_excluded);
     }
-   
+
+    Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
+    if(osc_params.size()) {
+        if(osc_params.size() > model->nparams) {
+            log<LOG_ERROR>(L"%1% || Too many physics parameters provided. Expected %2%, found %3%.")
+                % __func__ % model->nparams % osc_params.size();
+            exit(EXIT_FAILURE);
+        }
+        for(size_t i = 0; i < osc_params.size(); ++i) {
+            pparams(i) = std::log10(osc_params[i]);
+        }
+    }
+
+    PROspec spec = FillCVSpectrum(config, prop, !eventbyevent);
+    PROspec osc_spec = FillRecoSpectra(config, prop, systs, *model, pparams, !eventbyevent);
+
 
     if(savetopdf) {
         TCanvas c;
@@ -142,9 +144,98 @@ int main(int argc, char* argv[])
 
                         s->SetTitle((config.m_mode_names[im]  +" "+ config.m_detector_names[id]+" "+ config.m_channel_names[ic]).c_str());
                         s->GetXaxis()->SetTitle(config.m_channel_units[ic].c_str());
-                        s->GetYaxis()->SetTitle("Events/GeV");
+                        if(cv_scale || all_scale)
+                            s->GetYaxis()->SetTitle("Events/GeV");
+                        else
+                            s->GetYaxis()->SetTitle("Events");
 
                         c.Print(filename.c_str(), "pdf");
+                    }
+                }
+            }
+        }
+
+        if(*all || *osc_command) {
+            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, osc_scale || all_scale);
+            std::map<std::string, std::unique_ptr<TH1D>> osc_hists = getCVHists(osc_spec, config, osc_scale || all_scale);
+            size_t global_subchannel_index = 0;
+            size_t global_channel_index = 0;
+            for(size_t im = 0; im < config.m_num_modes; im++){
+                for(size_t id =0; id < config.m_num_detectors; id++){
+                    for(size_t ic = 0; ic < config.m_num_channels; ic++){
+                        TH1D* osc_hist = NULL;
+                        TH1D* cv_hist = NULL;
+                        for(size_t sc = 0; sc < config.m_num_subchannels[ic]; sc++){
+                            const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
+                            const auto &h = cv_hists[subchannel_name];
+                            const auto &o = osc_hists[subchannel_name];
+                            if(sc == 0) {
+                                cv_hist = (TH1D*)h->Clone();
+                                osc_hist = (TH1D*)o->Clone();
+                            } else {
+                                cv_hist->Add(&*h);
+                                osc_hist->Add(&*o);
+                            }
+                            ++global_subchannel_index;
+                        }
+                        if(osc_scale || all_scale)
+                            cv_hist->GetYaxis()->SetTitle("Events/GeV");
+                        else
+                            cv_hist->GetYaxis()->SetTitle("Events");
+                        cv_hist->SetTitle((config.m_mode_names[im]  +" "+ config.m_detector_names[id]+" "+ config.m_channel_names[ic]).c_str());
+                        cv_hist->GetXaxis()->SetTitle("");
+                        cv_hist->SetLineColor(kBlack);
+                        cv_hist->SetFillColor(kWhite);
+                        cv_hist->SetFillStyle(0);
+                        osc_hist->SetLineColor(kBlue);
+                        osc_hist->SetFillColor(kWhite);
+                        osc_hist->SetFillStyle(0);
+                        cv_hist->SetLineWidth(3);
+                        osc_hist->SetLineWidth(3);
+                        TH1D *rat = (TH1D*)osc_hist->Clone();
+                        rat->Divide(cv_hist);
+                        rat->SetTitle("");
+                        rat->GetYaxis()->SetTitle("Ratio");
+                        TH1D *one = (TH1D*)rat->Clone();
+                        one->Divide(one);
+                        one->SetLineColor(kBlack);
+                        one->GetYaxis()->SetTitle("Ratio");
+
+                        std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
+                        leg->SetFillStyle(0);
+                        leg->SetLineWidth(0);
+                        leg->AddEntry(cv_hist, "No Osc", "l");
+                        leg->AddEntry(osc_hist, "Oscillations", "l");
+
+                        TPad p1("p1", "p1", 0, 0.25, 1, 1);
+                        p1.SetBottomMargin(0);
+                        p1.cd();
+                        cv_hist->Draw("hist");
+                        osc_hist->Draw("hist same");
+                        leg->Draw("same");
+
+                        TPad p2("p2", "p2", 0, 0, 1, 0.25);
+                        p2.SetTopMargin(0);
+                        p2.SetBottomMargin(0.3);
+                        p2.cd();
+                        one->GetYaxis()->SetTitleSize(0.1);
+                        one->GetYaxis()->SetLabelSize(0.1);
+                        one->GetXaxis()->SetTitleSize(0.1);
+                        one->GetXaxis()->SetLabelSize(0.1);
+                        one->GetYaxis()->SetTitleOffset(0.5);
+                        one->Draw("hist");
+                        one->SetMaximum(rat->GetMaximum()*1.2);
+                        one->SetMinimum(rat->GetMinimum()*0.8);
+                        rat->Draw("hist same");
+                        
+                        c.cd();
+                        p1.Draw();
+                        p2.Draw();
+
+                        c.Print(filename.c_str(), "pdf");
+
+                        delete cv_hist;
+                        delete osc_hist;
                     }
                 }
             }
@@ -193,6 +284,15 @@ int main(int argc, char* argv[])
             fout.mkdir("CV_hists");
             fout.cd("CV_hists");
             for(const auto &[name, hist]: cv_hists) {
+                hist->Write(name.c_str());
+            }
+        }
+
+        if(*all || *osc_command) {
+            std::map<std::string, std::unique_ptr<TH1D>> osc_hists = getCVHists(osc_spec, config, osc_scale || all_scale);
+            fout.mkdir("Osc_hists");
+            fout.cd("Osc_hists");
+            for(const auto &[name, hist]: osc_hists) {
                 hist->Write(name.c_str());
             }
         }
@@ -261,7 +361,7 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, con
 std::unique_ptr<TH2D> covarianceTH2D(const PROsyst &syst, const PROconfig &config) {
     Eigen::MatrixXf fractional_cov = CollapseMatrix(config, syst.fractional_covariance);
 
-    std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin #;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
+    std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
 
     for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i)
         for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j)
