@@ -40,24 +40,16 @@ namespace PROfit {
                 for(int j = 0; j < shifts.size(); ++j) {
                     systw *= insyst.GetSplineShift(j, shifts(j), i);
                 }
-                if(phys.size() != 0) {
-                    for(size_t j = 0; j < inmodel.model_functions.size(); ++j) {
-                        float oscw = inmodel.model_functions[j](phys, le);
-                        for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
-                            myspectrum.Fill(k, systw * oscw * inmodel.hists[j](i, k));
-                        }
-                    }
-                } else {
+                for(size_t j = 0; j < inmodel.model_functions.size(); ++j) {
+                    float oscw = inmodel.model_functions[j](phys, le);
                     for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
-                        myspectrum.Fill(k, systw * inprop.hist(i, k));
+                        myspectrum.Fill(k, systw * oscw * inmodel.hists[j](i, k));
                     }
                 }
             }
         } else {
             for(size_t i = 0; i<inprop.trueLE.size(); ++i){
-                float oscw  = phys.size() != 0 ? 
-                    inmodel.model_functions[inprop.model_rule[i]](phys, inprop.trueLE[i]) :
-                    1;
+                float oscw  =  inmodel.model_functions[inprop.model_rule[i]](phys, inprop.trueLE[i]);
                 float add_w = inprop.added_weights[i]; 
                 const int true_bin = inprop.true_bin_indices[i]; 
 

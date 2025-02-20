@@ -599,14 +599,18 @@ namespace PROfit {
         inprop.hist = Eigen::MatrixXf::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
         inprop.histLE = Eigen::VectorXf::Constant(inconfig.m_num_truebins_total, 0);
         size_t LE_bin = 0;
-        for(size_t i = 0; i < inconfig.m_num_channels; ++i) {
-            const std::vector<float> &edges = inconfig.m_channel_truebin_edges[i];
-            for(size_t j = 0; j < edges.size() - 1; ++j){
-                inprop.histLE(LE_bin++) = (edges[j+1] + edges[j])/2;
-                //float kk = (edges[j+1] + edges[j])/2;
-                //log<LOG_INFO>(L"%1% || AGGGGGH %2% %3% %4% %5% %6% %7%") % __func__ % i % j % edges[j+1] % edges[j] % LE_bin % kk ;
+        for(size_t im = 0; im < inconfig.m_num_modes; im++){
+            for(size_t id =0; id < inconfig.m_num_detectors; id++){
+                for(size_t ic = 0; ic < inconfig.m_num_channels; ic++){
+                    const std::vector<float> &edges = inconfig.m_channel_truebin_edges[ic];
+                    for(size_t sc = 0; sc < inconfig.m_num_subchannels.at(ic); sc++){
+                        for(size_t j = 0; j < edges.size() - 1; ++j){
+                            inprop.histLE(LE_bin++) = (edges[j+1] + edges[j])/2;
+                        }
+                    }
+                }
             }
-        }
+         }
 
         time_t start_time = time(nullptr), time_stamp = time(nullptr);
         log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
