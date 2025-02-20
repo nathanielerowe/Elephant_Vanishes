@@ -369,24 +369,24 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, con
 
 std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config) {
     std::map<std::string, std::unique_ptr<TH2D>> ret;
-    Eigen::MatrixXf fractional_cov = CollapseMatrix(config, syst.fractional_covariance);
+    Eigen::MatrixXf fractional_cov = syst.fractional_covariance;
 
-    std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
+    std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total, 0, config.m_num_bins_total, config.m_num_bins_total, 0, config.m_num_bins_total);
 
-    for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i)
-        for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j)
+    for(size_t i = 0; i < config.m_num_bins_total; ++i)
+        for(size_t j = 0; j < config.m_num_bins_total; ++j)
             cov_hist->SetBinContent(i+1,j+1,fractional_cov(i,j));
 
     ret["total_frac_cov"] = std::move(cov_hist);
 
     for(const auto &name: syst.covar_names) {
-        const Eigen::MatrixXf &covar = CollapseMatrix(config, syst.GrabMatrix(name));
-        const Eigen::MatrixXf &corr = CollapseMatrix(config, syst.GrabCorrMatrix(name));
+        const Eigen::MatrixXf &covar = syst.GrabMatrix(name);
+        const Eigen::MatrixXf &corr = syst.GrabCorrMatrix(name);
 
-        std::unique_ptr<TH2D> cov_h = std::make_unique<TH2D>(("cov"+name).c_str(), (name+" Fractional Covariance;Bin # ;Bin #").c_str(), config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
-        std::unique_ptr<TH2D> corr_h = std::make_unique<TH2D>(("cor"+name).c_str(), (name+" Correlation;Bin # ;Bin #").c_str(), config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
-        for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i){
-            for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j){
+        std::unique_ptr<TH2D> cov_h = std::make_unique<TH2D>(("cov"+name).c_str(), (name+" Fractional Covariance;Bin # ;Bin #").c_str(), config.m_num_bins_total, 0, config.m_num_bins_total, config.m_num_bins_total, 0, config.m_num_bins_total);
+        std::unique_ptr<TH2D> corr_h = std::make_unique<TH2D>(("cor"+name).c_str(), (name+" Correlation;Bin # ;Bin #").c_str(), config.m_num_bins_total, 0, config.m_num_bins_total, config.m_num_bins_total, 0, config.m_num_bins_total);
+        for(size_t i = 0; i < config.m_num_bins_total; ++i){
+            for(size_t j = 0; j < config.m_num_bins_total; ++j){
                 cov_h->SetBinContent(i+1,j+1,covar(i,j));
                 corr_h->SetBinContent(i+1,j+1,corr(i,j));
             }
