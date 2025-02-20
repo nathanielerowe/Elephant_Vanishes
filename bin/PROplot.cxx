@@ -101,10 +101,15 @@ int main(int argc, char* argv[])
       systs = systs.excluding(systs_excluded);
     }
 
+    if(*osc_command && !osc_params.size()) {
+        log<LOG_ERROR>(L"%1% || Expected %2% physics parameters to be provided for oscillation plot.")
+            % __func__ % model->nparams;
+        exit(EXIT_FAILURE);
+    }
     Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
     if(osc_params.size()) {
-        if(osc_params.size() > model->nparams) {
-            log<LOG_ERROR>(L"%1% || Too many physics parameters provided. Expected %2%, found %3%.")
+        if(osc_params.size() != model->nparams) {
+            log<LOG_ERROR>(L"%1% || Incorrect number of physics parameters provided. Expected %2%, found %3%.")
                 % __func__ % model->nparams % osc_params.size();
             exit(EXIT_FAILURE);
         }
@@ -114,7 +119,6 @@ int main(int argc, char* argv[])
     }
 
     PROspec spec = FillCVSpectrum(config, prop, !eventbyevent);
-    PROspec osc_spec = FillRecoSpectra(config, prop, systs, *model, pparams, !eventbyevent);
 
 
     if(savetopdf) {
@@ -155,7 +159,8 @@ int main(int argc, char* argv[])
             }
         }
 
-        if(*all || *osc_command) {
+        if((*all && osc_params.size()) || *osc_command) {
+            PROspec osc_spec = FillRecoSpectra(config, prop, systs, *model, pparams, !eventbyevent);
             std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, osc_scale || all_scale);
             std::map<std::string, std::unique_ptr<TH1D>> osc_hists = getCVHists(osc_spec, config, osc_scale || all_scale);
             size_t global_subchannel_index = 0;
@@ -290,7 +295,8 @@ int main(int argc, char* argv[])
             }
         }
 
-        if(*all || *osc_command) {
+        if((*all && osc_params.size()) || *osc_command) {
+            PROspec osc_spec = FillRecoSpectra(config, prop, systs, *model, pparams, !eventbyevent);
             std::map<std::string, std::unique_ptr<TH1D>> osc_hists = getCVHists(osc_spec, config, osc_scale || all_scale);
             fout.mkdir("Osc_hists");
             fout.cd("Osc_hists");
