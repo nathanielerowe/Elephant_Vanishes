@@ -16,6 +16,7 @@ namespace PROfit {
                 //anyspline=true;
             } else if(syst.mode == "covariance") {
                 this->CreateMatrix(syst);
+                covar_names.push_back(syst.systname);
                 //anycovar=true;
             }
         }
@@ -38,6 +39,7 @@ namespace PROfit {
                 break;
             case SystType::Covariance:
                 ret.syst_map[name] = std::make_pair(ret.covmat.size(), SystType::Covariance);
+                ret.covar_names.push_back(name);
                 ret.covmat.push_back(covmat[idx]);
                 ret.corrmat.push_back(corrmat[idx]);
                 break;
@@ -65,6 +67,7 @@ namespace PROfit {
                 break;
             case SystType::Covariance:
                 ret.syst_map[name] = std::make_pair(ret.covmat.size(), SystType::Covariance);
+                ret.covar_names.push_back(name);
                 ret.covmat.push_back(covmat[idx]);
                 ret.corrmat.push_back(corrmat[idx]);
                 break;
@@ -448,6 +451,16 @@ namespace PROfit {
     Eigen::MatrixXf PROsyst::GrabMatrix(const std::string& sys) const{
         if(syst_map.find(sys) != syst_map.end())
             return covmat.at(syst_map.at(sys).first);	
+        else{
+            log<LOG_ERROR>(L"%1% || Systematic you asked for : %2% doesn't have matrix saved yet..") % __func__ % sys.c_str();
+            log<LOG_ERROR>(L"%1% || Return empty matrix .") % __func__ ;
+            return Eigen::MatrixXf();
+        }
+    }
+
+    Eigen::MatrixXf PROsyst::GrabCorrMatrix(const std::string& sys) const{
+        if(syst_map.find(sys) != syst_map.end())
+            return corrmat.at(syst_map.at(sys).first);	
         else{
             log<LOG_ERROR>(L"%1% || Systematic you asked for : %2% doesn't have matrix saved yet..") % __func__ % sys.c_str();
             log<LOG_ERROR>(L"%1% || Return empty matrix .") % __func__ ;

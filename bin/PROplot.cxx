@@ -32,7 +32,7 @@ using namespace PROfit;
 log_level_t GLOBAL_LEVEL;
 
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
-std::unique_ptr<TH2D> covarianceTH2D(const PROsyst &syst, const PROconfig &config);
+std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false);
 
@@ -242,9 +242,11 @@ int main(int argc, char* argv[])
         }
 
         if(*all || *cov_command) {
-            std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
-            covariance->Draw("colz");
-            c.Print(filename.c_str(), "pdf");
+            std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config);
+            for(const auto &[name, mat]: matrices) {
+                mat->Draw("colz");
+                c.Print(filename.c_str(), "pdf");
+            }
         }
 
         if((*all && with_splines) || *spline_command) {
@@ -298,10 +300,11 @@ int main(int argc, char* argv[])
         }
 
         if(*all || *cov_command) {
-            std::unique_ptr<TH2D> covariance = covarianceTH2D(systs, config);
+            std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config);
             fout.mkdir("Covariance");
             fout.cd("Covariance");
-            covariance->Write("collapsed_frac_cov");
+            for(const auto &[name, mat]: matrices)
+                mat->Write(name.c_str());
         }
 
         if(*all || *errband_command) {
@@ -358,7 +361,8 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, con
     return hists;
 }
 
-std::unique_ptr<TH2D> covarianceTH2D(const PROsyst &syst, const PROconfig &config) {
+std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config) {
+    std::map<std::string, std::unique_ptr<TH2D>> ret;
     Eigen::MatrixXf fractional_cov = CollapseMatrix(config, syst.fractional_covariance);
 
     std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
@@ -367,7 +371,26 @@ std::unique_ptr<TH2D> covarianceTH2D(const PROsyst &syst, const PROconfig &confi
         for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j)
             cov_hist->SetBinContent(i+1,j+1,fractional_cov(i,j));
 
-    return cov_hist;
+    ret["total_frac_cov"] = std::move(cov_hist);
+
+    for(const auto &name: syst.covar_names) {
+        const Eigen::MatrixXf &covar = CollapseMatrix(config, syst.GrabMatrix(name));
+        const Eigen::MatrixXf &corr = CollapseMatrix(config, syst.GrabCorrMatrix(name));
+
+        std::unique_ptr<TH2D> cov_h = std::make_unique<TH2D>(("cov"+name).c_str(), (name+" Fractional Covariance;Bin # ;Bin #").c_str(), config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
+        std::unique_ptr<TH2D> corr_h = std::make_unique<TH2D>(("cor"+name).c_str(), (name+" Correlation;Bin # ;Bin #").c_str(), config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
+        for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i){
+            for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j){
+                cov_h->SetBinContent(i+1,j+1,covar(i,j));
+                corr_h->SetBinContent(i+1,j+1,corr(i,j));
+            }
+        }
+
+        ret[name+"_cov"] = std::move(cov_h);
+        ret[name+"_corr"] = std::move(corr_h);
+    }
+
+    return ret;
 }
 
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> 
