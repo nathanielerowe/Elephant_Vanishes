@@ -32,7 +32,7 @@ using namespace PROfit;
 log_level_t GLOBAL_LEVEL;
 
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
-std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config);
+std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config, const PROspec &cv);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false);
 
@@ -247,7 +247,7 @@ int main(int argc, char* argv[])
         }
 
         if(*all || *cov_command) {
-            std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config);
+            std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config, spec);
             for(const auto &[name, mat]: matrices) {
                 mat->Draw("colz");
                 c.Print(filename.c_str(), "pdf");
@@ -306,7 +306,7 @@ int main(int argc, char* argv[])
         }
 
         if(*all || *cov_command) {
-            std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config);
+            std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config, spec);
             fout.mkdir("Covariance");
             fout.cd("Covariance");
             for(const auto &[name, mat]: matrices)
@@ -367,17 +367,28 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, con
     return hists;
 }
 
-std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config) {
+std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config, const PROspec &cv) {
     std::map<std::string, std::unique_ptr<TH2D>> ret;
     Eigen::MatrixXf fractional_cov = syst.fractional_covariance;
+    Eigen::MatrixXf diag = cv.Spec().array().matrix().asDiagonal(); 
+    Eigen::MatrixXf full_covariance =  diag*fractional_cov*diag;
+    Eigen::MatrixXf collapsed_full_covariance =  CollapseMatrix(config,full_covariance);  
+    Eigen::VectorXf collapsed_cv = CollapseMatrix(config, cv.Spec());
+    Eigen::MatrixXf collapsed_cv_inv_diag = collapsed_cv.asDiagonal().inverse();
+    Eigen::MatrixXf collapsed_frac_cov = collapsed_cv_inv_diag * collapsed_full_covariance * collapsed_cv_inv_diag;
 
     std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total, 0, config.m_num_bins_total, config.m_num_bins_total, 0, config.m_num_bins_total);
+    std::unique_ptr<TH2D> collapsed_cov_hist = std::make_unique<TH2D>("ccov", "Collapsed Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
 
     for(size_t i = 0; i < config.m_num_bins_total; ++i)
         for(size_t j = 0; j < config.m_num_bins_total; ++j)
             cov_hist->SetBinContent(i+1,j+1,fractional_cov(i,j));
+    for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i)
+        for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j)
+            collapsed_cov_hist->SetBinContent(i+1,j+1,collapsed_frac_cov(i,j));
 
     ret["total_frac_cov"] = std::move(cov_hist);
+    ret["collapsed_total_frac_cov"] = std::move(collapsed_cov_hist);
 
     for(const auto &name: syst.covar_names) {
         const Eigen::MatrixXf &covar = syst.GrabMatrix(name);
