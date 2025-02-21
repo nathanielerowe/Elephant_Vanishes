@@ -81,8 +81,8 @@ namespace PROfit{
 >>>>>>> d9befa09617de70e048378490f0fc9681d62344e
 
       //constructor
-      BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), oscillate(false), model_rule(-9), include_systematics(1), hist_reweight(false){}
-      BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), oscillate(false), model_rule(-9), include_systematics(1), hist_reweight(false){}
+      BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), model_rule(-9), include_systematics(1), hist_reweight(false){}
+      BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), model_rule(-9), include_systematics(1), hist_reweight(false){}
  
       /* Function: Return the TTreeformula for branch 'name', usually it's the reconstructed variable */
       std::shared_ptr<TTreeFormula> GetFormula(){
