@@ -75,10 +75,6 @@ namespace PROfit{
       std::string true_proton_mom_name;
       std::string true_proton_costh_name;
 
-        //constructor
-        BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), model_rule(-9), include_systematics(1){}
-        BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), model_rule(-9),include_systematics(1){}
-
       //constructor
       BranchVariable(std::string n, std::string t, std::string a) : name(n), type(t), associated_hist(a), central_value(false), model_rule(-9), include_systematics(1), hist_reweight(false){}
       BranchVariable(std::string n, std::string t, std::string a_hist, std::string a_syst, bool cv) : name(n), type(t), associated_hist(a_hist), associated_systematic(a_syst), central_value(cv), model_rule(-9), include_systematics(1), hist_reweight(false){}

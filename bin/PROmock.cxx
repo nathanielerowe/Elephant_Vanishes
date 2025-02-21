@@ -62,13 +62,13 @@ int main(int argc, char* argv[])
   app.add_option("-v, --verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
   app.add_option("-t, --nthread",   nthread, "Number of fits.");
   app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name");
-  app.add_option("-s, --mocksys",   mockparams, "Vector of systematics parameter names to vary for mock data")->expected(-1);  
-  app.add_option("-u, --mockvals",  mockshifts, "Vector of size of shifts. Default +1")->expected(-1);
-  app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting")->expected(-1);
-  app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data")->expected(-1);
-  app.add_option("-p, --pparams",   physics_params_in, "deltam^2, sin^22thetamumu, default no osc")->expected(-1);
-  app.add_option("-q, --plotonly", plotonly, "Skip the fit and just produce the plots")->expected(false);
-  app.add_option("-c, --floatosc", floatosc, "Let oscillation parameters float in the fit")->expected(false);
+  app.add_option("-s, --mocksys",   mockparams, "Vector of systematics parameter names to vary for mock data");
+  app.add_option("-u, --mockvals",  mockshifts, "Vector of size of shifts.");
+  app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting");
+  app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data");
+  app.add_option("-p, --pparams",   physics_params_in, "deltam^2, sin^22thetamumu, default no osc");
+  app.add_flag("-q, --plotonly", plotonly, "Skip the fit and just produce the plots");
+  app.add_flag("-c, --floatosc", floatosc, "Let oscillation parameters float in the fit");
 
   app.add_flag(  "-b, --binned",    binned, "Do you want to weight event-by-event?");
 
@@ -87,9 +87,11 @@ int main(int argc, char* argv[])
   //Convert to eigen
   if (physics_params_in.size() < model->nparams) {
     for (size_t i=0; i<model->nparams; ++i) {
-      physics_params_in[i] = 0.0;
+      physics_params_in.push_back(0.0);
     }
   }
+  log<LOG_DEBUG>(L"%1% || Nparams %2%, Physics params size %3") % __func__ % model->nparams % physics_params_in.size();
+
   Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
 
 
