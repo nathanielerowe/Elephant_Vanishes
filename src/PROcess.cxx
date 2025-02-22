@@ -32,18 +32,26 @@ namespace PROfit {
         PROspec myspectrum(inconfig.m_num_bins_total);
         Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);
         Eigen::VectorXf shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
+	log<LOG_DEBUG>(L"%1% || after eigenvectors ") % __func__ ;	
 
         if(binned) {
             for(long int i = 0; i < inprop.hist.rows(); ++i) {
                 float le = inprop.histLE[i];
                 float systw = 1;
+		log<LOG_DEBUG>(L"%1% || got values ") % __func__ ;			
                 for(int j = 0; j < shifts.size(); ++j) {
                     systw *= insyst.GetSplineShift(j, shifts(j), i);
                 }
+		log<LOG_DEBUG>(L"%1% || got systweights ") % __func__ ;					
                 for(size_t j = 0; j < inmodel.model_functions.size(); ++j) {
                     float oscw = inmodel.model_functions[j](phys, le);
+		    log<LOG_DEBUG>(L"%1% || got oscweights ") % __func__ ;
+		    log<LOG_DEBUG>(L"%1% || nbins is %2% ") % __func__ % myspectrum.GetNbins();
                     for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
+		      log<LOG_DEBUG>(L"%1% || k: %2% systw: %3% oscw %4% ") % __func__ % k % systw % oscw;
+		      log<LOG_DEBUG>(L"%1% || inmodel %2% ") % __func__ % inmodel.hists[j](i,k);
                         myspectrum.Fill(k, systw * oscw * inmodel.hists[j](i, k));
+			log<LOG_DEBUG>(L"%1% || filled spectrum ") % __func__ ;						
                     }
                 }
             }
@@ -71,10 +79,34 @@ namespace PROfit {
     Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);
     Eigen::VectorXf shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
 
-
     if (binned) {
-      log<LOG_WARNING>(L"%1% || WARNING: Binned fit is requested but not supported for histogram reweights. Returning empty spectrum so things will likely fail ") % __func__ ;
-      // ETW Can't handle binned for now - will just return an empty spec
+      for(long int i = 0; i < inprop.hist.rows(); ++i) {
+	float le = inprop.histLE[i];
+	float hist_w = 1.0 ;
+	
+	//Figure out what subchannel the event is in
+	size_t subchan = inconfig.GetSubchannelIndexFromGlobalTrueBin(inprop.true_bin_indices[i]);
+	std::string name = inconfig.m_fullnames[subchan];
+	  
+	//Put name for ICARUS study here. How to handle more generically?
+	if (name == "nu_ICARUS_numu_numucc") {
+
+	  float pmom = static_cast<float>(inprop.pmom[i]);
+	  float pcosth = static_cast<float>(inprop.pcosth[i]);
+	  for (size_t j = 0; j<inweighthists.size(); ++j){
+	    TH2D h = *inweighthists[j];
+	    int bin = h.FindBin(pmom,pcosth);
+	    hist_w *= h.GetBinContent(bin);
+	  }
+	}
+	
+	for(size_t j = 0; j < inmodel.model_functions.size(); ++j) {
+	  float oscw = inmodel.model_functions[j](phys, le);
+	  for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
+	    myspectrum.Fill(k, hist_w * oscw * inmodel.hists[j](i, k));
+	  }
+	}
+      }
     }
     else {
       for(size_t i = 0; i<inprop.trueLE.size(); ++i){
@@ -91,8 +123,8 @@ namespace PROfit {
 	  
 	//Put name for ICARUS study here. How to handle more generically?
 	if (name == "nu_ICARUS_numu_numucc") {
-	  double pmom = static_cast<double>(inprop.pmom[i]);
-	  double pcosth = static_cast<double>(inprop.pcosth[i]);
+	  float pmom = static_cast<float>(inprop.pmom[i]);
+	  float pcosth = static_cast<float>(inprop.pcosth[i]);
 
 	  for (size_t j = 0; j<inweighthists.size(); ++j){
 	    TH2D h = *inweighthists[j];

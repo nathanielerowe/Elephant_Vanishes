@@ -8,6 +8,7 @@
 #include "PROchi.h"
 #include "PROcess.h"
 #include "PROsurf.h"
+#include "PROfitter.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
       physics_params_in.push_back(0.0);
     }
   }
-  log<LOG_DEBUG>(L"%1% || Nparams %2%, Physics params size %3") % __func__ % model->nparams % physics_params_in.size();
+  log<LOG_DEBUG>(L"%1% || Nparams %2%, Physics params size %3%") % __func__ % model->nparams % physics_params_in.size();
 
   Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
 
@@ -220,7 +221,35 @@ int main(int argc, char* argv[])
     
     //Define a metric
     PROchi chi("", config, prop, &systs, *model, data, PROfit::PROchi::BinnedChi2);
-    PROfile(config, prop, systs, *model, data, chi, filename, floatosc, nthread);
+    log<LOG_DEBUG>(L"%1% || Run fit to get inputs for PROfile") % __func__ ;
+    
+    //Run a fit to get best-fit input for PROfile
+    LBFGSpp::LBFGSBParam<float> param;  
+    param.epsilon = 1e-6;
+    param.max_iterations = 100;
+    param.max_linesearch = 250;
+    param.delta = 1e-6;
+
+    size_t nparams = model->nparams + systs.GetNSplines();
+    Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
+    lb(0) = -2; lb(1) = -std::numeric_limits<float>::infinity();
+    Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
+    ub(0) = 2; ub(1) = 0;
+    for(size_t i = 2; i < nparams; ++i) {
+        lb(i) = systs.spline_lo[i-2];
+        ub(i) = systs.spline_hi[i-2];
+    }
+    log<LOG_DEBUG>(L"%1% || Set up eigenvector, nparams is %2%") % __func__ % nparams;    
+    PROfitter fitter(ub, lb, param);
+    log<LOG_DEBUG>(L"%1% || fitter done") % __func__ ;
+    float chi2 = fitter.Fit(chi);
+    log<LOG_DEBUG>(L"%1% || chi2 extracted") % __func__ ;    
+    Eigen::VectorXf best_fit = fitter.best_fit;
+    log<LOG_DEBUG>(L"%1% || best fit extracted") % __func__ ;        
+
+    log<LOG_DEBUG>(L"%1% || Fit finished, now running PROfile") % __func__ ;    
+
+    PROfile(config, prop, systs, *model, data, chi, filename, floatosc, nthread, best_fit);
   }
   
   return 0;
