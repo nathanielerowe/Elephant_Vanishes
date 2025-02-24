@@ -3,6 +3,7 @@
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROtocall.h"
+#include "TH2D.h"
 
 #include <Eigen/Eigen>
 
@@ -32,26 +33,18 @@ namespace PROfit {
         PROspec myspectrum(inconfig.m_num_bins_total);
         Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);
         Eigen::VectorXf shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
-	log<LOG_DEBUG>(L"%1% || after eigenvectors ") % __func__ ;	
 
         if(binned) {
             for(long int i = 0; i < inprop.hist.rows(); ++i) {
                 float le = inprop.histLE[i];
                 float systw = 1;
-		log<LOG_DEBUG>(L"%1% || got values ") % __func__ ;			
                 for(int j = 0; j < shifts.size(); ++j) {
                     systw *= insyst.GetSplineShift(j, shifts(j), i);
                 }
-		log<LOG_DEBUG>(L"%1% || got systweights ") % __func__ ;					
                 for(size_t j = 0; j < inmodel.model_functions.size(); ++j) {
                     float oscw = inmodel.model_functions[j](phys, le);
-		    log<LOG_DEBUG>(L"%1% || got oscweights ") % __func__ ;
-		    log<LOG_DEBUG>(L"%1% || nbins is %2% ") % __func__ % myspectrum.GetNbins();
                     for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
-		      log<LOG_DEBUG>(L"%1% || k: %2% systw: %3% oscw %4% ") % __func__ % k % systw % oscw;
-		      log<LOG_DEBUG>(L"%1% || inmodel %2% ") % __func__ % inmodel.hists[j](i,k);
                         myspectrum.Fill(k, systw * oscw * inmodel.hists[j](i, k));
-			log<LOG_DEBUG>(L"%1% || filled spectrum ") % __func__ ;						
                     }
                 }
             }

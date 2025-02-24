@@ -9,6 +9,7 @@
 #include "PROcess.h"
 #include "PROsurf.h"
 #include "PROfitter.h"
+#include "PROmodel.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -82,20 +83,6 @@ int main(int argc, char* argv[])
   //Inititilize PROpeller to keep MC
   PROpeller prop;
 
-  //Define the model (currently 3+1 SBL)
-  std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
-
-  //Convert to eigen
-  if (physics_params_in.size() < model->nparams) {
-    for (size_t i=0; i<model->nparams; ++i) {
-      physics_params_in.push_back(0.0);
-    }
-  }
-  log<LOG_DEBUG>(L"%1% || Nparams %2%, Physics params size %3%") % __func__ % model->nparams % physics_params_in.size();
-
-  Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
-
-
   //Initilize objects for systematics storage
   std::vector<SystStruct> systsstructs;
 
@@ -104,6 +91,20 @@ int main(int argc, char* argv[])
 
   //Build a PROsyst to sort and analyze all systematics
   PROsyst systs(systsstructs);
+
+  //Define the model (currently 3+1 SBL)
+  log<LOG_DEBUG>(L"%1% || model name %2% ") % __func__ % config.m_model_tag.c_str();
+  std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
+  log<LOG_DEBUG>(L"%1% || model size %2% by %3% ") % __func__ % model->hists[0].rows() % model->hists[0].cols();
+
+  //Convert to eigen
+  if (physics_params_in.size() < model->nparams) {
+    for (size_t i=0; i<model->nparams; ++i) {
+      physics_params_in.push_back(0.0);
+    }
+  }
+
+  Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
 
   for (size_t i = 0; i < mockparams.size(); ++i) {
     log<LOG_INFO>(L"%1% || Mock data parameters %2%") % __func__  % mockparams[i].c_str();
