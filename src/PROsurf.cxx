@@ -155,8 +155,9 @@ std::vector<surfOut> PROsurf::PointHelper(std::vector<surfOut> multi_physics_par
         int nparams = local_metric->GetModel().nparams + local_metric->GetSysts().GetNSplines() - 2;
 
         if(nparams == 0) {
-            Eigen::VectorXf empty_vec1, empty_vec2;
-            output.chi = (*local_metric)(empty_vec1, empty_vec2, false);
+            Eigen::VectorXf empty_vec, 
+                            params = Eigen::VectorXf::Map(physics_params.data(), physics_params.size());
+            output.chi = (*local_metric)(params, empty_vec, false);
             outs.push_back(output);
             continue;
         }
