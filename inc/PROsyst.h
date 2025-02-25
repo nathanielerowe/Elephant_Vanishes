@@ -34,6 +34,7 @@ namespace PROfit {
 
             /* Function: given the systematic name, return corresponding fractional covariance matrix */
             Eigen::MatrixXf GrabMatrix(const std::string& sys) const;
+            Eigen::MatrixXf GrabCorrMatrix(const std::string& sys) const;
 
             /* Function: given the systematic name, return corresponding Spline */
             Spline GrabSpline(const std::string& sys) const;
@@ -111,6 +112,7 @@ namespace PROfit {
 
             /* names of all systs*/
             std::vector<std::string> spline_names;
+            std::vector<std::string> covar_names;
             std::vector<float> spline_lo, spline_hi;
         private:
             std::unordered_map<std::string, std::pair<size_t, SystType>> syst_map;
