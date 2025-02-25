@@ -1,5 +1,4 @@
 #include "PROsurf.h"
-#include "Eigen/src/Core/Matrix.h"
 #include "PROfitter.h"
 #include "PROlog.h"
 
