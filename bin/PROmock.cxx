@@ -61,9 +61,9 @@ int main(int argc, char* argv[])
   
   app.add_option("-x, --xml",       xmlname, "Input PROfit XML config.");
   app.add_option("-m, --max",       maxevents, "Max number of events to run over.");
-  app.add_option("-v, --verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
-  app.add_option("-t, --nthread",   nthread, "Number of fits.");
-  app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name");
+  app.add_option("-v, --verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].")->default_val(2);
+  app.add_option("-t, --nthread",   nthread, "Number of fits.")->default_val(1);
+  app.add_option("-o, --outfile",   filename, "If you want chisq to be dumped to text file, provide name")->default_str("profit");
   app.add_option("-s, --mocksys",   mockparams, "Vector of systematics parameter names to vary for mock data");
   app.add_option("-u, --mockvals",  mockshifts, "Vector of size of shifts.");
   app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting");
@@ -97,14 +97,20 @@ int main(int argc, char* argv[])
   std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
   log<LOG_DEBUG>(L"%1% || model size %2% by %3% ") % __func__ % model->hists[0].rows() % model->hists[0].cols();
 
-  //Convert to eigen
+  //Convert to eigen and to log
   if (physics_params_in.size() < model->nparams) {
-    for (size_t i=0; i<model->nparams; ++i) {
+    for (size_t i=physics_params_in.size(); i<model->nparams; ++i) {
       physics_params_in.push_back(0.0);
+      log<LOG_WARNING>(L"%1% || Model expects %2% params but only %3% params are given") % __func__ % model->nparams % physics_params_in.size();
     }
   }
+  std::vector<float> physics_params_log;
+  for (size_t i=0; i<physics_params_in.size(); i++) {
+    physics_params_log.push_back(std::log10(physics_params_in[i]));
+    log<LOG_DEBUG>(L"%1% || param%2%  %3% logparam%2% %4% ") % __func__ % i % physics_params_in[i] % physics_params_log[i];
+  }
 
-  Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_in.data(), physics_params_in.size());
+  Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_log.data(), physics_params_log.size());
 
   for (size_t i = 0; i < mockparams.size(); ++i) {
     log<LOG_INFO>(L"%1% || Mock data parameters %2%") % __func__  % mockparams[i].c_str();
@@ -118,6 +124,7 @@ int main(int argc, char* argv[])
   cv = systsstructs.back().CV();
   if (mockparams.empty() && mockreweights.empty()) {
     log<LOG_INFO>(L"%1% || Will use CV MC as data for this study") % __func__  ;
+    //fix to use true oscpars
     data = systsstructs.back().CV();
   }
   else if (!mockreweights.empty()) {
