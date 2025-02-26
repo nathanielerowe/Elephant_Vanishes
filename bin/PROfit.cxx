@@ -25,7 +25,7 @@ log_level_t GLOBAL_LEVEL = LOG_DEBUG;
 int main(int argc, char* argv[])
 {
     gStyle->SetOptStat(0);
-    CLI::App app{"Test for PROfit"}; 
+    CLI::App app{"PROfit PROfile"}; 
 
     // Define options
     std::string xmlname = "NULL.xml", filename = "profit"; 

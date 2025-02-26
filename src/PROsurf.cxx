@@ -302,7 +302,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     std::unique_ptr<TGraph> gprior = std::make_unique<TGraph>(priorX.size(), priorX.data(), priorY.data());
 
     std::vector<std::string> names;
-    if(with_osc) for(const auto& name: model.param_names) names.push_back(name);
+    if(with_osc) for(const auto& name: model.pretty_param_names) names.push_back(name);
     for(const auto &name: systs.spline_names) names.push_back(name);
 
     int loopSize = nparams;
@@ -345,7 +345,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 
         c->cd(w+1);
         std::unique_ptr<TGraph> g = std::make_unique<TGraph>(out.knob_vals.size(), out.knob_vals.data(), out.knob_chis.data());
-        std::string xval = w < model.nparams ? model.param_names[w] :"#sigma Shift"  ;
+        std::string xval = w < model.nparams ? model.pretty_param_names[w] :"#sigma Shift"  ;
         std::string tit = names[w]+ ";"+xval+"; #Chi^{2}";
         g->SetTitle(tit.c_str());
         graphs.push_back(std::move(g));
@@ -368,10 +368,10 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
     c2->cd();
     c2->SetBottomMargin(0.25);
-    c2->SetRightMargin(0.2);
+    c2->SetRightMargin(0.5);
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
-    int nBins = systs.spline_names.size();
+    int nBins = nparams;
 
     std::vector<float> bfvalues;
     std::vector<float> values1_up;
@@ -384,6 +384,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 
     int count = 0;
     for(auto &g:graphs){
+        //if(metric->GetModel().nparams)continue;
         float range = count == 0 ? 2.0 : count == 1 ? 1.0 : 3.0;
         std::vector<float> tmp = findMinAndBounds(g.get(),1.0, range);
         bfvalues.push_back(tmp[0]);
