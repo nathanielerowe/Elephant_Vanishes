@@ -107,7 +107,6 @@ int main(int argc, char* argv[])
   std::vector<float> physics_params_log;
   for (size_t i=0; i<physics_params_in.size(); i++) {
     physics_params_log.push_back(std::log10(physics_params_in[i]));
-    log<LOG_DEBUG>(L"%1% || param%2%  %3% logparam%2% %4% ") % __func__ % i % physics_params_in[i] % physics_params_log[i];
   }
 
   Eigen::VectorXf physics_params = Eigen::VectorXf::Map(physics_params_log.data(), physics_params_log.size());
@@ -121,14 +120,15 @@ int main(int argc, char* argv[])
   
   PROspec data, cv;
 
-  cv = systsstructs.back().CV();
+  cv = FillCVSpectrum(config, prop, binned);
   if (mockparams.empty() && mockreweights.empty()) {
-    log<LOG_INFO>(L"%1% || Will use CV MC as data for this study") % __func__  ;
-    //fix to use true oscpars
-    data = systsstructs.back().CV();
+    log<LOG_INFO>(L"%1% || Will use CV MC (with any requested oscillations) as data for this study") % __func__  ;
+    data = physics_params_in[0] != 0 && physics_params_in[1] != 0 ? 
+      FillRecoSpectra(config, prop, systs, *model, physics_params, binned) :
+      FillCVSpectrum(config, prop, binned);
   }
   else if (!mockreweights.empty()) {
-    log<LOG_INFO>(L"%1% || Will use reweighted MC  as data for this study") % __func__  ;
+    log<LOG_INFO>(L"%1% || Will use reweighted MC (with any requested oscillations) as data for this study") % __func__  ;
         log<LOG_INFO>(L"%1% || Any parameter shifts requested will be ignored (fix later?)") % __func__  ;
     auto file = std::make_unique<TFile>(reweights_file.c_str());
     log<LOG_DEBUG>(L"%1% || Set file to : %2% ") % __func__ % reweights_file.c_str();
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
       weighthists.push_back(rwhist);
       log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
     }
-    data = FillWeightedSpectrumFromHist(config,prop,weighthists,*model,physics_params,false);
+    data = FillWeightedSpectrumFromHist(config,prop,weighthists,*model,physics_params,binned);
   }
   else{
     if (mockshifts.size() != mockparams.size()) {
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
 	mockshifts.push_back(1.0);
       }
     }
-    log<LOG_INFO>(L"%1% || Will use systematic shifted MC  as data for this study") % __func__  ;    
+    log<LOG_INFO>(L"%1% || Will use systematic shifted MC (no osc) as data for this study") % __func__  ;    
     data = systs.GetSplineShiftedSpectrum(config,prop,mockparams,mockshifts);
   }
 
@@ -172,7 +172,6 @@ int main(int argc, char* argv[])
   else {
     xi = 3;
   }
-   
 
   TH1D hcv = cv.toTH1D(config,0);
   TH1D hmock = data.toTH1D(config,0);
@@ -214,6 +213,10 @@ int main(int argc, char* argv[])
   }
   for (const auto& m : mockreweights) {
       leg->AddEntry(null, m.c_str(),"");
+    i++;
+  }
+  for (const auto& m : physics_params_in) {
+    leg->AddEntry(null, ("param: "+std::to_string(m)).c_str(),"");
     i++;
   }
   
