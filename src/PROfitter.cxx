@@ -66,7 +66,9 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
     for(int s = 0; s < n_multistart; s++){
         Eigen::VectorXf x = Eigen::Map<Eigen::VectorXf>(latin_samples[s].data(), latin_samples[s].size());
         Eigen::VectorXf grad = Eigen::VectorXf::Constant(x.size(), 0);
+	log<LOG_DEBUG>(L"%1% || vectors set up") % __func__ ;	
         float fx =  metric(x, grad, false);
+	log<LOG_DEBUG>(L"%1% || fx is  : %2% ") % __func__ % fx;
         chi2s_multistart.push_back(fx);
     }
 

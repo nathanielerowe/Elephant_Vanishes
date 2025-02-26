@@ -457,6 +457,12 @@ namespace PROfit {
                 log<LOG_INFO>(L"%1% || Setting up true E variable for this branch: %2%") % __func__ %  branch_variable->true_param_name.c_str();
                 branch_variable->branch_true_pdg_formula = std::make_shared<TTreeFormula>(("branch_pdg_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->pdg_name.c_str(), chains[fid]);
                 log<LOG_INFO>(L"%1% || Setting up PDG variable for this branch: %2%") % __func__ %  branch_variable->pdg_name.c_str();
+		if (branch_variable->hist_reweight) {
+		  branch_variable->branch_true_proton_mom_formula = std::make_shared<TTreeFormula>(("branch_pmom_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_proton_mom_name.c_str(), chains[fid]);
+		  log<LOG_INFO>(L"%1% || Setting up leading proton momentum variable for this branch: %2%") % __func__ %  branch_variable->true_proton_mom_name.c_str();
+		  branch_variable->branch_true_proton_costh_formula = std::make_shared<TTreeFormula>(("branch_costh_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_proton_costh_name.c_str(), chains[fid]);
+		  log<LOG_INFO>(L"%1% || Setting up leading proton costh variable for this branch: %2%") % __func__ %  branch_variable->true_proton_costh_name.c_str();
+		}
 
 
                 //grab monte carlo weight
@@ -790,6 +796,8 @@ namespace PROfit {
                 branch_variable->branch_true_pdg_formula  =  std::make_shared<TTreeFormula>(("branch_add_pdg_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->pdg_name.c_str(),trees[fid]);
                 branch_variable->branch_true_value_formula  =  std::make_shared<TTreeFormula>(("branch_add_trueE_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->true_param_name.c_str(),trees[fid]);
                 branch_variable->branch_true_L_formula  =  std::make_shared<TTreeFormula>(("branch_add_trueL_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->true_L_name.c_str(),trees[fid]);
+                branch_variable->branch_true_proton_mom_formula  =  std::make_shared<TTreeFormula>(("branch_add_true_pmom_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->true_proton_mom_name.c_str(),trees[fid]);
+                branch_variable->branch_true_proton_costh_formula  =  std::make_shared<TTreeFormula>(("branch_add_true_pcosth_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),branch_variable->true_proton_costh_name.c_str(),trees[fid]);
 
                 //grab monte carlo weight
                 if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
@@ -917,10 +925,13 @@ namespace PROfit {
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     float true_param = branches[ib]->GetTrueValue<float>();
                     float baseline = branches[ib]->GetTrueL<float>();
+		    float pmom = branches[ib]->GetTrueLeadProtonMom<float>();
+		    float pcosth = branches[ib]->GetTrueLeadProtonCosth<float>();
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
                     int model_rule = branches[ib]->GetModelRule();
 
                     log<LOG_DEBUG>(L"%1% || Reco and True E values: %2% and  %3%") % __func__ % reco_value % true_param;
+		    log<LOG_DEBUG>(L"%1% || Proton mom and costh values: %2% and  %3%") % __func__ % pmom % pcosth;
 
                     if(additional_weight == 0 || global_bin < 0)
                         continue;
@@ -929,6 +940,8 @@ namespace PROfit {
                     inprop.bin_indices.push_back(global_bin);
                     inprop.trueLE.push_back((float)(baseline/true_param));
                     inprop.model_rule.push_back((int)model_rule);
+		    inprop.pmom.push_back((float)pmom);
+		    inprop.pcosth.push_back((float)pcosth);
                     inprop.true_bin_indices.push_back((int)global_true_bin);
                     inprop.hist(global_true_bin, global_bin) += additional_weight;
                     PROcess_CAF_Event(sys_weight_formula, syst_vector, v_cafhelper[fid], additional_weight, global_bin, global_true_bin);
@@ -1162,9 +1175,12 @@ namespace PROfit {
         float true_param = branch->GetTrueValue<float>();
         float baseline = branch->GetTrueL<float>();
         float true_value = baseline / true_param;
+	float pmom = branch->GetTrueLeadProtonMom<double>();
+	float pcosth = branch->GetTrueLeadProtonCosth<double>();
         int run_syst = branch->GetIncludeSystematics();
         float mc_weight = branch->GetMonteCarloWeight();
         mc_weight *= inconfig.m_plot_pot / mcpot;
+
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 
         int model_rule = branch->GetModelRule();
@@ -1180,6 +1196,8 @@ namespace PROfit {
         inprop.model_rule.push_back((int)model_rule);
         inprop.true_bin_indices.push_back((int)global_true_bin);
         inprop.hist(global_true_bin, global_bin) += mc_weight;
+	inprop.pmom.push_back((float)pmom);
+	inprop.pcosth.push_back((float)pcosth);
 
         if(!run_syst) return;
 

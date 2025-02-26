@@ -59,11 +59,12 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
 float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient, bool rungradient){
     size_t nparams = model.nparams+syst->GetNSplines();
     size_t nsyst = syst->GetNSplines();
+    log<LOG_DEBUG>(L"%1% || nparams is %2%, nsyst is %3% ") % __func__ % nparams % nsyst;    
 
     // Get Spectra from FillRecoSpectra
     Eigen::VectorXf subvector1 = param.segment(0, nparams - nsyst);
     Eigen::VectorXf subvector2 = param.segment(nparams - nsyst, nsyst);
-
+    
     PROspec result = FillRecoSpectra(config, peller, *syst, model, param, strat == BinnedChi2);
 
     Eigen::MatrixXf inverted_collapsed_full_covariance(config.m_num_bins_total_collapsed,config.m_num_bins_total_collapsed);
@@ -93,7 +94,7 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
          
        }
 
-    Eigen::VectorXf delta  = CollapseMatrix(config,result.Spec()) - data.Spec(); 
+    Eigen::VectorXf delta  = CollapseMatrix(config,result.Spec()) - data.Spec();
     float pull = Pull(subvector2);
     float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
     float value = covar_portion + pull;
