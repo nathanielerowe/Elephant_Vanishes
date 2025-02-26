@@ -345,7 +345,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 
         c->cd(w+1);
         std::unique_ptr<TGraph> g = std::make_unique<TGraph>(out.knob_vals.size(), out.knob_vals.data(), out.knob_chis.data());
-        std::string xval = w < model.nparams ? model.pretty_param_names[w] :"#sigma Shift"  ;
+        std::string xval = w < model.nparams ? "Log_{10}(" + model.pretty_param_names[w]+")" :"#sigma Shift"  ;
         std::string tit = names[w]+ ";"+xval+"; #Chi^{2}";
         g->SetTitle(tit.c_str());
         graphs.push_back(std::move(g));
