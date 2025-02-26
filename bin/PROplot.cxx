@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
     errband_command->add_flag("--scale-by-width", err_scale, "Scale histgrams by 1/(bin width).");
     osc_command->add_flag("--scale-by-width", osc_scale, "Scale histograms by 1/(bin width).");
     osc_command->add_option("--signal", osc_params, "Oscillation parameters to use.")->expected(-1);
+
     all->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
     all->add_flag("--scale-by-width", all_scale, "Scale histgrams by 1/(bin width).");
     all->add_option("--signal", osc_params, "Oscillation parameters to use.")->expected(-1);
@@ -209,8 +210,14 @@ int main(int argc, char* argv[])
                         std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
                         leg->SetFillStyle(0);
                         leg->SetLineWidth(0);
-                        leg->AddEntry(cv_hist, "No Osc", "l");
-                        leg->AddEntry(osc_hist, "Oscillations", "l");
+                        leg->AddEntry(cv_hist, "No Oscillations", "l");
+                        std::string oscstr = "";//"#splitline{Oscilations:}{";
+                        for(int j=0;j<model->nparams;j++){
+                            oscstr+=model->pretty_param_names[j]+ " : "+ to_string_prec(osc_params[j],2) + (j==0 ? ", " : "" );
+                        }
+                        //oscstr+="}";
+
+                        leg->AddEntry(osc_hist, oscstr.c_str(), "l");
 
                         TPad p1("p1", "p1", 0, 0.25, 1, 1);
                         p1.SetBottomMargin(0);
