@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
     app.add_option("-o,--outfile", filename, "Output filename")->default_str("profit");
-    app.add_option("-t, --nthread",   nthread, "Number of fits.")->default_val(1);
+    app.add_option("-t, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
     app.add_option("--inject", injected_pt, "Physics parameters to inject as true signal.")->default_str("0 0");
 
     CLI11_PARSE(app, argc, argv);
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
     //Inititilize PROpeller to keep MC
     PROpeller myprop;
-    
+
     //Initilize objects for systematics storage
     std::vector<SystStruct> systsstructs;
 
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
     }
 
     //PROfile(myConf, myprop, systs, osc, data, "profit_test", true);
-    
+
     PROchi chi("", myConf, myprop, &systs, *model, data, PROfit::PROchi::BinnedChi2);
 
     LBFGSpp::LBFGSBParam<float> param;  
@@ -125,57 +125,60 @@ int main(int argc, char* argv[])
         post_hist.SetBinContent(i+1, post_fit(i));
     }
 
-    TCanvas ch;
-    cv_hist.SetTitle(hname.c_str());
-    cv_hist.SetLineColor(kBlack);
-    cv_hist.Draw("hist");
-    post_hist.SetLineColor(kRed);
-    post_hist.Draw("hist same");
-    data_hist.Draw("E same");
-    ch.Print((filename+"_hists.pdf").c_str(), "pdf");
+    if(false){//currently turn off these as not working as wanted
+        TCanvas ch;
+        cv_hist.SetTitle(hname.c_str());
+        cv_hist.SetLineColor(kBlack);
+        cv_hist.Draw("hist");
+        post_hist.SetLineColor(kRed);
+        post_hist.Draw("hist same");
+        data_hist.Draw("E same");
+        ch.Print((filename+"_hists.pdf").c_str(), "pdf");
 
-    TH2D cov("cov", hname.c_str(), post_covar.rows(), 0, post_covar.rows(), post_covar.cols(), 0, post_covar.cols());
-    for(size_t i = 0; i < post_covar.rows(); ++i) {
-        for(size_t j = 0; j < post_covar.cols(); ++j) {
-            cov.SetBinContent(i+1, j+1, post_covar(i,j));
+        TH2D cov("cov", hname.c_str(), post_covar.rows(), 0, post_covar.rows(), post_covar.cols(), 0, post_covar.cols());
+        for(size_t i = 0; i < post_covar.rows(); ++i) {
+            for(size_t j = 0; j < post_covar.cols(); ++j) {
+                cov.SetBinContent(i+1, j+1, post_covar(i,j));
+            }
         }
-    }
-    TCanvas c1;
-    cov.Draw("colz");
-    c1.Print((filename+"_cov.pdf").c_str(), "pdf");
+        TCanvas c1;
+        cov.Draw("colz");
+        c1.Print((filename+"_cov.pdf").c_str(), "pdf");
 
-    std::vector<std::string> names;
-    for(size_t i = 0; i < model->nparams; ++i) names.push_back(model->param_names[i]);
-    for(size_t i = 0; i < systs.GetNSplines(); ++i) names.push_back(systs.spline_names[i]);
-  
-    TH1D *hsyst_pre  = new TH1D("hp", hname.c_str(), nparams, 0, nparams);
-    TH1D *hsyst_post = new TH1D("ho", hname.c_str(), nparams, 0, nparams);
-    for(size_t i = 0; i < nparams; i++) {
-        hsyst_pre->GetXaxis()->SetBinLabel(i+1, names[i].c_str());
-        hsyst_pre->SetBinContent(i+1, 0.0);
-        hsyst_pre->SetBinError(i+1, 1.0);
-        hsyst_post->GetXaxis()->SetBinLabel(i+1, names[i].c_str());
-        hsyst_post->SetBinContent(i+1, best_fit(i));
-        hsyst_post->SetBinError(i+1, std::sqrt(post_covar(i,i)));
+        std::vector<std::string> names;
+        for(size_t i = 0; i < model->nparams; ++i) names.push_back(model->param_names[i]);
+        for(size_t i = 0; i < systs.GetNSplines(); ++i) names.push_back(systs.spline_names[i]);
+
+        TH1D *hsyst_pre  = new TH1D("hp", hname.c_str(), nparams, 0, nparams);
+        TH1D *hsyst_post = new TH1D("ho", hname.c_str(), nparams, 0, nparams);
+        for(size_t i = 0; i < nparams; i++) {
+            hsyst_pre->GetXaxis()->SetBinLabel(i+1, names[i].c_str());
+            hsyst_pre->SetBinContent(i+1, 0.0);
+            hsyst_pre->SetBinError(i+1, 1.0);
+            hsyst_post->GetXaxis()->SetBinLabel(i+1, names[i].c_str());
+            hsyst_post->SetBinContent(i+1, best_fit(i));
+            hsyst_post->SetBinError(i+1, std::sqrt(post_covar(i,i)));
+        }
+        //hsyst_pre->Write(("pulls_pre_"+det).c_str());
+        //hsyst_post->Write(("pulls_post_"+det).c_str());
+        TCanvas c("c","", 1200, 600);
+        TPad p("pp", "pp", 0, 0, 1, 1);
+        p.SetBottomMargin(0.4);
+        p.SetLeftMargin(0.1);
+        p.SetRightMargin(0.05);
+        p.cd();
+        hsyst_pre->SetLineColor(kRed);
+        hsyst_pre->SetMarkerColor(kRed);
+        hsyst_pre->GetYaxis()->SetTitle("Parameter Pull [#sigma]");
+        hsyst_pre->Draw("E");
+        hsyst_post->SetLineColor(kBlack);
+        hsyst_post->SetMarkerColor(kBlack);
+        hsyst_post->Draw("E same");
+        c.cd();
+        p.Draw();
+        c.Print((filename+"_pulls.pdf").c_str(), "pdf");
+
     }
-    //hsyst_pre->Write(("pulls_pre_"+det).c_str());
-    //hsyst_post->Write(("pulls_post_"+det).c_str());
-    TCanvas c("c","", 1200, 600);
-    TPad p("pp", "pp", 0, 0, 1, 1);
-    p.SetBottomMargin(0.4);
-    p.SetLeftMargin(0.1);
-    p.SetRightMargin(0.05);
-    p.cd();
-    hsyst_pre->SetLineColor(kRed);
-    hsyst_pre->SetMarkerColor(kRed);
-    hsyst_pre->GetYaxis()->SetTitle("Parameter Pull [#sigma]");
-    hsyst_pre->Draw("E");
-    hsyst_post->SetLineColor(kBlack);
-    hsyst_post->SetMarkerColor(kBlack);
-    hsyst_post->Draw("E same");
-    c.cd();
-    p.Draw();
-    c.Print((filename+"_pulls.pdf").c_str(), "pdf");
 
     PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread, best_fit);
 
