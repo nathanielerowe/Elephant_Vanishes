@@ -261,6 +261,44 @@ int main(int argc, char* argv[])
             }
         }
 
+        if(*all || *errband_command) {
+            std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, cv_scale || all_scale);
+            size_t global_subchannel_index = 0;
+            size_t global_channel_index = 0;
+            for(size_t im = 0; im < config.m_num_modes; im++){
+                for(size_t id =0; id < config.m_num_detectors; id++){
+                    for(size_t ic = 0; ic < config.m_num_channels; ic++){
+                        std::unique_ptr<THStack> s = std::make_unique<THStack>((std::to_string(global_channel_index)).c_str(),(std::to_string(global_channel_index)).c_str());
+                        std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
+                        leg->SetFillStyle(0);
+                        leg->SetLineWidth(0);
+                        for(size_t sc = 0; sc < config.m_num_subchannels[ic]; sc++){
+                            const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
+                            s->Add(cv_hists[subchannel_name].get());
+                            leg->AddEntry(cv_hists[subchannel_name].get(), config.m_subchannel_plotnames[ic][sc].c_str() ,"f");
+                            ++global_subchannel_index;
+                        }
+                        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, err_scale || all_scale);
+                        err_band->SetLineColor(kRed+1);                        
+                        err_band->GetYaxis()->SetTitle("Events/GeV");
+                        err_band->Draw("AP");
+                        err_band->GetXaxis()->SetRangeUser(0.3, 3.0);
+
+
+                        s->Draw("hist SAME");
+                        leg->Draw("SAME");
+                        err_band->SetTitle((config.m_mode_names[im]  +" "+ config.m_detector_names[id]+" "+ config.m_channel_names[ic]).c_str());
+                        err_band->GetXaxis()->SetTitle(config.m_channel_units[ic].c_str());
+                         TH1* dummy = new TH1F("", "", 1, 0, 1);
+                         dummy->SetLineColor(kRed+1);
+                        leg->AddEntry(dummy->Clone(), "Syst", "l");
+                        err_band->Draw("SAME P");
+                        c.Print(filename.c_str(), "pdf");
+                    }
+                }
+            }
+        }
+
         if((*all && with_splines) || *spline_command) {
             std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
             c.Clear();
@@ -325,8 +363,8 @@ int main(int argc, char* argv[])
             fout.mkdir("ErrorBand");
             fout.cd("ErrorBand");
             err_band->Write("err_band");
-        }
 
+        }
         if((*all && with_splines) || *spline_command) {
             std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
             fout.mkdir("Splines");
