@@ -17,6 +17,8 @@ namespace PROfit{
 
     int FindLocalBin(const PROconfig &inconfig, float reco_value, int channel_index){
 
+                   
+        
         //find local bin 
         const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
         auto pos_iter = std::upper_bound(bin_edges.begin(), bin_edges.end(), reco_value);
