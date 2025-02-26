@@ -500,7 +500,7 @@ namespace PROfit {
                                 }
                             } else if(strlen(branch->GetName()) > 6 && strcmp(branch->GetName() + strlen(branch->GetName()) - 6, "_sigma") == 0) {
                                 log<LOG_INFO>(L"%1% || Setting up knob val list using branch %2%") % __func__ % branch->GetName();
-                                chains[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
+                                chains[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][0][branch->GetName()]));
                             }
                         }
                     }

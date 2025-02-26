@@ -19,7 +19,6 @@ namespace PROfit{
 
                    
         
-        log<LOG_DEBUG>(L"%1% || chke ") % __func__  ;
         //find local bin 
         const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
         auto pos_iter = std::upper_bound(bin_edges.begin(), bin_edges.end(), reco_value);
@@ -30,7 +29,6 @@ namespace PROfit{
             log<LOG_DEBUG>(L"%1% || Channel %2% has bin lower edge: %3% and bin upper edge: %4%") % __func__ % channel_index % *bin_edges.begin() % bin_edges.back();
             return -1; 
         }
-        log<LOG_DEBUG>(L"%1% || chke2 ") % __func__  ;
         return pos_iter - bin_edges.begin() - 1; 
     }
 
