@@ -423,8 +423,9 @@ namespace PROfit {
 
             // grab branches 
             int num_branch = inconfig.m_branch_variables[fid].size();
-            f_event_weights[fid].resize(num_branch);
-            f_knob_vals[fid].resize(num_branch);
+            f_event_weights[fid].resize(1);//was num_branch
+            f_knob_vals[fid].resize(1);//was num_brach
+
             for(int ib = 0; ib != num_branch; ++ib) {
 
                 std::shared_ptr<BranchVariable> branch_variable = inconfig.m_branch_variables[fid][ib];
@@ -478,10 +479,10 @@ namespace PROfit {
 
                     if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
                         log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2% for fid %3$") % __func__ %  branch->GetName() % fid;
-                        chains[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                        chains[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][0][branch->GetName()]));
                     } else if(strlen(branch->GetName()) > 6 && strcmp(branch->GetName() + strlen(branch->GetName()) - 6, "_sigma") == 0) {
                         log<LOG_INFO>(L"%1% || Setting up knob val list using branch %2% for fid %3%") % __func__ % branch->GetName() % fid;
-                        chains[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][ib][branch->GetName()]));
+                        chains[fid]->SetBranchAddress(branch->GetName(), &(f_knob_vals[fid][0][branch->GetName()]));
                     }
                 }
                 if(inconfig.m_mcgen_numfriends[fid]>0){
@@ -493,7 +494,7 @@ namespace PROfit {
                             if (std::find(inconfig.m_mcgen_variation_allowlist.begin(), inconfig.m_mcgen_variation_allowlist.end(), branch->GetName()) != inconfig.m_mcgen_variation_allowlist.end()) {
                                 if(branch_variable->GetIncludeSystematics()){
                                     log<LOG_INFO>(L"%1% || Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
-                                    chains[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][ib][branch->GetName()]));
+                                    chains[fid]->SetBranchAddress(branch->GetName(), &(f_event_weights[fid][0][branch->GetName()]));
                                 }else{
                                     log<LOG_INFO>(L"%1% || EXPLICITLY NOT Setting up eventweight map for this branch: %2%") % __func__ %  branch->GetName();
                                 }
@@ -515,7 +516,7 @@ namespace PROfit {
 
             for(int ib = 0; ib != num_branch; ++ib) {
                 const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
-                auto& f_weight = f_event_weights[fid][ib];
+                auto& f_weight = f_event_weights[fid][0];
                 auto& f_knob = f_knob_vals[fid][ib];
 
                 if(branch_variable->GetIncludeSystematics()){
@@ -676,7 +677,7 @@ namespace PROfit {
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
                     log<LOG_DEBUG>(L"%1% ||Event: %4% Branch %2% / %3% ") % __func__ % ib % num_branch % i;
-                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][ib], inconfig.m_mcgen_pot[fid], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
+                    process_cafana_event(inconfig, branches[ib], f_event_weights[fid][0], inconfig.m_mcgen_pot[fid], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
                 } 
 
             } //end of entry loop
@@ -1175,7 +1176,6 @@ namespace PROfit {
 
     void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop){
 
-        log<LOG_DEBUG>(L"%1% || start ") % __func__  ;
         int total_num_sys = syst_vector.size(); 
         float reco_value = branch->GetValue<float>();
         float true_param = branch->GetTrueValue<float>();
@@ -1187,20 +1187,15 @@ namespace PROfit {
         float mc_weight = branch->GetMonteCarloWeight();
         mc_weight *= inconfig.m_plot_pot / mcpot;
 
-        log<LOG_DEBUG>(L"%1% || 0 ") % __func__  ;
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
-        log<LOG_DEBUG>(L"%1% || 1 ") % __func__  ;
         int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 
-        log<LOG_DEBUG>(L"%1% || 2 ") % __func__  ;
         int model_rule = branch->GetModelRule();
-        log<LOG_DEBUG>(L"%1% || 3 ") % __func__  ;
 
         if(global_bin < 0 )  //out of range
             return;
         if(global_true_bin < 0)
             return;
 
-        log<LOG_DEBUG>(L"%1% || 4 ") % __func__  ;
         inprop.added_weights.push_back(mc_weight);
         inprop.bin_indices.push_back(global_bin);
         inprop.trueLE.push_back((float)(baseline/true_param));
@@ -1210,35 +1205,23 @@ namespace PROfit {
         inprop.pmom.push_back((float)pmom);
         inprop.pcosth.push_back((float)pcosth);
 
-        log<LOG_DEBUG>(L"%1% || 5 ") % __func__  ;
         if(!run_syst) return;
 
-        log<LOG_DEBUG>(L"%1% || 6 ") % __func__  ;
         for(int i = 0; i != total_num_sys; ++i){
-            log<LOG_DEBUG>(L"%1% || 6.5 i %2% %3% size %4%") % __func__  % i % total_num_sys % syst_vector.size();
 
             SystStruct& syst_obj = syst_vector[i];
             float additional_weight = syst_additional_weight.at(i);
-
-            log<LOG_DEBUG>(L"%1% || 6.6 %2% %3% ") % __func__  % additional_weight % syst_obj.GetSysName().c_str();
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
 
 
-            log<LOG_DEBUG>(L"%1% || 6.7 %2% ") % __func__  % syst_obj.mode.c_str();
             if(syst_obj.mode == "spline") {
-                log<LOG_DEBUG>(L"%1% || 6.70  ") % __func__  ;
                 syst_obj.FillCV(global_true_bin, mc_weight);
 
-                log<LOG_DEBUG>(L"%1% || 6.71  ") % __func__  ;
                 for(int is = 0; is < syst_obj.GetNUniverse(); ++is){
-                    log<LOG_DEBUG>(L"%1% || 6.72 is %2% max %3%  ") % __func__ % is % syst_obj.GetNUniverse() ;
                     size_t u = 0;
                     for(; u < syst_obj.knobval.size(); ++u)
                         if(syst_obj.knobval[u] == syst_obj.knob_index[is]) break;
-        
-                    log<LOG_DEBUG>(L"%1% || 6.73 u %2% global_true_bin %3% mcweight %4% additional %5%, size %6%, %7%") % __func__  % u % global_true_bin % mc_weight % additional_weight % map_iter->second->size() % map_iter->second ;
                     syst_obj.FillUniverse(u, global_true_bin, mc_weight * additional_weight * static_cast<float>(map_iter->second->at(is)));
-                    log<LOG_DEBUG>(L"%1% || 6.74  ") % __func__  ;
                 }
                 continue;
             }else{
@@ -1252,7 +1235,6 @@ namespace PROfit {
 
         }
 
-        log<LOG_DEBUG>(L"%1% || 7 ") % __func__  ;
 
         return;
     }

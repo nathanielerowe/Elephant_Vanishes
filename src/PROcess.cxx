@@ -127,7 +127,6 @@ namespace PROfit {
 	}
 
 	float finalw = oscw * add_w * hist_w;
-	log<LOG_DEBUG>(L"%1% || name %2% oscw %3% addw %4% histw %5%" ) % __func__ % name.c_str() %  oscw % add_w % hist_w;
 	myspectrum.Fill(inprop.bin_indices[i], finalw);
       }
     }
