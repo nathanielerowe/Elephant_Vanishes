@@ -387,15 +387,25 @@ std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst,
     std::unique_ptr<TH2D> cov_hist = std::make_unique<TH2D>("cov", "Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total, 0, config.m_num_bins_total, config.m_num_bins_total, 0, config.m_num_bins_total);
     std::unique_ptr<TH2D> collapsed_cov_hist = std::make_unique<TH2D>("ccov", "Collapsed Fractional Covariance Matrix;Bin # ;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
 
+    std::unique_ptr<TH2D> cor_hist = std::make_unique<TH2D>("cor", "Correlation Matrix;Bin # ;Bin #", config.m_num_bins_total, 0, config.m_num_bins_total, config.m_num_bins_total, 0, config.m_num_bins_total);
+    std::unique_ptr<TH2D> collapsed_cor_hist = std::make_unique<TH2D>("ccor", "Collapsed Correlation Matrix;Bin # ;Bin #", config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed, config.m_num_bins_total_collapsed, 0, config.m_num_bins_total_collapsed);
+
     for(size_t i = 0; i < config.m_num_bins_total; ++i)
-        for(size_t j = 0; j < config.m_num_bins_total; ++j)
+        for(size_t j = 0; j < config.m_num_bins_total; ++j){
             cov_hist->SetBinContent(i+1,j+1,fractional_cov(i,j));
+            cor_hist->SetBinContent(i+1,j+1,fractional_cov(i,j)/(sqrt(fractional_cov(i,i))*sqrt(fractional_cov(j,j))));
+        }
+
     for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i)
-        for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j)
+        for(size_t j = 0; j < config.m_num_bins_total_collapsed; ++j){
             collapsed_cov_hist->SetBinContent(i+1,j+1,collapsed_frac_cov(i,j));
+            collapsed_cor_hist->SetBinContent(i+1,j+1,collapsed_frac_cov(i,j)/(sqrt(collapsed_frac_cov(i,i))*sqrt(collapsed_frac_cov(j,j))));
+        }
 
     ret["total_frac_cov"] = std::move(cov_hist);
     ret["collapsed_total_frac_cov"] = std::move(collapsed_cov_hist);
+    ret["total_cor"] = std::move(cor_hist);
+    ret["collapsed_total_cor"] = std::move(collapsed_cor_hist);
 
     for(const auto &name: syst.covar_names) {
         const Eigen::MatrixXf &covar = syst.GrabMatrix(name);
