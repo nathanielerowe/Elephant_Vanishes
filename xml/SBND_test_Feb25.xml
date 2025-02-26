@@ -1,0 +1,69 @@
+<?xml version="1.0" ?>
+
+<mode name="nu" />
+<detector name="SBND" />
+<channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
+        <bins min="0.1" max="3.0" nbins = "30"/>
+        <truebins min="0" max="2" nbins="200"/>
+    <subchannel name="cc" plotname="#nu_{#mu} CC" color="#FF6961"/>
+    <subchannel name="nc" plotname="#nu_{#mu} NC" color="#3D9432"/>
+</channel>
+
+<plotpot value="9.7e18"/>
+
+<variation_list>
+    <allowlist type="covariance">expskin_Flux</allowlist>  
+    <allowlist type="covariance">horncurrent_Flux</allowlist>  
+    <allowlist type="covariance">nucleoninexsec_Flux</allowlist>  
+    <allowlist type="covariance">nucleonqexsec_Flux</allowlist>  
+    <allowlist type="covariance">nucleontotxsec_Flux</allowlist>  
+    <allowlist type="covariance">pioninexsec_Flux</allowlist>  
+    <allowlist type="covariance">pionqexsec_Flux</allowlist>  
+    <allowlist type="covariance">piontotxsec_Flux</allowlist>  
+    <allowlist type="covariance">piplus_Flux</allowlist>  
+    <allowlist type="covariance">piminus_Flux</allowlist>  
+    <allowlist type="covariance">kplus_Flux</allowlist>  
+    <allowlist type="covariance">kminus_Flux</allowlist>  
+    <allowlist type="covariance">kzero_Flux</allowlist> 
+    <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_CoulombCCQE</allowlist>
+    <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_MFP_pi</allowlist>
+    <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_NormCCMEC</allowlist>
+    <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_FrCEx_N</allowlist>
+    <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi</allowlist>
+    <allowlist type="spline">GENIEReWeight_SBN_v1_multisigma_RPA_CCQE</allowlist>
+</variation_list>
+
+<model tag="numudis">
+    <rule index="0" name="No Osc"/>
+    <rule index="1" name="Numu Dis"/>
+</model>
+
+
+<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root" scale = "0.9"  pot="2.14111e+18"> 
+    <friend treename="events/multisimTree" />
+    <friend treename="events/multisigmaTree"/>
+     <branch
+         associated_subchannel = "nu_SBND_numu_cc"
+         name                  = "recoE"
+         true_param_name       = "trueE" 
+         model_rule            = "1"
+         pdg_name              = "truePDG"
+         true_L_name           = "trueL / 1000"
+         additional_weight     = "CC"
+         />
+</MCFile>
+
+<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root" scale = "0.9" pot="2.14111e+18"> 
+    <friend treename="events/multisimTree" />
+    <friend treename="events/multisigmaTree"/>
+     <branch
+         associated_subchannel = "nu_SBND_numu_nc"
+         name                  = "recoE"
+         true_param_name       = "trueE" 
+         model_rule            = "1"
+         pdg_name              = "truePDG"
+         true_L_name           = "trueL / 1000"
+         additional_weight     = "CC==0"
+         />
+</MCFile>
+

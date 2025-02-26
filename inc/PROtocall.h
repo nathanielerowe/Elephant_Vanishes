@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <string>
-
+#include <iomanip>
 // PROfit include 
 #include "PROlog.h"
 #include "PROconfig.h"
@@ -55,7 +55,12 @@ namespace PROfit{
     /* Function: given a full vector (that contains reco), collapse the vector */
     Eigen::VectorXf CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXf& full_vector);
 
-
+    template <typename T>
+    std::string to_string_prec(const T a_value, const int n = 6)    {
+      std::ostringstream out;
+      out <<std::fixed<< std::setprecision(n) << a_value;
+      return out.str();
+    }
 
 };
 

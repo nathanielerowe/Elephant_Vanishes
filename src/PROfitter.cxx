@@ -88,7 +88,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
     for(int s = 0; s < n_localfit; s++){
         //Get the nth
         Eigen::VectorXf x = Eigen::Map<Eigen::VectorXf>( latin_samples[best_multistart[s]].data(), latin_samples[best_multistart[s]].size());   
-        int niter;
+        int niter=0;
         float fx;
         try {
             niter = solver.minimize(metric, x, fx, lb, ub);
@@ -108,7 +108,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
 
 
     // and do Seeded Point
-    int niter;
+    int niter=0;
     float fx;
     Eigen::VectorXf x;
 

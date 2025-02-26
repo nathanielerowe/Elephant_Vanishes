@@ -17,6 +17,7 @@ class PROmodel {
 public:
     size_t nparams;
     std::vector<std::string> param_names;
+    std::vector<std::string> pretty_param_names;
     Eigen::VectorXf lb, ub;
     std::vector<std::function<float(const Eigen::VectorXf&, float)>> model_functions;
     std::vector<Eigen::MatrixXf> hists; //2D hists for binned oscilattions
@@ -40,6 +41,7 @@ public:
 
         nparams = 2;
         param_names = {"dmsq", "sinsq2thmm"}; 
+        pretty_param_names = {"#Deltam^{2}", "sin^{2}2#theta_{#mu#mu}"}; 
         lb = Eigen::VectorXf(2);
         ub = Eigen::VectorXf(2);
         lb << -2, -std::numeric_limits<float>::infinity();
@@ -94,6 +96,7 @@ public:
 
         nparams = 2;
         param_names = {"dmsq", "sinsq2thme"}; 
+        pretty_param_names = {"#Deltam^{2}", "sin^{2}2#theta_{#mu{e}}"}; 
         lb = Eigen::VectorXf(2);
         ub = Eigen::VectorXf(2);
         lb << -2, -std::numeric_limits<float>::infinity();
@@ -150,6 +153,7 @@ public:
 
         nparams = 3;
         param_names = {"dmsq", "Ue4^2", "Um4^2"}; 
+        pretty_param_names = {"dmsq", "Ue4^2", "Um4^2"}; 
         lb = Eigen::VectorXf(3);
         ub = Eigen::VectorXf(3);
         lb << -2, -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity();
@@ -261,7 +265,7 @@ std::unique_ptr<PROmodel> get_model_from_string(const std::string &name, const P
     } else if(name == "3+1") {
         return std::unique_ptr<PROmodel>(new PRO3p1(prop));
     }
-    log<LOG_ERROR>(L"%1% || Unrecognized model name %2%. Terminating.") % __func__ % name.c_str();
+    log<LOG_ERROR>(L"%1% || Unrecognized model name %2%. Try numudis, nueapp or 3+1 for now. Terminating.") % __func__ % name.c_str();
     exit(EXIT_FAILURE);
 }
 
