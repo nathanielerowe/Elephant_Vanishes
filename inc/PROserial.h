@@ -9,6 +9,8 @@
 #include <fstream>
 #include <Eigen/Dense>
 
+#include "PROcreate.h"
+
 //extrnd boost to handle read/write serialization of Eigen::MatrixXf and Eigen::VectorXF
 namespace boost {
     namespace serialization {
@@ -33,6 +35,29 @@ namespace boost {
             }
 
     } 
-}  
+} 
+
+
+namespace PROfit {
+
+
+    void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename) {
+            std::ofstream ofs(filename);
+            boost::archive::text_oarchive oa(ofs);
+            oa & structs;  
+    }
+
+    void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename) {
+            std::ifstream ifs(filename);
+            boost::archive::text_iarchive ia(ifs);
+            ia & structs;  
+    }
+
+
+
+
+
+
+}
 #endif
 
