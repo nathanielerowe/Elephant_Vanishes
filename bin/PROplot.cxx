@@ -90,12 +90,19 @@ int main(int argc, char* argv[])
     PROconfig config(xmlname);
 
     PROpeller prop1;
-    std::vector<SystStruct> systsstructs;
-    PROcess_CAFAna(config, systsstructs, prop1);
+    std::vector<SystStruct> systsstructs1;
+    PROcess_CAFAna(config, systsstructs1, prop1);
+
+    
 
     prop1.save("mytest.txt");
+    saveSystStructVector(systsstructs1,"structs.txt");
+
     PROpeller prop;
+    std::vector<SystStruct> systsstructs;
+    
     prop.load("mytest.txt");
+    loadSystStructVector(systsstructs,"structs.txt");
 
     PROsyst systs(systsstructs);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);

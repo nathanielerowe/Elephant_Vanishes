@@ -55,7 +55,7 @@ namespace PROfit{
         public:
 
             template<class Archive>
-            void serialize(Archive &ar, [[maybe unused]] const unsigned int version) {
+            void serialize(Archive &ar, [[maybe_unused]] const unsigned int version) {
                 ar & nbins;
                 ar & spec;
                 ar & error;

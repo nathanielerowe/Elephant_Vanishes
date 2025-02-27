@@ -30,6 +30,10 @@
 #include "sbnanaobj/StandardRecord/SRGlobal.h"
 #include "sbnanaobj/StandardRecord/SRWeightPSet.h"
 
+//Boost
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
 namespace PROfit{
 
     /*Struct: Core systeatics object, one per systematics, handels both 1D splines, Covariances and MFA
@@ -55,6 +59,25 @@ namespace PROfit{
         // pointer to cv spectrum and multi-universe spectrum from systematic variation
         std::shared_ptr<PROspec> p_cv;	
         std::vector<std::shared_ptr<PROspec>> p_multi_spec;
+
+
+        //boost serialization
+        template<class Archive>
+        void serialize(Archive &ar, [[maybe_unused]] const unsigned int version) {
+            ar & systname;
+            ar & n_univ;
+            ar & mode;
+            ar & weight_formula;
+            ar & knobval;
+            ar & knob_index;
+            ar & index;
+            ar & spline_coeffs;
+            ar & p_cv;
+            ar & p_multi_spec;  
+        }
+
+
+        SystStruct() = default;
 
         /*Function: Constructor for a blank systematic*/
         SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},{},0){}
@@ -121,6 +144,13 @@ namespace PROfit{
         void Print() const;
 
     };
+
+
+    void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename);
+    void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename);
+
+
+
 
     /*Struct: manage flat CAF file index matching. 
      *Notes:

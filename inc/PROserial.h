@@ -6,10 +6,14 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/split_free.hpp>
+
 #include <fstream>
 #include <Eigen/Dense>
 
-#include "PROcreate.h"
 
 //extrnd boost to handle read/write serialization of Eigen::MatrixXf and Eigen::VectorXF
 namespace boost {
@@ -34,30 +38,15 @@ namespace boost {
                     ar & vec(i);
             }
 
+
+        // boost 4serialize std::array<T, N>
+        template<class Archive, typename T, std::size_t N>
+            void serialize(Archive& ar, std::array<T, N>& arr, [[maybe_unused]]  const unsigned int version) {
+                 ar & boost::serialization::make_nvp("array", arr);
+            }
+
     } 
 } 
 
-
-namespace PROfit {
-
-
-    void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename) {
-            std::ofstream ofs(filename);
-            boost::archive::text_oarchive oa(ofs);
-            oa & structs;  
-    }
-
-    void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename) {
-            std::ifstream ifs(filename);
-            boost::archive::text_iarchive ia(ifs);
-            ia & structs;  
-    }
-
-
-
-
-
-
-}
 #endif
 

@@ -16,6 +16,19 @@ namespace PROfit {
 
 
 
+    void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename) {
+            std::ofstream ofs(filename);
+            boost::archive::text_oarchive oa(ofs);
+            oa & structs;  
+    }
+
+    void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename) {
+            std::ifstream ifs(filename);
+            boost::archive::text_iarchive ia(ifs);
+            ia & structs;  
+    }
+
+
     std::string convertToXRootD(std::string fname_orig){
         std::string fname_use = fname_orig;
         if(fname_orig.find("pnfs")!=std::string::npos){
