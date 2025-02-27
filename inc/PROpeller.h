@@ -70,8 +70,8 @@ namespace PROfit{
             // boost serialize save to file
             void save(const std::string& filename) const {
                 auto start = std::chrono::high_resolution_clock::now();
-                std::ofstream ofs(filename);
-                boost::archive::text_oarchive oa(ofs);
+                std::ofstream ofs(filename, std::ios::binary);
+                boost::archive::binary_oarchive oa(ofs);
                 oa << *this;
                 auto end = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> elapsed = end - start;
@@ -81,8 +81,8 @@ namespace PROfit{
             // Load from file
             void load(const std::string& filename) {
                 auto start = std::chrono::high_resolution_clock::now();
-                std::ifstream ifs(filename);
-                boost::archive::text_iarchive ia(ifs);
+                std::ifstream ifs(filename,std::ios::binary);
+                boost::archive::binary_iarchive ia(ifs);
                 ia >> *this;
                 auto end = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> elapsed = end - start;

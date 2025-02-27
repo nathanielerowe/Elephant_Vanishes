@@ -17,14 +17,14 @@ namespace PROfit {
 
 
     void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename) {
-            std::ofstream ofs(filename);
-            boost::archive::text_oarchive oa(ofs);
+            std::ofstream ofs(filename, std::ios::binary);
+            boost::archive::binary_oarchive oa(ofs);
             oa & structs;  
     }
 
     void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename) {
-            std::ifstream ifs(filename);
-            boost::archive::text_iarchive ia(ifs);
+            std::ifstream ifs(filename, std::ios::binary);
+            boost::archive::binary_iarchive ia(ifs);
             ia & structs;  
     }
 
