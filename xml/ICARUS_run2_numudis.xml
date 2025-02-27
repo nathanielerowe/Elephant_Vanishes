@@ -9,9 +9,10 @@
     <bins edges="0.3 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.25 1.5 2.0 3.0"/>
     <truebins min="0" max="2" nbins="100"/>
     <subchannel name="cos" plotname="Cosmics" color="#E105D2"/>
-    <subchannel name="nuecc" plotname="#nu_{e} CC" color="#0548E1"/>
     <subchannel name="nc" plotname="NC" color="#FF6961"/>
+    <subchannel name="nuecc" plotname="#nu_{e} CC" color="#0548E1"/>
     <subchannel name="numucc" plotname="#nu_{#mu} CC" color="#3D9432"/>
+
 </channel>
 
 <plotpot value="2e20"/>
@@ -122,11 +123,6 @@
          pdg_name              = "truePDG"
          additional_weight     = "CC && (truePDG == 14 || truePDG == -14)"
          />
-</MCFile>
-
-<MCFile treename="events/selectedNu" filename="selected_events.root" scale = "1.0" maxevents="50000" pot="2.8e20"> 
-    <friend treename="events/multisimTree" filename="selected_events.root"/>
-    <friend treename="events/multisigmaTree" filename="selected_events.root"/>
 <!-- Fitting numu dis only, so just set model rule for nue to no osc for now -->
      <branch
          associated_subchannel = "nu_ICARUS_numu_nuecc"
@@ -137,11 +133,6 @@
          pdg_name              = "truePDG"
          additional_weight     = "CC && (truePDG == 12 || truePDG == -12)"
          />
-</MCFile>
-
-<MCFile treename="events/selectedNu" filename="selected_events.root" scale = "1.0" maxevents="50000" pot="2.8e20"> 
-    <friend treename="events/multisimTree" filename="selected_events.root"/>
-    <friend treename="events/multisigmaTree" filename="selected_events.root"/>
 <!--
     Fitting numu dis only, so just set model rule for nc to just numu dis for now 
     Note: This assumes theta_mue and U_tau4 are both 0, for numu+nue fits theta_mue will not be 0 and we may not want to assume U_tau4 = 0 (see SBNfit)
