@@ -61,7 +61,6 @@ int PROconfig::LoadFromXML(const std::string &filename){
     tinyxml2::XMLDocument doc;
     doc.LoadFile(filename.c_str());
     bool loadOkay = !doc.ErrorID();
-    std::cout << "DOC ERROR IS " << doc.ErrorID() << std::endl;
 
     bool use_universe = 1; //FIX
     try{
@@ -554,7 +553,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     systematic_name.push_back(bsyst);	
 
                 }
-                log<LOG_DEBUG>(L"%1% || Branch syst %2%") %__func__ % bsyst;						
+                //log<LOG_DEBUG>(L"%1% || Branch syst %2%") %__func__ % bsyst;						
 
                 //std::string chk_wei = badditional_weight;
                 if(badditional_weight == NULL || strcmp(badditional_weight, "") == 0){ 
