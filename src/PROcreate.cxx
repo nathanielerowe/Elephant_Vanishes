@@ -517,7 +517,7 @@ namespace PROfit {
             for(int ib = 0; ib != num_branch; ++ib) {
                 const auto& branch_variable = inconfig.m_branch_variables[fid][ib];
                 auto& f_weight = f_event_weights[fid][0];
-                auto& f_knob = f_knob_vals[fid][ib];
+                auto& f_knob = f_knob_vals[fid][0];
 
                 if(branch_variable->GetIncludeSystematics()){
                     for(const auto& it : f_weight){
