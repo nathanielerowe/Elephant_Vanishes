@@ -52,6 +52,7 @@ namespace PROfit{
         std::vector<float> knob_index;
 
         int index;
+        uint32_t hash;
         std::vector<std::vector<std::array<float, 4>>> spline_coeffs;
 
         //std::vector<PROspec> m_multi_spec;
@@ -74,13 +75,14 @@ namespace PROfit{
             ar & spline_coeffs;
             ar & p_cv;
             ar & p_multi_spec;  
+            ar & hash;
         }
 
 
         SystStruct() = default;
 
         /*Function: Constructor for a blank systematic*/
-        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},{},0){}
+        SystStruct(const std::string& in_systname, const int in_n_univ): SystStruct(in_systname, in_n_univ, "multisim", "1",{},{},0){hash=-1;}
 
         /*Function: Constructor for a systematic from knobs*/
         SystStruct(const std::string& in_systname, const int in_n_univ, const std::string& in_mode, const std::string& in_formula, const std::vector<float>& in_knobval, const std::vector<float>& in_knob_index, const int in_index): systname(in_systname), n_univ(in_n_univ), mode(in_mode), weight_formula(in_formula), knobval(in_knobval), knob_index(in_knob_index), index(in_index){}
@@ -120,6 +122,11 @@ namespace PROfit{
 
         //---------- Helper Functions --------
         //---------- Helper Functions --------
+
+        /*Function to set hash*/
+        inline
+            void SetHash(uint32_t inhash){ hash=inhash;}
+
 
         /* Return number of universes for this systematic */
         inline

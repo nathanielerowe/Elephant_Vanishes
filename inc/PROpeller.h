@@ -30,6 +30,7 @@ namespace PROfit{
                     ar & true_bin_indices;
                     ar & hist;
                     ar & histLE;
+                    ar & hash;
                 }
 
         public:
@@ -44,6 +45,7 @@ namespace PROfit{
                 bin_indices.clear();
                 model_rule.clear();
                 true_bin_indices.clear();
+                hash = -1;
             };
 
             /*Function: Primary Constructor from raw std::vectors of MC values */ 
@@ -52,6 +54,7 @@ namespace PROfit{
                 hist = Eigen::MatrixXf::Constant(config.m_num_truebins_total, config.m_num_bins_total, 0);
                 for(size_t i = 0; i < bin_indices.size(); ++i)
                     hist(true_bin_indices[i], bin_indices[i]) += added_weights[i];
+                hash = config.hash;
             };
 
             /* the Core MC is saved in these vectors.*/
@@ -65,7 +68,7 @@ namespace PROfit{
             std::vector<float> pcosth;
             Eigen::MatrixXf    hist;
             Eigen::VectorXf    histLE;
-
+            uint32_t           hash;
 
             // boost serialize save to file
             void save(const std::string& filename) const {

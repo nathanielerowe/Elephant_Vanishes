@@ -26,10 +26,12 @@
 
 //PROfit
 #include "PROlog.h"
+#include "MurmurHash3.h"
 
 //ROOT
 #include "TTreeFormula.h"
 #include "TColor.h"
+
 
 /*eweight_type here to switch between uboone style "float" and SBNcode style "float"  */
 #define TYPE_FLOAT
@@ -222,7 +224,7 @@ namespace PROfit{
             /*
              * Function: Use TinyXML2 to load XML */
             int LoadFromXML(const std::string & filename);
-
+            uint32_t hash;
 
             std::string m_xmlname;	
             float m_plot_pot;
@@ -383,6 +385,10 @@ namespace PROfit{
 
             /* Function: Hex to int*/
             int HexToROOTColor(const std::string& hexColor) const;
+
+            /* Calculate hash of unique properties of XML config for PROpeller */
+            uint32_t CalcHash() const;
+                    
 
     };
 
