@@ -25,22 +25,61 @@ log_level_t GLOBAL_LEVEL = LOG_DEBUG;
 int main(int argc, char* argv[])
 {
     gStyle->SetOptStat(0);
-    CLI::App app{"PROfit PROfile"}; 
+    CLI::App app{"PROfit, a PROfessional, PROductive fitting and oscillation framework. Together let's minimize PROfit!"}; 
 
     // Define options
     std::string xmlname = "NULL.xml", filename = "profit"; 
     std::array<float, 2> injected_pt{0, 0};
     std::map<std::string, float> injected_systs;
-    int maxevents = 100;
+   
+    std::string analysis_tag;
     size_t nthread = 1;
-    //floats
-    app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
-    app.add_option("-m,--max", maxevents, "Max number of events to run over.");
-    app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].");
-    app.add_option("-o,--outfile", filename, "Output filename")->default_str("profit");
-    app.add_option("-t, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
-    app.add_option("--inject", injected_pt, "Physics parameters to inject as true signal.")->default_str("0 0");
+   
 
+    //Global Arguments for all PROfit enables subcommands.
+    app.add_option("-x,--xml", xmlname, "Input PROfit XML configuration file.")->required();
+    app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4]->[Error,Warning,Info,Debug].")->default_val(GLOBAL_LEVEL);
+    app.add_option("-t,--tag", analysis_tag, "Analysis Tag used for output identification.")->default_str("PROfit");
+    app.add_option("-n, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
+    app.add_option("-m,--max", maxevents, "Max number of events to run over.");
+    app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
+    app.add_option("--inject", injected_pt, "Physics parameters to inject as true signal.")->default_str("0 0");// HOW TO
+    app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
+    app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
+    app.add_flag("--scale-by-width", cv_scale, "Scale histgrams by 1/(bin width).");
+    app.add_flag("--event-by-event", eventbyevent, "Do you want to weight event-by-event?");
+    app.add_flag("--statonly", statonly, "Run a stats only surface instead of fitting systematics");
+    app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
+    app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
+    app.add_flag("--force",force,"Force loading binary data even if hash is incorrect (Be Careful!)");
+
+
+    //PROcess, into binary data [Do this once first!]
+    CLI::App *process_command = app.add_subcommand("process", "PROcess the MC and systematics in root files into binary data for future rapid loading.");
+
+    //PROsurf, make a 2D surface scan of physics parameters
+    CLI::App *surface_command = app.add_subcommand("surface", "Make a 2D surface scan of two physics parameters, profiling over all others.");
+    surface_command->add_option("-g, --grid", grid_size, "Set grid size. If one dimension passed, grid assumed to be square, else rectangular")->expected(0, 2)->default_val(40);
+    CLI::Option *xlim_opt = surface_command->add_option("--xlims", xlims, "Limits for x-axis");
+    CLI::Option *ylim_opt = surface_command->add_option("--ylims", ylims, "Limits for y-axis");
+    surface_command->add_option("--xlo", xlo, "Lower limit for x-axis")->excludes(xlim_opt)->default_val(1e-4);
+    surface_command->add_option("--xhi", xhi, "Upper limit for x-axis")->excludes(xlim_opt)->default_val(1);
+    surface_command->add_option("--ylo", ylo, "Lower limit for y-axis")->excludes(ylim_opt)->default_val(1e-2);
+    surface_command->add_option("--yhi", yhi, "Upper limit for y-axis")->excludes(ylim_opt)->default_val(1e2);
+    surface_command->add_option("--xlabel", xlabel, "X-axis label")->default_val("sin^{2}2#theta_{#mu#mu}");
+    surface_command->add_option("--ylabel", ylabel, "Y-axis label")->default_val("#Deltam^{2}_{41}");
+    surface_command->add_flag("--logx,!--linx", logx, "Specify if x-axis is logarithmic or linear (default log)");
+    surface_command->add_flag("--logy,!--liny", logy, "Specify if y-axis is logarithmic or linear (default log)");
+
+    //PROfile, make N profile'd chi^2 for each physics and nuisence parameters
+    CLI::App *profile_command = app.add_subcommand("profile", "Make a 1D profiled chi2 for each physics and nuisence parameter.");
+
+    //PROplot, plot things
+    CLI::App *plot_command = app.add_subcommand("prot", "Make plots of CV, or injected point with error bars and covariance.");
+    plot_command->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
+
+
+    
     CLI11_PARSE(app, argc, argv);
 
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, outfile: %3%, nthread: %4% ") % __func__ % xmlname.c_str() % filename.c_str() % nthread ;
