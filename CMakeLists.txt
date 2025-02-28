@@ -109,10 +109,11 @@ if(HDF5_FOUND)
     link_libraries(${HDF5_LIBRARIES})
 endif()
 
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS serialization)
 if(Boost_FOUND)
     include_directories (SYSTEM ${Boost_INCLUDE_DIR})
 endif()
+add_compile_options(-gdwarf-4)
 
 ###### ROOT ROOT ##############33
 

@@ -21,35 +21,13 @@ PROconfig::PROconfig(const std::string &xml):
     m_write_out_variation(false), 
     m_form_covariance(true),
     m_write_out_tag("UNSET_DEFAULT"),
-    m_num_mcgen_files(0)
+    m_num_mcgen_files(0)    
 {
 
     LoadFromXML(m_xmlname);
 
+    hash = PROconfig::CalcHash();
     construct_collapsing_matrix();
-    //A matrix for collapsing the full-vector
-    //left multiply this matrix by the full-vector to get collapsed vector
-    //TODO: check corr=init for multi detector
-
-
-    /*collapsingVector = Eigen::MatrixXf::Zero(num_bins_total,num_bins_total_collapsed);
-
-      for(int im = 0; im < num_modes; im++){
-      for(int id =0; id < num_detectors; id++){
-      int edge = id*num_bins_detector_block + num_bins_mode_block*im; // This is the starting index for this detector
-      int corr = edge;
-      for(int ic = 0; ic < num_channels; ic++){
-      int corner=edge;
-      for(int j=0; j< num_bins.at(ic); j++){
-      for(int sc = 0; sc < num_subchannels.at(ic); sc++){
-      int place = j+sc*num_bins[ic]+corner;
-      collapsingVector(place,corr)=1;
-      }
-      }
-      corr++;
-      }
-      }
-      }*/
 
 }
 
@@ -616,7 +594,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 pBranch = pBranch->NextSiblingElement("branch");
             }
-            
+
             m_mcgen_additional_weight_name.push_back(TEMP_additional_weight_name);
             m_mcgen_additional_weight_bool.push_back(TEMP_additional_weight_bool);
             m_branch_variables.push_back(TEMP_branch_variables);
@@ -1399,6 +1377,50 @@ int PROconfig::HexToROOTColor(const std::string& hexColor) const{
     ss << std::hex << hexColor.substr(5, 2);
     ss >> b;
     return TColor::GetColor(r, g, b);
+}
+
+uint32_t PROconfig::CalcHash() const{
+    int fixed_seed = 404;
+    uint32_t hash;
+    std::ostringstream unique_string;
+
+    //Very quik hash, not including all important bits but a good start for now
+    auto vecToString = [](const auto& vec) -> std::string {
+        std::ostringstream oss;
+        for (const auto& v : vec) {
+            oss << v;
+        }
+        return oss.str();
+    };
+
+    unique_string << vecToString(m_fullnames);
+    for (const auto& vec : m_channel_bin_edges) 
+        unique_string << vecToString(vec);
+
+    for (const auto& vec : m_channel_truebin_edges) 
+        unique_string << vecToString(vec);
+
+    for (const auto& vec : m_mcgen_additional_weight_name) 
+        unique_string << vecToString(vec);
+
+    for (const auto& vec : m_mcgen_eventweight_branch_names) 
+        unique_string << vecToString(vec);
+
+    unique_string << vecToString(m_mcgen_variation_allowlist);
+
+    for(const auto& vec: m_branch_variables){
+        for(const auto& br: vec){
+            unique_string << br->name << br->associated_hist << br->associated_systematic << br->true_param_name<< br->true_L_name << br->model_rule;
+        }
+    }
+   
+    log<LOG_DEBUG>(L"%1% || MurmurHash input uniue string %2% ") % __func__ % unique_string.str().c_str();
+
+    MurmurHash3_x86_32(unique_string.str().c_str(), unique_string.str().size(), fixed_seed, &hash);
+    
+    log<LOG_INFO>(L"%1% || MurmurHash output hash %2% ") % __func__ % hash;
+
+    return hash;
 }
 
 

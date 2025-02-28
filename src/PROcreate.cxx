@@ -16,6 +16,19 @@ namespace PROfit {
 
 
 
+    void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename) {
+            std::ofstream ofs(filename, std::ios::binary);
+            boost::archive::binary_oarchive oa(ofs);
+            oa & structs;  
+    }
+
+    void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename) {
+            std::ifstream ifs(filename, std::ios::binary);
+            boost::archive::binary_iarchive ia(ifs);
+            ia & structs;  
+    }
+
+
     std::string convertToXRootD(std::string fname_orig){
         std::string fname_use = fname_orig;
         if(fname_orig.find("pnfs")!=std::string::npos){
@@ -595,8 +608,10 @@ namespace PROfit {
 
 
         //sanity check 
-        for(const auto& s : syst_vector)
+        for(auto& s : syst_vector){
             s.SanityCheck();
+            s.SetHash(inconfig.hash);
+        }
 
 
         //create 2D multi-universe spec.
@@ -676,13 +691,15 @@ namespace PROfit {
 
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    log<LOG_DEBUG>(L"%1% ||Event: %4% Branch %2% / %3% ") % __func__ % ib % num_branch % i;
                     process_cafana_event(inconfig, branches[ib], f_event_weights[fid][0], inconfig.m_mcgen_pot[fid], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
                 } 
 
             } //end of entry loop
 
         } //end of file loop
+
+        //ensure hash is correctly assigned
+        inprop.hash=inconfig.hash;
 
         time_t time_took = time(nullptr) - start_time;
         log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
@@ -922,13 +939,11 @@ namespace PROfit {
                 if(i%1000==0)log<LOG_DEBUG>(L"%1% || ---- universe %2%/%3% ") % __func__  % files[fid]->GetName() % nevents ;
 
                 for(int ib = 0; ib != num_branch; ++ib) {
-                    log<LOG_DEBUG>(L"%1% || BranchEntryLoop %2% /%3% ") % __func__ % ib % num_branch ;
                     float reco_value = branches[ib]->GetValue<float>();
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
                     
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
-                    log<LOG_DEBUG>(L"%1% || global bin %2%") % __func__ %  global_bin;
                     float true_param = branches[ib]->GetTrueValue<float>();
                     float baseline = branches[ib]->GetTrueL<float>();
                     float pmom = branches[ib]->GetTrueLeadProtonMom<float>();
@@ -936,8 +951,6 @@ namespace PROfit {
                     int global_true_bin = FindGlobalTrueBin(inconfig, baseline / true_param, subchannel_index[ib]);
                     int model_rule = branches[ib]->GetModelRule();
 
-                    log<LOG_DEBUG>(L"%1% || Reco and True E values: %2% and  %3%") % __func__ % reco_value % true_param;
-                    log<LOG_DEBUG>(L"%1% || Proton mom and costh values: %2% and  %3%") % __func__ % pmom % pcosth;
 
                     if(additional_weight == 0 || global_bin < 0)
                         continue;

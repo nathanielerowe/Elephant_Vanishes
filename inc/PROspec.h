@@ -20,6 +20,7 @@
 
 // PROfit
 #include "PROconfig.h"
+#include "PROserial.h"
 
 namespace PROfit{
 
@@ -39,6 +40,7 @@ namespace PROfit{
             Eigen::VectorXf spec;
             Eigen::VectorXf error;
 
+            
 
             //---- private helper function --------
             // Function: given two eigenvector of same dimension, calculate element-wise calculation of sqrt(a**2 + b**2) 
@@ -51,6 +53,14 @@ namespace PROfit{
             Eigen::VectorXf eigenvector_multiplication(const Eigen::VectorXf& a, const Eigen::VectorXf& b) const;
 
         public:
+
+            template<class Archive>
+            void serialize(Archive &ar, [[maybe_unused]] const unsigned int version) {
+                ar & nbins;
+                ar & spec;
+                ar & error;
+            }
+
 
             //Constructors
             PROspec():nbins(0) {}

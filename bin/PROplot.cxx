@@ -47,6 +47,9 @@ int main(int argc, char* argv[])
     std::map<std::string, float> apply_shift;
     std::vector<std::string> syst_list, systs_excluded;
     bool eventbyevent = false, with_splines = false, all_scale = false, cv_scale = false, err_scale = false, osc_scale = false;
+    bool force = false;
+    std::string load_tag= "";
+    std::string save_tag= "";
 
     CLI::App *cv_command = app.add_subcommand("cv", "Make CV histograms");
     CLI::App *cov_command = app.add_subcommand("covariance", "Make 2D histogram of covariance matrix");
@@ -59,10 +62,12 @@ int main(int argc, char* argv[])
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.")->required();
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4].")->default_val(LOG_WARNING);
     app.add_option("-o,--output", filename, "Output Filename.")->default_val("PROplot.pdf");
+    app.add_option("-l,--load",load_tag,"Load not from root, but from precalculated PROserialized PROpeller (load_tag_prop.bin) and Systs (load_tag_syst.bin)")->default_val("");
+    app.add_option("-s,--save",save_tag,"While running save PROpeller (save_tag_prop.bin) and Systs (save_tag_syst.bin)")->default_val("");
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
-
-    app.add_flag("--event-by-event",    eventbyevent, "Do you want to weight event-by-event?");
+    app.add_flag("--force",force,"Force loading binary data even if hash is incorrect (Be Careful!)");
+    app.add_flag("--event-by-event", eventbyevent, "Do you want to weight event-by-event?");
 
     cv_command->add_flag("--scale-by-width", cv_scale, "Scale histgrams by 1/(bin width).");
     errband_command->add_flag("--scale-by-width", err_scale, "Scale histgrams by 1/(bin width).");
@@ -91,8 +96,32 @@ int main(int argc, char* argv[])
 
     PROpeller prop;
     std::vector<SystStruct> systsstructs;
-    PROcess_CAFAna(config, systsstructs, prop);
 
+   
+    //input/output logic
+    if(load_tag.empty()){
+        log<LOG_ERROR>(L"%1% || Processing PROpeller and PROsysts from XML defined root files, and saving to binary output also: %2%") % __func__ % (load_tag+".prop").c_str();
+        PROcess_CAFAna(config, systsstructs, prop);
+        if(!save_tag.empty()){
+            prop.save(save_tag+"_prop.bin");    
+            saveSystStructVector(systsstructs,save_tag+"_syst.bin");
+        }
+    }else{
+        log<LOG_ERROR>(L"%1% || Loading PROpeller and PROsysts from precalc binary input: %2%") % __func__ % (load_tag+".prop").c_str();
+        prop.load(load_tag+"_prop.bin");
+        loadSystStructVector(systsstructs, load_tag+"_syst.bin");
+
+        log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) are here. ") % __func__ %  config.hash % prop.hash % systsstructs[0].hash;
+        if(config.hash!=prop.hash && config.hash!=systsstructs.front().hash){
+            if(force){
+                 log<LOG_WARNING>(L"%1% || WARNING config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().hash;
+                 log<LOG_WARNING>(L"%1% || WARNING Be SUPER clear and happy you understand what your doing.  ") % __func__;
+            }else{
+                log<LOG_ERROR>(L"%1% || ERROR config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().hash;
+                return 1;
+            }
+        }
+     }
     PROsyst systs(systsstructs);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
