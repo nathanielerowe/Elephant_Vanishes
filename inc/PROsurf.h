@@ -16,8 +16,10 @@
 #include <future>
 
 #include "TGraph.h"
+#include "TGraphAsymmErrors.h"
 #include "TMarker.h"
 #include "TLine.h"
+#include "TText.h"
 
 namespace PROfit {
 

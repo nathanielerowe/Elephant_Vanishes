@@ -376,118 +376,92 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     std::vector<float> bfvalues;
     std::vector<float> values1_up;
     std::vector<float> values1_down;
+    std::vector<float> values1_errup;
+    std::vector<float> values1_errdown;
 
+    std::vector<float> barvalues;
+    std::vector<float> barvalues_err;
+      
     std::vector<float> values2_up;
     std::vector<float> values2_down;
 
-    log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two igma turned on? : %2% ") % __func__ % twosig;
+
+    log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two sigma turned on? : %2% ") % __func__ % twosig;
 
     int count = 0;
     for(auto &g:graphs){
         //if(metric->GetModel().nparams)continue;
         float range = count == 0 ? 2.0 : count == 1 ? 1.0 : 3.0;
         std::vector<float> tmp = findMinAndBounds(g.get(),1.0, range);
+	barvalues.push_back(float(count)+0.5);
+	barvalues_err.push_back(0.4);
         bfvalues.push_back(tmp[0]);
-        values1_down.push_back(tmp[1]);
-        values1_up.push_back(tmp[2]);
-
+	values1_up.push_back(tmp[1]);
+	values1_down.push_back(tmp[2]);
+	values1_errdown.push_back(abs(tmp[1]-tmp[0]));
+        values1_errup.push_back(abs(tmp[2]-tmp[0]));
+	log<LOG_DEBUG>(L"%1% || Results of findMinAndBounds : %2% %3% %4% ") % __func__ % tmp[0] % tmp[1] % tmp[2];
+	log<LOG_DEBUG>(L"%1% || Barvalues : %2% %3% %4% %5%") % __func__ % count % barvalues[count] % barvalues_err[count] % barvalues_err[count];
+	log<LOG_DEBUG>(L"%1% || Bfvalues : %2% %3% ") % __func__ % count % bfvalues[count];
+	log<LOG_DEBUG>(L"%1% || RangeValues : %2% %3% %4% ") % __func__ % count % values1_down[count] % values1_up[count];
+	log<LOG_DEBUG>(L"%1% || ErrValues : %2% %3% %4% ") % __func__ % count % values1_errdown[count] % values1_errup[count];
         if(twosig){
-            std::vector<float> tmp2 = findMinAndBounds(g.get(),4.0,3.0);
-            values2_down.push_back(tmp2[1]);
-            values2_up.push_back(tmp2[2]);
+            std::vector<float> tmp2 = findMinAndBounds(g.get(),4.0,range);
+            values2_down.push_back(abs(tmp2[1]-tmp[0]));
+            values2_up.push_back(abs(tmp2[2]-tmp[0]));
         }
         count++;
     }
 
     
-    log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% ") % __func__ % nBins % bfvalues.size() % values1_down.size() % values1_up.size() ;
+    log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% %6%") % __func__ % nBins % barvalues.size() % bfvalues.size() % values1_down.size() % values1_up.size() ;
 
     float minVal = *std::min_element(values1_down.begin(), values1_down.end());
     float maxVal = *std::max_element(values1_up.begin(), values1_up.end());
 
-    float wid = twosig? 0.4  : 0.8;
-    float off1 = twosig?0.1   : 0.0;
-    float off2 = twosig?0.5  : 0.0;
+    TGraphAsymmErrors *h1 = new TGraphAsymmErrors(barvalues.size(),barvalues.data(), bfvalues.data(), barvalues_err.data(), barvalues_err.data(), values1_errdown.data(), values1_errup.data());
+    h1->SetFillColor(kBlue-7);
+    h1->SetStats(0);
+    h1->SetMinimum(min(-1.2,minVal*1.2));
+    h1->SetMaximum(max(1.2,maxVal*1.2));
 
-    TH1D *h1up = new TH1D("hup", "Bar Chart", nBins, 0, nBins);
-    TH1D *h1down = new TH1D("hdown", "Bar Chart", nBins, 0, nBins);
+    h1->GetXaxis()->SetNdivisions(barvalues.size());  // Set number of tick marks
+    h1->GetXaxis()->SetLabelSize(0);  // Hide default numerical labels
 
-    TH1D *h2up = new TH1D("h2up", "Bar Chart", nBins, 0, nBins);
-    TH1D *h2down = new TH1D("h2down", "Bar Chart", nBins, 0, nBins);
+    h1->SetTitle("");
+    h1->Draw("A2");
+    h1->GetYaxis()->SetTitle("#sigma Shift");
 
-
-    h1up->SetFillColor(kBlue-7);
-    h1up->SetBarWidth(wid);
-    h1up->SetBarOffset(off1);
-    h1up->SetStats(0);
-    h1up->SetMinimum(minVal*1.2);
-    h1up->SetMaximum(maxVal*1.2);
-
-    h1down->SetFillColor(kBlue-7);
-    h1down->SetBarWidth(wid);
-    h1down->SetBarOffset(off1);
-    h1down->SetStats(0);
-
-    h2up->SetFillColor(38);
-    h2up->SetBarWidth(wid);
-    h2up->SetBarOffset(off2);
-    h2up->SetStats(0);
-
-    h2down->SetFillColor(38);
-    h2down->SetBarWidth(wid);
-    h2down->SetBarOffset(off2);
-    h2down->SetStats(0);
-
-
-
-
-    // Fill the histogram with values from the vector
-    for (int i = 0; i < nBins; ++i) {
-        h1up->SetBinContent(i+1, values1_up[i]); 
-        h1down->SetBinContent(i+1, values1_down[i]); 
-
-       log<LOG_DEBUG>(L"%1% || on spline %2% BF down up : %3% %4% %5% ") % __func__ % i % bfvalues[i] % values1_down[i] % values1_up[i] ;
-        if(twosig){
-            h2up->SetBinContent(i+1, values2_up[i]); 
-            h2down->SetBinContent(i+1, values2_down[i]); 
-        }
-
-        h1up->GetXaxis()->SetBinLabel(i+1,names[i].c_str());
-
-    }
-    h1up->SetTitle("");
-    h1up->Draw("b");
-    h1up->GetYaxis()->SetTitle("#sigma Shift");
-
-    h1down->Draw("b same");
-    if(twosig){
-        h2up->Draw("b same");
-        h2down->Draw("b same");
+    float y_min = h1->GetYaxis()->GetXmin();  // Get Y-axis min value for label positioning
+    for (size_t i = 0; i < barvalues.size(); ++i) {
+      TText* text = new TText(barvalues[i], y_min - 0.5, names[i].c_str());  // Position text below axis
+      text->SetTextAlign(22);  // Center align the text
+      text->SetTextSize(0.03); // Adjust text size
+      text->SetTextAngle(45); //Angle the text
+      text->Draw();
     }
 
-    TLine l(0,0,nBins,0);
+    c2->Update();
+
+    if (twosig) {
+      TGraphAsymmErrors *h2 = new TGraphAsymmErrors(barvalues.size(),barvalues.data(), bfvalues.data(), barvalues_err.data(), barvalues_err.data(), values2_down.data(), values2_up.data());
+      h2->SetFillColor(38);
+      h2->SetStats(0);
+      h2->SetTitle("");
+      h2->Draw("A2");
+      h2->GetYaxis()->SetTitle("");
+    }
+    
+    
+    TLine l(0,0,nBins+0.5,0);
     l.SetLineStyle(2);
     l.SetLineColor(kBlack);
     l.SetLineWidth(1);
     l.Draw();
 
-    TLine l1(0,1,nBins,1);
-    l1.SetLineStyle(2);
-    l1.SetLineColor(kBlack);
-    l1.SetLineWidth(1);
-    l1.Draw();
-
-    TLine l2(0,-1,nBins,-1);
-    l2.SetLineStyle(2);
-    l2.SetLineColor(kBlack);
-    l2.SetLineWidth(1);
-    l2.Draw();
-
-
-
     for (int i = 0; i < nBins; ++i) {
-        TMarker* star = new TMarker(i + wid/2.0, bfvalues[i], 29);
-        star->SetMarkerSize(2); 
+        TMarker* star = new TMarker(i+0.5, bfvalues[i], 29);
+        star->SetMarkerSize(0.5); 
         star->SetMarkerColor(kBlack); 
         star->Draw();
     }
@@ -496,6 +470,6 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     c2->SaveAs((filename+"_1sigma.pdf").c_str(),"pdf");
     delete c2;
 
-    return ;
+    return;
 }
 
