@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
 
 
     CLI11_PARSE(app, argc, argv);
-
+    log<LOG_INFO>(L" %1% ") % getIcon().c_str()  ;
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, nthread: %4% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % nthread ;
 
     //Initilize configuration from the XML;
@@ -295,7 +295,8 @@ int main(int argc, char* argv[])
         //******************** PROsurf PROsurf PROsurf **************************
         //***********************************************************************
         //***********************************************************************
-    }else if(*surface_command){
+    }
+    if(*surface_command){
 
         if (grid_size.empty()) {
             grid_size = {40, 40};
@@ -356,7 +357,9 @@ int main(int argc, char* argv[])
         //******************** PROplot PROplot PROplot **************************
         //***********************************************************************
         //***********************************************************************
-    }else if(*proplot_command){
+    }
+    if(*proplot_command){
+
 
         TCanvas c;
 
@@ -714,15 +717,13 @@ int main(int argc, char* argv[])
         //******************** TEST AREA TEST AREA     **************************
         //***********************************************************************
         //***********************************************************************
-    }else if(*protest_command){
+    }
+    if(*protest_command){
         log<LOG_INFO>(L"%1% || PROtest. Place anything here, a playground for testing things .") % __func__;
 
         //***************************** END *********************************
-    }else{
-        log<LOG_WARNING>(L"%1% || Please pass a subcommand to tell PROfit to do something! see --help for ideas.") % __func__;
-        return 1;
     }
-
+   
     delete metric;
     
     return 0;
