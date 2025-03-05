@@ -435,9 +435,9 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     float y_min = h1->GetYaxis()->GetXmin();  // Get Y-axis min value for label positioning
     for (size_t i = 0; i < barvalues.size(); ++i) {
       TText* text = new TText(barvalues[i], y_min - 0.5, names[i].c_str());  // Position text below axis
-      text->SetTextAlign(22);  // Center align the text
+      text->SetTextAlign(31);  // Center align the text
       text->SetTextSize(0.03); // Adjust text size
-      text->SetTextAngle(45); //Angle the text
+      text->SetTextAngle(-45); //Angle the text
       text->Draw();
     }
 
