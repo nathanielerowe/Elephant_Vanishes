@@ -35,7 +35,7 @@
 
 using namespace PROfit;
 
-log_level_t GLOBAL_LEVEL = LOG_DEBUG;
+log_level_t GLOBAL_LEVEL = LOG_INFO;
 
 //some helper functions for PROplot
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
