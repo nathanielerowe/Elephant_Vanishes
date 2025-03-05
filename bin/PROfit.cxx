@@ -17,6 +17,7 @@
 #include "PROtocall.h"
 #include "TH2D.h"
 #include "TStyle.h"
+#include <filesystem>
 
 using namespace PROfit;
 
@@ -28,13 +29,13 @@ int main(int argc, char* argv[])
     CLI::App app{"PROfit, a PROfessional, PROductive fitting and oscillation framework. Together let's minimize PROfit!"}; 
 
     // Define options
-    std::string xmlname = "NULL.xml", filename = "profit"; 
-    std::array<float, 2> injected_pt{0, 0};
+    std::string xmlname = "NULL.xml"; 
+    std::vector<float> osc_params;
     std::map<std::string, float> injected_systs;
-   
-    std::string analysis_tag;
+
+    std::string analysis_tag = "PROfit"
     size_t nthread = 1;
-   
+
 
     //Global Arguments for all PROfit enables subcommands.
     app.add_option("-x,--xml", xmlname, "Input PROfit XML configuration file.")->required();
@@ -43,7 +44,7 @@ int main(int argc, char* argv[])
     app.add_option("-n, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
-    app.add_option("--inject", injected_pt, "Physics parameters to inject as true signal.")->default_str("0 0");// HOW TO
+    app.add_option("--inject", osc_params, "Physics parameters to inject as true signal.")->expected(-1);// HOW TO
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
     app.add_flag("--scale-by-width", cv_scale, "Scale histgrams by 1/(bin width).");
@@ -79,147 +80,239 @@ int main(int argc, char* argv[])
     plot_command->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
 
 
-    
+
     CLI11_PARSE(app, argc, argv);
 
-    log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, outfile: %3%, nthread: %4% ") % __func__ % xmlname.c_str() % filename.c_str() % nthread ;
+    log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, nthread: %4% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % nthread ;
 
     //Initilize configuration from the XML;
-    PROconfig myConf(xmlname);
+    PROconfig config(xmlname);
 
     //Inititilize PROpeller to keep MC
-    PROpeller myprop;
+    PROpeller prop;
 
     //Initilize objects for systematics storage
     std::vector<SystStruct> systsstructs;
 
-    //Process the CAF files to grab and fill all SystStructs and PROpeller
-    PROcess_CAFAna(myConf, systsstructs, myprop);
+    //input/output logic
+    std::string propBinName = analysis_tag+"_prop.bin";
+    std::string systBinName = analysis_tag+"_prop.bin";
+
+    if((*process_command) || (!std::filesystem::exists(systBinName) || !std::filesystem::exists(propBinName))  ){
+        log<LOG_INFO>(L"%1% || Processing PROpeller and PROsysts from XML defined root files, and saving to binary output also: %2%") % __func__ % propBinName.c_str();
+        //Process the CAF files to grab and fill all SystStructs and PROpeller
+        PROcess_CAFAna(config, systsstructs, prop);
+        prop.save(propBinName);    
+        saveSystStructVector(systsstructs,systBinName);
+        log<LOG_INFO>(L"%1% || Done processing PROpeller and PROsysts from XML defined root files, and saving to binary output also: %2%") % __func__ % propBinName.c_str();
+        return 0;
+    }else{
+        log<LOG_INFO>(L"%1% || Loading PROpeller and PROsysts from precalc binary input: %2%") % __func__ % propBinName.c_str();
+        prop.load(propBinName);
+        loadSystStructVector(systsstructs, systBinName);
+
+        log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) are here. ") % __func__ %  config.hash % prop.hash % systsstructs[0].hash;
+        if(config.hash!=prop.hash && config.hash!=systsstructs.front().hash){
+            if(force){
+                log<LOG_WARNING>(L"%1% || WARNING config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().hash;
+                log<LOG_WARNING>(L"%1% || WARNING But we are forcing ahead, be SUPER clear and happy you understand what your doing.  ") % __func__;
+            }else{
+                log<LOG_ERROR>(L"%1% || ERROR config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().hash;
+                return 1;
+            }
+        }
+    }
 
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(systsstructs);
+    std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
-    //Define the model (currently 3+1 SBL)
-    //PROsc osc(myprop);
-    std::unique_ptr<PROmodel> model = get_model_from_string(myConf.m_model_tag, myprop);
-
-    Eigen::VectorXf pparams{{std::log10(injected_pt[0]), std::log10(injected_pt[1])}};
-    log<LOG_INFO>(L"%1% || PROfit Injected point: sinsq2t  %2% dmsq %3%") % __func__ % injected_pt[0] % injected_pt[1] ;
-    PROspec data = injected_pt[0] != 0 && injected_pt[1] != 0 ? 
-        FillRecoSpectra(myConf, myprop, systs, *model, pparams, true) :
-        FillCVSpectrum(myConf, myprop, true);
-    Eigen::VectorXf data_vec = CollapseMatrix(myConf, data.Spec());
-    Eigen::VectorXf err_vec_sq = data.Error().array().square();
-    Eigen::VectorXf err_vec = CollapseMatrix(myConf, err_vec_sq).array().sqrt();
-    data = PROspec(data_vec, err_vec);
-
-    Eigen::VectorXf cv_spec = CollapseMatrix(myConf, FillCVSpectrum(myConf, myprop, true).Spec());
-
-    TH1D cv_hist("cv", "CV", myConf.m_num_bins_total_collapsed, myConf.m_channel_bin_edges[0].data());
-    TH1D data_hist("dh", "Data", myConf.m_num_bins_total_collapsed, myConf.m_channel_bin_edges[0].data());
-    for(size_t i = 0; i < myConf.m_num_bins_total_collapsed; ++i) {
-        cv_hist.SetBinContent(i+1, cv_spec(i));
-        data_hist.SetBinContent(i+1, data_vec(i));
-        data_hist.SetBinError(i+1, std::sqrt(data_vec(i)));
+    if(syst_list.size()) {
+        systs = systs.subset(syst_list);
+    } else if(systs_excluded.size()) {
+        systs = systs.excluding(systs_excluded);
     }
 
-    //PROfile(myConf, myprop, systs, osc, data, "profit_test", true);
+    if(!osc_params.size()) {
+        log<LOG_ERROR>(L"%1% || Expected %2% physics parameters to be provided for oscillation plot.")
+            % __func__ % model->nparams;
+        exit(EXIT_FAILURE);
+    }
+    Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
+    if(osc_params.size()) {
+        if(osc_params.size() != model->nparams) {
+            log<LOG_ERROR>(L"%1% || Incorrect number of physics parameters provided. Expected %2%, found %3%.")
+                % __func__ % model->nparams % osc_params.size();
+            exit(EXIT_FAILURE);
+        }
+        for(size_t i = 0; i < osc_params.size(); ++i) {
+            pparams(i) = std::log10(osc_params[i]);
+        }
+    }
 
-    PROchi chi("", myConf, myprop, &systs, *model, data, PROfit::PROchi::BinnedChi2);
+    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
+    for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
+    for(const auto& [name, shift]: injected_systs) {
+        log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
+        auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
+        if(it == systs.spline_names.end()) {
+            log<LOG_ERROR>(L"%1% || Error: Unrecognized spline %2%. Ignoring this injected shift.") % __func__ % name.c_str();
+            continue;
+        }
+        int idx = std::distance(systs.spline_names.begin(), it);
+        allparams(idx) = shift;
+    }
 
+    //Create CV or injected data spectrum for all subsequent steps
+    PROspec data = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
+    Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
+    Eigen::VectorXf err_vec_sq = data.Error().array().square();
+    Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+    data = PROspec(data_vec, err_vec);
+
+
+    //Some global minimizer params
     LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;
     param.max_iterations = 100;
     param.max_linesearch = 250;
     param.delta = 1e-6;
 
-    size_t nparams = 2 + systs.GetNSplines();
-    Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
-    lb(0) = -2; lb(1) = -std::numeric_limits<float>::infinity();
-    Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
-    ub(0) = 2; ub(1) = 0;
-    for(size_t i = 2; i < nparams; ++i) {
-        lb(i) = systs.spline_lo[i-2];
-        ub(i) = systs.spline_hi[i-2];
-    }
-    PROfitter fitter(ub, lb, param);
-
-    float chi2 = fitter.Fit(chi); 
-    Eigen::VectorXf best_fit = fitter.best_fit;
-    //Eigen::MatrixXd post_covar = fitter.ScaledCovariance(chi2, myConf.m_num_bins_total_collapsed);
-    Eigen::MatrixXf post_covar = fitter.Covariance();
-
-    //std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(myConf.m_num_bins_total_collapsed);
-    std::string hname = "";
-
-    Eigen::VectorXf subvector1 = best_fit.segment(0, 2);
-    std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-
-    Eigen::VectorXf subvector2 = best_fit.segment(2, systs.GetNSplines());
-    std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
-
-    Eigen::VectorXf post_fit = CollapseMatrix(myConf, FillRecoSpectra(myConf, myprop, systs, *model, best_fit, true).Spec());
-    TH1D post_hist("ph", hname.c_str(), myConf.m_num_bins_total_collapsed, myConf.m_channel_bin_edges[0].data());
-    for(size_t i = 0; i < myConf.m_num_bins_total_collapsed; ++i) {
-        post_hist.SetBinContent(i+1, post_fit(i));
+    //Metric Time
+    PROmetric *metric;
+    if(chi2 == "PROchi") {
+        metric = new PROchi("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+    } else if(chi2 == "PROCNP") {
+        metric = new PROCNP("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+    } else {
+        log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
+        abort();
     }
 
-    if(false){//currently turn off these as not working as wanted
-        TCanvas ch;
-        cv_hist.SetTitle(hname.c_str());
-        cv_hist.SetLineColor(kBlack);
-        cv_hist.Draw("hist");
-        post_hist.SetLineColor(kRed);
-        post_hist.Draw("hist same");
-        data_hist.Draw("E same");
-        ch.Print((filename+"_hists.pdf").c_str(), "pdf");
 
-        TH2D cov("cov", hname.c_str(), post_covar.rows(), 0, post_covar.rows(), post_covar.cols(), 0, post_covar.cols());
-        for(size_t i = 0; i < post_covar.rows(); ++i) {
-            for(size_t j = 0; j < post_covar.cols(); ++j) {
-                cov.SetBinContent(i+1, j+1, post_covar(i,j));
+    //***********************************************************************
+    //***********************************************************************
+    //******************** PROfile PROfile PROfile **************************
+    //***********************************************************************
+    //***********************************************************************
+
+    if(*profile_command){
+
+
+        size_t nparams = 2 + systs.GetNSplines();
+        Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
+        lb(0) = -2; lb(1) = -std::numeric_limits<float>::infinity();
+        Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
+        ub(0) = 2; ub(1) = 0;
+        for(size_t i = 2; i < nparams; ++i) {
+            lb(i) = systs.spline_lo[i-2];
+            ub(i) = systs.spline_hi[i-2];
+        }
+        PROfitter fitter(ub, lb, param);
+
+        float chi2 = fitter.Fit(*metric); 
+        Eigen::VectorXf best_fit = fitter.best_fit;
+        Eigen::MatrixXf post_covar = fitter.Covariance();
+
+        //std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(config.m_num_bins_total_collapsed);
+        std::string hname = "";
+
+        Eigen::VectorXf subvector1 = best_fit.segment(0, 2);
+        std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
+
+        Eigen::VectorXf subvector2 = best_fit.segment(2, systs.GetNSplines());
+        std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
+
+        Eigen::VectorXf post_fit = CollapseMatrix(config, FillRecoSpectra(config, prop, systs, *model, best_fit, true).Spec());
+        TH1D post_hist("ph", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
+        for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i) {
+            post_hist.SetBinContent(i+1, post_fit(i));
+        }
+
+        PROfile(config, prop, systs, *model, data, chi, analysis_tag+".pdf", true, nthread, best_fit);
+
+        return 0;
+
+        //***********************************************************************
+        //***********************************************************************
+        //******************** PROsurf PROsurf PROsurf **************************
+        //***********************************************************************
+        //***********************************************************************
+    }else if(*surface_command){
+
+        if (grid_size.empty()) {
+            grid_size = {40, 40};
+        }
+        if (grid_size.size() == 1) {
+            grid_size.push_back(grid_size[0]); //make it square
+        }
+
+        if(*xlim_opt) {
+            xlo = xlims[0];
+            xhi = xlims[1];
+        }
+        if(*ylim_opt) {
+            ylo = ylims[0];
+            yhi = ylims[1];
+        }
+
+        //Define grid and Surface
+        size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
+        PROsurf surface(*metric, 1, 0, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+                nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
+
+        if(statonly)
+            surface.FillSurfaceStat(config, analysis_tag+"_statonly_surface.txt");
+        else
+            surface.FillSurface(analysis_tag+"_surface.txt");
+
+        std::vector<float> binedges_x, binedges_y;
+        for(size_t i = 0; i < surface.nbinsx+1; i++)
+            binedges_x.push_back(logx ? std::pow(10, surface.edges_x(i)) : surface.edges_x(i));
+        for(size_t i = 0; i < surface.nbinsy+1; i++)
+            binedges_y.push_back(logy ? std::pow(10, surface.edges_y(i)) : surface.edges_y(i));
+
+        TH2D surf("surf", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+
+        for(size_t i = 0; i < surface.nbinsx; i++) {
+            for(size_t j = 0; j < surface.nbinsy; j++) {
+                surf.SetBinContent(i+1, j+1, surface.surface(i, j));
             }
         }
-        TCanvas c1;
-        cov.Draw("colz");
-        c1.Print((filename+"_cov.pdf").c_str(), "pdf");
 
-        std::vector<std::string> names;
-        for(size_t i = 0; i < model->nparams; ++i) names.push_back(model->param_names[i]);
-        for(size_t i = 0; i < systs.GetNSplines(); ++i) names.push_back(systs.spline_names[i]);
+        log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % analysis_tag.c_str();
+        TFile fout((analysis_tag+"_surf.root").c_str(), "RECREATE");
+        surf.Write();
 
-        TH1D *hsyst_pre  = new TH1D("hp", hname.c_str(), nparams, 0, nparams);
-        TH1D *hsyst_post = new TH1D("ho", hname.c_str(), nparams, 0, nparams);
-        for(size_t i = 0; i < nparams; i++) {
-            hsyst_pre->GetXaxis()->SetBinLabel(i+1, names[i].c_str());
-            hsyst_pre->SetBinContent(i+1, 0.0);
-            hsyst_pre->SetBinError(i+1, 1.0);
-            hsyst_post->GetXaxis()->SetBinLabel(i+1, names[i].c_str());
-            hsyst_post->SetBinContent(i+1, best_fit(i));
-            hsyst_post->SetBinError(i+1, std::sqrt(post_covar(i,i)));
-        }
-        //hsyst_pre->Write(("pulls_pre_"+det).c_str());
-        //hsyst_post->Write(("pulls_post_"+det).c_str());
-        TCanvas c("c","", 1200, 600);
-        TPad p("pp", "pp", 0, 0, 1, 1);
-        p.SetBottomMargin(0.4);
-        p.SetLeftMargin(0.1);
-        p.SetRightMargin(0.05);
-        p.cd();
-        hsyst_pre->SetLineColor(kRed);
-        hsyst_pre->SetMarkerColor(kRed);
-        hsyst_pre->GetYaxis()->SetTitle("Parameter Pull [#sigma]");
-        hsyst_pre->Draw("E");
-        hsyst_post->SetLineColor(kBlack);
-        hsyst_post->SetMarkerColor(kBlack);
-        hsyst_post->Draw("E same");
-        c.cd();
-        p.Draw();
-        c.Print((filename+"_pulls.pdf").c_str(), "pdf");
+        TCanvas c;
+        if(logy)
+            c.SetLogy();
+        if(logx)
+            c.SetLogx();
+        c.SetLogz();
+        surf.Draw("colz");
+        c.Print((analysis_tag+"_surface.pdf").c_str());
+        delete metric;
+        fout.close();
+        return 0;
 
+        //***********************************************************************
+        //***********************************************************************
+        //******************** PROplot PROplot PROplot **************************
+        //***********************************************************************
+        //***********************************************************************
+    }else if(*proplot_command){
+
+
+
+
+
+        //***************************** END *********************************
+    }else{
+        log<LOG_WARNING>(L"%1% || Please pass a subcommand to tell PROfit to do something! see --help for ideas.") % __func__);
+        return 1;
     }
 
-    PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread, best_fit);
 
     return 0;
 }
