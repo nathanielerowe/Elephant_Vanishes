@@ -150,7 +150,6 @@ int main(int argc, char* argv[])
         saveSystStructVector(systsstructs,systBinName);
         log<LOG_INFO>(L"%1% || Done processing PROpeller and PROsysts from XML defined root files, and saving to binary output also: %2%") % __func__ % propBinName.c_str();
 
-        if(*process_command)return 0;
     }else{
         log<LOG_INFO>(L"%1% || Loading PROpeller and PROsysts from precalc binary input: %2%") % __func__ % propBinName.c_str();
         prop.load(propBinName);
@@ -290,8 +289,6 @@ int main(int argc, char* argv[])
 
         PROfile(config, prop, systs, *model, data, *metric , analysis_tag+"_PROfile", true, nthread, best_fit);
 
-        delete metric;
-        return 0;
 
         //***********************************************************************
         //***********************************************************************
@@ -352,9 +349,7 @@ int main(int argc, char* argv[])
         c.SetLogz();
         surf.Draw("colz");
         c.Print((analysis_tag+"_surface.pdf").c_str());
-        delete metric;
         fout.Close();
-        return 0;
 
         //***********************************************************************
         //***********************************************************************
@@ -710,8 +705,6 @@ int main(int argc, char* argv[])
         }
 
         fout.Close();
-        delete metric;
-        return 0;
 
 
 
@@ -730,7 +723,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-
+    delete metric;
+    
     return 0;
 }
 
