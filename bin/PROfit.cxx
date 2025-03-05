@@ -21,6 +21,7 @@
 #include "TGraphAsymmErrors.h"
 #include "TCanvas.h"
 #include "TFile.h"
+#include "TRatioPlot.h"
 
 #include <Eigen/Eigen>
 
@@ -70,7 +71,9 @@ int main(int argc, char* argv[])
     bool statonly = false, logx=true, logy=true;
     std::string xlabel, ylabel;
 
-
+    std::string reweights_file;
+    std::vector<std::string> mockreweights;
+    std::vector<TH2D*> weighthists;
 
     //Global Arguments for all PROfit enables subcommands.
     app.add_option("-x,--xml", xmlname, "Input PROfit XML configuration file.")->required();
@@ -82,6 +85,8 @@ int main(int argc, char* argv[])
     app.add_option("--inject", osc_params, "Physics parameters to inject as true signal.")->expected(-1);// HOW TO
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
+    app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting");
+    app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data");
     app.add_flag("--scale-by-width", binwidth_scale, "Scale histgrams by 1/(bin width).");
     app.add_flag("--event-by-event", eventbyevent, "Do you want to weight event-by-event?");
     app.add_flag("--statonly", statonly, "Run a stats only surface instead of fitting systematics");
@@ -172,7 +177,7 @@ int main(int argc, char* argv[])
         systs = systs.excluding(systs_excluded);
     }
 
-    
+
     Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
     if(osc_params.size()) {
         if(osc_params.size() != model->nparams) {
@@ -199,7 +204,25 @@ int main(int argc, char* argv[])
     }
 
     //Create CV or injected data spectrum for all subsequent steps
+    //this now will inject osc param, splines and reweight all at once
     PROspec data = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
+
+    //Only for reweighting tests
+    if (!mockreweights.empty()) {
+        log<LOG_INFO>(L"%1% || Will use reweighted MC (with any requested oscillations) as data for this study") % __func__  ;
+        log<LOG_INFO>(L"%1% || Any parameter shifts requested will be ignored (fix later?)") % __func__  ;
+        auto file = std::make_unique<TFile>(reweights_file.c_str());
+        log<LOG_DEBUG>(L"%1% || Set file to : %2% ") % __func__ % reweights_file.c_str();
+        log<LOG_DEBUG>(L"%1% || Size of reweights vector : %2% ") % __func__ % mockreweights.size() ;
+        for (size_t i=0; i < mockreweights.size(); ++i) {
+            log<LOG_DEBUG>(L"%1% || Mock reweight i : %2% ") % __func__ % mockreweights[i].c_str() ;
+            TH2D* rwhist = (TH2D*)file->Get(mockreweights[i].c_str());
+            weighthists.push_back(rwhist);
+            log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
+        }
+        data = FillWeightedSpectrumFromHist(config,prop,weighthists,*model, allparams,!eventbyevent);
+    }
+
     Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
     Eigen::VectorXf err_vec_sq = data.Error().array().square();
     Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
@@ -471,7 +494,7 @@ int main(int argc, char* argv[])
                     }
                 }
             }
-        c.Print((analysis_tag+"_PROplot_Osc.pdf" + "]").c_str(), "pdf");
+            c.Print((analysis_tag+"_PROplot_Osc.pdf" + "]").c_str(), "pdf");
         }
 
 
@@ -525,6 +548,90 @@ int main(int argc, char* argv[])
         }
         c.Print((analysis_tag+"_PROplot_ErrorBand.pdf" + "]").c_str(), "pdf");
 
+
+
+        if (!mockreweights.empty()) {
+
+            //stupid hack, must be a better way to do this
+            //Set up options:
+            std::vector<const char*> xlabel(4);
+            xlabel[0] = "Reconstructed Neutrino Energy";
+            xlabel[1] = "True Leading Proton Momentum";
+            xlabel[2] = "True Leading Proton Cos(Theta)";
+            xlabel[3] = "Check what variable you are plotting!";
+            int xi;
+            if (xmlname.find("standard") != std::string::npos) {
+                xi = 0;
+            }
+            else if (xmlname.find("pmom") != std::string::npos) {
+                xi = 1;
+            }
+            else if (xmlname.find("costh") != std::string::npos) {  
+                xi = 2;
+            }
+            else {
+                xi = 3;
+            }
+
+            TH1D hcv = spec.toTH1D(config,0);
+            TH1D hmock = data.toTH1D(config,0);
+            hcv.Scale(1, "width");
+            hmock.Scale(1, "width");
+            hcv.GetYaxis()->SetTitle("Events/GeV");
+            hmock.GetYaxis()->SetTitle("Events/GeV");
+            hcv.GetXaxis()->SetTitle(xlabel[xi]);
+            hmock.GetXaxis()->SetTitle(xlabel[xi]);
+            hcv.SetTitle("");
+            hmock.SetTitle("");
+
+            TCanvas *c2 = new TCanvas((analysis_tag+"_spec_cv").c_str(), (analysis_tag+"_spec_cv").c_str(), 800, 800);
+            hcv.SetLineColor(kBlack);
+            hmock.SetLineColor(5);
+            hmock.SetFillColor(5);
+            TRatioPlot * rp = new TRatioPlot(&hmock,&hcv);
+            rp->Draw();
+            rp->GetLowerRefGraph()->SetMarkerStyle(21);
+            TGraphAsymmErrors *lowerGraph = dynamic_cast<TGraphAsymmErrors*>(rp->GetLowerRefGraph());
+            if (lowerGraph) {
+                int nPoints = lowerGraph->GetN();
+                for (int i = 0; i < nPoints; i++) {
+                    lowerGraph->SetPointError(i, 0, 0, 0, 0); // Set both x and y errors to zero
+                }
+            }
+            std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.35,0.7,0.89,0.89);
+            leg->SetFillStyle(0);
+            leg->SetLineWidth(0);
+            leg->AddEntry(&hcv,"CV","l");
+            leg->AddEntry(&hmock,"Mock data: ", "f");
+            TObject *null = new TObject(); 
+            int i=0;
+
+            for(const auto& [name, shift]: injected_systs) {
+                char ns[6];
+                snprintf(ns, sizeof(ns),"%.2f", shift);
+                leg->AddEntry(null, (name+": "+ns+ " sigma").c_str(),"");
+                i++;
+            }
+
+            for (const auto& m : mockreweights) {
+                leg->AddEntry(null, m.c_str(),"");
+                i++;
+            }
+            for (const auto& m : osc_params) {
+                leg->AddEntry(null, ("param: "+std::to_string(m)).c_str(),"");
+                i++;
+            }
+
+            leg->Draw();
+            c2->SaveAs((analysis_tag+"_ReWeight_spec.pdf").c_str());
+
+
+        }
+
+
+
+
+
         if(with_splines) {
             c.Print((analysis_tag+"_PROplot_Spline.pdf" + "[").c_str(), "pdf");
 
@@ -554,7 +661,7 @@ int main(int argc, char* argv[])
                 if(unprinted)
                     c.Print((analysis_tag+"_PROplot_spline.pdf").c_str(), "pdf");
             }
-        
+
             c.Print((analysis_tag+"_PROplot_Spline.pdf" + "]").c_str(), "pdf");
         }
 
@@ -605,9 +712,9 @@ int main(int argc, char* argv[])
         delete metric;
         return 0;
 
-        
-        
-        
+
+
+
         //***********************************************************************
         //***********************************************************************
         //******************** TEST AREA TEST AREA     **************************
