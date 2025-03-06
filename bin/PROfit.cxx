@@ -682,12 +682,12 @@ int main(int argc, char* argv[])
                     curve->Draw("C same");
                     ++bin;
                     if(bin % 16 == 0) {
-                        c.Print((final_output_tag+"_PROplot_spline.pdf").c_str(), "pdf");
+                        c.Print((final_output_tag+"_PROplot_Spline.pdf").c_str(), "pdf");
                         unprinted = false;
                     }
                 }
                 if(unprinted)
-                    c.Print((final_output_tag+"_PROplot_spline.pdf").c_str(), "pdf");
+                    c.Print((final_output_tag+"_PROplot_Spline.pdf").c_str(), "pdf");
             }
 
             c.Print((final_output_tag+"_PROplot_Spline.pdf" + "]").c_str(), "pdf");
