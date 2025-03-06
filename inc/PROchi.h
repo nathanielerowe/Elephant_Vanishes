@@ -88,6 +88,9 @@ namespace PROfit{
             float Pull(const Eigen::VectorXf &systs);
 
             void fixSpline(int fix, float valin);
+
+            float getSingleChannelChi(size_t channel_index) ;
+                
     };
 }
 #endif

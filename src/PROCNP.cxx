@@ -176,4 +176,52 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
     return value;
 }
 
+float PROCNP::getSingleChannelChi(size_t channel_index) {
+
+    PROspec cv = FillCVSpectrum(config, peller,strat == BinnedChi2);
+    size_t nparams = model.nparams+syst->GetNSplines();
+    size_t nsyst = syst->GetNSplines();
+
+    size_t nbin =  config.m_channel_num_bins[channel_index];
+    size_t startBin = config.GetCollapsedGlobalBinStart(channel_index);
+
+    Eigen::MatrixXf inverted_collapsed_full_covariance(nbin,nbin);
+
+
+    Eigen::MatrixXf collapsed_data_stat_covariance = (data.Spec().array().matrix().asDiagonal());
+    collapsed_data_stat_covariance = collapsed_data_stat_covariance.block(startBin,startBin,nbin,nbin);
+    Eigen::MatrixXf mc_stat_covariance = cv.Spec().array().matrix().asDiagonal();
+    Eigen::MatrixXf collapsed_mc_stat_covariance = CollapseMatrix(config, mc_stat_covariance).block(startBin,startBin,nbin,nbin);
+    Eigen::MatrixXf sub_collapsed_stat_covariance = 3 * (collapsed_data_stat_covariance.inverse() + 2 * collapsed_mc_stat_covariance.inverse()).inverse();
+
+    //only calculate a syst covariance if we have any covariance parameters as defined in the xml
+    if(syst->GetNCovar()){
+
+      // Calculate Full Syst Covariance matrix
+      Eigen::MatrixXf diag =  cv.Spec().array().matrix().asDiagonal(); 
+      Eigen::MatrixXf full_covariance =  diag*(syst->fractional_covariance)*diag;
+      
+      // Collapse Covariance and Spectra 
+      Eigen::MatrixXf collapsed_full_covariance =  CollapseMatrix(config,full_covariance);
+      Eigen::MatrixXf sub_collapsed_full_covariance =  collapsed_full_covariance.block(startBin,startBin,nbin,nbin);
+
+      // Invert Collaped Matrix Matrix 
+      inverted_collapsed_full_covariance = (sub_collapsed_full_covariance+sub_collapsed_stat_covariance).inverse();
+      }
+
+    else{
+ 
+    	inverted_collapsed_full_covariance = (sub_collapsed_stat_covariance).inverse();
+         
+       }
+
+    Eigen::VectorXf delta  = (CollapseMatrix(config, cv.Spec()) - data.Spec()).segment(startBin,nbin);
+    //float pull = Pull(subvector2);
+    float covar_portion = (delta.transpose())*inverted_collapsed_full_covariance*(delta);
+    float value = covar_portion;//pull;
+
+    return value;
+
+}
+
 
