@@ -432,12 +432,13 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     h1->Draw("A2");
     h1->GetYaxis()->SetTitle("#sigma Shift");
 
-    float y_min = h1->GetYaxis()->GetXmin();  // Get Y-axis min value for label positioning
+    float y_min = h1->GetMinimum();
     for (size_t i = 0; i < barvalues.size(); ++i) {
-      TText* text = new TText(barvalues[i], y_min - 0.5, names[i].c_str());  // Position text below axis
-      text->SetTextAlign(31);  // Center align the text
-      text->SetTextSize(0.03); // Adjust text size
-      text->SetTextAngle(-45); //Angle the text
+      std::string label = i < model.nparams ? "Log_{10}(" + model.pretty_param_names[i]+")" : names[i];
+      TText* text = new TText(barvalues[i], y_min - 0.05, label.c_str());  // Position text below axis
+      text->SetTextAlign(13);  
+      text->SetTextSize(0.03); 
+      text->SetTextAngle(-45); 
       text->Draw();
     }
 
