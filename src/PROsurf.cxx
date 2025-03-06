@@ -275,7 +275,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val,float range) {
 }
 
 
-PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed) : metric(metric) {
+PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed, const Eigen::VectorXf & true_params) : metric(metric) {
 
     LBFGSpp::LBFGSBParam<float> param;
     param.epsilon = 1e-6;
@@ -462,11 +462,18 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     l.Draw();
 
     for (int i = 0; i < nBins; ++i) {
-        TMarker* star = new TMarker(i+0.5, bfvalues[i], 29);
+	if (i < true_params.size()) {
+	  TMarker* truestar = new TMarker(i+0.5, true_params[i], 29);
+	  truestar->SetMarkerSize(0.6); 
+	  truestar->SetMarkerColor(kRed); 
+	  truestar->Draw();
+	}	  
+      TMarker* star = new TMarker(i+0.5, bfvalues[i], 29);
         star->SetMarkerSize(0.5); 
         star->SetMarkerColor(kBlack); 
         star->Draw();
     }
+
 
 
     c2->SaveAs((filename+"_1sigma.pdf").c_str(),"pdf");

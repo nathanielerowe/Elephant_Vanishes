@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
 
     }
 
-    PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread, best_fit);
+    PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread, best_fit, pparams);
 
     return 0;
 }
