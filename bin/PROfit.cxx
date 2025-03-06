@@ -543,8 +543,9 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
                     else
                         err_band->GetYaxis()->SetTitle("Events");
 
-
+                    
                     err_band->Draw("A2P");
+                    err_band->SetMinimum(0);
                     err_band->GetXaxis()->SetRangeUser(config.m_channel_bin_edges[global_channel_index].front(),config.m_channel_bin_edges[global_channel_index].back());
 
                     TH1D hdat = data.toTH1D(config,global_channel_index);
