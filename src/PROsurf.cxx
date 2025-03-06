@@ -396,8 +396,8 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 	barvalues.push_back(float(count)+0.5);
 	barvalues_err.push_back(0.4);
         bfvalues.push_back(tmp[0]);
-	values1_up.push_back(tmp[1]);
-	values1_down.push_back(tmp[2]);
+	values1_down.push_back(tmp[1]);
+	values1_up.push_back(tmp[2]);
 	values1_errdown.push_back(abs(tmp[1]-tmp[0]));
         values1_errup.push_back(abs(tmp[2]-tmp[0]));
 	log<LOG_DEBUG>(L"%1% || Results of findMinAndBounds : %2% %3% %4% ") % __func__ % tmp[0] % tmp[1] % tmp[2];
@@ -422,8 +422,9 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     TGraphAsymmErrors *h1 = new TGraphAsymmErrors(barvalues.size(),barvalues.data(), bfvalues.data(), barvalues_err.data(), barvalues_err.data(), values1_errdown.data(), values1_errup.data());
     h1->SetFillColor(kBlue-7);
     h1->SetStats(0);
-    h1->SetMinimum(min(-1.2,minVal*1.2));
-    h1->SetMaximum(max(1.2,maxVal*1.2));
+    //h1->SetMinimum(min(-1.2,minVal*1.2));
+    h1->SetMinimum(minVal*1.2);
+    h1->SetMaximum(maxVal*1.2);
 
     h1->GetXaxis()->SetNdivisions(barvalues.size());  // Set number of tick marks
     h1->GetXaxis()->SetLabelSize(0);  // Hide default numerical labels
