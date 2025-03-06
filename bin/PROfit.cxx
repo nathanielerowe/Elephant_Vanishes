@@ -518,6 +518,8 @@ int main(int argc, char* argv[])
         c.Print((final_output_tag+"_PROplot_ErrorBand.pdf" + "[").c_str(), "pdf");
         global_subchannel_index = 0;
         global_channel_index = 0;
+
+        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale );
         for(size_t im = 0; im < config.m_num_modes; im++){
             for(size_t id =0; id < config.m_num_detectors; id++){
                 for(size_t ic = 0; ic < config.m_num_channels; ic++){
@@ -531,7 +533,6 @@ int main(int argc, char* argv[])
                         leg->AddEntry(cv_hists[subchannel_name].get(), config.m_subchannel_plotnames[ic][sc].c_str() ,"f");
                         ++global_subchannel_index;
                     }
-                    std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale );
                     err_band->SetFillColor(kBlack);
                     err_band->SetFillStyle(3005);
                     if(binwidth_scale)
@@ -722,7 +723,6 @@ int main(int argc, char* argv[])
         for(const auto &[name, mat]: matrices)
             mat->Write(name.c_str());
 
-        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale );
         fout.mkdir("ErrorBand");
         fout.cd("ErrorBand");
         err_band->Write("err_band");
