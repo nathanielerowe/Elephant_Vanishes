@@ -51,6 +51,7 @@ int main(int argc, char* argv[])
     // Define options
     std::string xmlname = "NULL.xml"; 
     std::string analysis_tag = "PROfit";
+    std::string output_tag = "v1";
     std::string chi2 = "PROchi";
     bool eventbyevent=false;
     bool shapeonly = false;//not coded yet
@@ -79,6 +80,7 @@ int main(int argc, char* argv[])
     app.add_option("-x,--xml", xmlname, "Input PROfit XML configuration file.")->required();
     app.add_option("-v,--verbosity", GLOBAL_LEVEL, "Verbosity Level [1-4]->[Error,Warning,Info,Debug].")->default_val(GLOBAL_LEVEL);
     app.add_option("-t,--tag", analysis_tag, "Analysis Tag used for output identification.")->default_str("PROfit");
+    app.add_option("-o,--output",output_tag,"Additional output filename quantifier")->default_str("v1");
     app.add_option("-n, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
@@ -127,7 +129,8 @@ int main(int argc, char* argv[])
     //Parse inputs. 
     CLI11_PARSE(app, argc, argv);
     log<LOG_INFO>(L" %1% ") % getIcon().c_str()  ;
-    log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, nthread: %4% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % nthread ;
+    std:string final_output_tag =analysis_tag +"_"+output_tag;
+    log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, output %4%, nthread: %5% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % output_tag.c_str() % nthread ;
 
     //Initilize configuration from the XML;
     PROconfig config(xmlname);
@@ -289,7 +292,7 @@ int main(int argc, char* argv[])
             post_hist.SetBinContent(i+1, post_fit(i));
         }
 
-        PROfile(config, prop, systs, *model, data, *metric , analysis_tag+"_PROfile", true, nthread, best_fit);
+        PROfile(config, prop, systs, *model, data, *metric , final_output_tag+"_PROfile", true, nthread, best_fit);
 
 
         //***********************************************************************
@@ -322,9 +325,9 @@ int main(int argc, char* argv[])
                 nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
 
         if(statonly)
-            surface.FillSurfaceStat(config, analysis_tag+"_statonly_surface.txt");
+            surface.FillSurfaceStat(config, final_output_tag+"_statonly_surface.txt");
         else
-            surface.FillSurface(analysis_tag+"_surface.txt",nthread);
+            surface.FillSurface(final_output_tag+"_surface.txt",nthread);
 
         std::vector<float> binedges_x, binedges_y;
         for(size_t i = 0; i < surface.nbinsx+1; i++)
@@ -340,8 +343,8 @@ int main(int argc, char* argv[])
             }
         }
 
-        log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % analysis_tag.c_str();
-        TFile fout((analysis_tag+"_surf.root").c_str(), "RECREATE");
+        log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % final_output_tag.c_str();
+        TFile fout((final_output_tag+"_surf.root").c_str(), "RECREATE");
         surf.Write();
 
         TCanvas c;
@@ -351,7 +354,7 @@ int main(int argc, char* argv[])
             c.SetLogx();
         c.SetLogz();
         surf.Draw("colz");
-        c.Print((analysis_tag+"_surface.pdf").c_str());
+        c.Print((final_output_tag+"_surface.pdf").c_str());
         fout.Close();
 
         //***********************************************************************
@@ -366,7 +369,7 @@ int main(int argc, char* argv[])
         TCanvas c;
 
 
-        c.Print((analysis_tag +"_PROplot_CV.pdf"+ "[").c_str(), "pdf");
+        c.Print((final_output_tag +"_PROplot_CV.pdf"+ "[").c_str(), "pdf");
         PROspec spec = FillCVSpectrum(config, prop, !eventbyevent);
 
         std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, binwidth_scale);
@@ -396,15 +399,15 @@ int main(int argc, char* argv[])
                     else
                         s->GetYaxis()->SetTitle("Events");
 
-                    c.Print((analysis_tag+"_PROplot_CV.pdf").c_str(), "pdf");
+                    c.Print((final_output_tag+"_PROplot_CV.pdf").c_str(), "pdf");
                 }
             }
         }
-        c.Print((analysis_tag+"_PROplot_CV.pdf" + "]").c_str(), "pdf");
+        c.Print((final_output_tag+"_PROplot_CV.pdf" + "]").c_str(), "pdf");
 
         if(osc_params.size()) {
 
-            c.Print((analysis_tag +"_PROplot_Osc.pdf"+ "[").c_str(), "pdf");
+            c.Print((final_output_tag +"_PROplot_Osc.pdf"+ "[").c_str(), "pdf");
 
             PROspec osc_spec = FillRecoSpectra(config, prop, systs, *model, pparams, !eventbyevent);
             std::map<std::string, std::unique_ptr<TH1D>> osc_hists = getCVHists(osc_spec, config, binwidth_scale);
@@ -488,31 +491,31 @@ int main(int argc, char* argv[])
                         p1.Draw();
                         p2.Draw();
 
-                        c.Print((analysis_tag+"_PROplot_Osc.pdf").c_str(), "pdf");
+                        c.Print((final_output_tag+"_PROplot_Osc.pdf").c_str(), "pdf");
 
                         delete cv_hist;
                         delete osc_hist;
                     }
                 }
             }
-            c.Print((analysis_tag+"_PROplot_Osc.pdf" + "]").c_str(), "pdf");
+            c.Print((final_output_tag+"_PROplot_Osc.pdf" + "]").c_str(), "pdf");
         }
 
 
 
         //Now some covariances
         std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config, spec);
-        c.Print((analysis_tag+"_PROplot_Covar.pdf" + "[").c_str(), "pdf");
+        c.Print((final_output_tag+"_PROplot_Covar.pdf" + "[").c_str(), "pdf");
         for(const auto &[name, mat]: matrices) {
             mat->Draw("colz");
-            c.Print((analysis_tag+"_PROplot_Covar.pdf").c_str(), "pdf");
+            c.Print((final_output_tag+"_PROplot_Covar.pdf").c_str(), "pdf");
         }
-        c.Print((analysis_tag+"_PROplot_Covar.pdf" + "]").c_str(), "pdf");
+        c.Print((final_output_tag+"_PROplot_Covar.pdf" + "]").c_str(), "pdf");
 
 
         //errorband
         //
-        c.Print((analysis_tag+"_PROplot_ErrorBand.pdf" + "[").c_str(), "pdf");
+        c.Print((final_output_tag+"_PROplot_ErrorBand.pdf" + "[").c_str(), "pdf");
         global_subchannel_index = 0;
         global_channel_index = 0;
         for(size_t im = 0; im < config.m_num_modes; im++){
@@ -566,12 +569,12 @@ int main(int argc, char* argv[])
                     log<LOG_INFO>(L"%1% || On channel %2% the datamc chi^2/ndof is %3%/%4% .") % __func__ % global_channel_index % chival % config.m_channel_num_bins[global_channel_index];
 
 
-                    c.Print((analysis_tag+"_PROplot_ErrorBand.pdf").c_str(), "pdf");
+                    c.Print((final_output_tag+"_PROplot_ErrorBand.pdf").c_str(), "pdf");
                 
                                    }
             }
         }
-        c.Print((analysis_tag+"_PROplot_ErrorBand.pdf" + "]").c_str(), "pdf");
+        c.Print((final_output_tag+"_PROplot_ErrorBand.pdf" + "]").c_str(), "pdf");
 
 
 
@@ -609,7 +612,7 @@ int main(int argc, char* argv[])
             hcv.SetTitle("");
             hmock.SetTitle("");
 
-            TCanvas *c2 = new TCanvas((analysis_tag+"_spec_cv").c_str(), (analysis_tag+"_spec_cv").c_str(), 800, 800);
+            TCanvas *c2 = new TCanvas((final_output_tag+"_spec_cv").c_str(), (final_output_tag+"_spec_cv").c_str(), 800, 800);
             hcv.SetLineColor(kBlack);
             hmock.SetLineColor(5);
             hmock.SetFillColor(5);
@@ -648,7 +651,7 @@ int main(int argc, char* argv[])
             }
 
             leg->Draw();
-            c2->SaveAs((analysis_tag+"_ReWeight_spec.pdf").c_str());
+            c2->SaveAs((final_output_tag+"_ReWeight_spec.pdf").c_str());
 
 
         }
@@ -658,7 +661,7 @@ int main(int argc, char* argv[])
 
 
         if(with_splines) {
-            c.Print((analysis_tag+"_PROplot_Spline.pdf" + "[").c_str(), "pdf");
+            c.Print((final_output_tag+"_PROplot_Spline.pdf" + "[").c_str(), "pdf");
 
 
             std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
@@ -679,19 +682,19 @@ int main(int argc, char* argv[])
                     curve->Draw("C same");
                     ++bin;
                     if(bin % 16 == 0) {
-                        c.Print((analysis_tag+"_PROplot_spline.pdf").c_str(), "pdf");
+                        c.Print((final_output_tag+"_PROplot_spline.pdf").c_str(), "pdf");
                         unprinted = false;
                     }
                 }
                 if(unprinted)
-                    c.Print((analysis_tag+"_PROplot_spline.pdf").c_str(), "pdf");
+                    c.Print((final_output_tag+"_PROplot_spline.pdf").c_str(), "pdf");
             }
 
-            c.Print((analysis_tag+"_PROplot_Spline.pdf" + "]").c_str(), "pdf");
+            c.Print((final_output_tag+"_PROplot_Spline.pdf" + "]").c_str(), "pdf");
         }
 
         //now onto root files
-        TFile fout((analysis_tag+"_PROplot.root").c_str(), "RECREATE");
+        TFile fout((final_output_tag+"_PROplot.root").c_str(), "RECREATE");
 
         fout.mkdir("CV_hists");
         fout.cd("CV_hists");
