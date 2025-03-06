@@ -235,9 +235,8 @@ void PROsurf::FillSurface(std::string filename, int nThreads) {
 
 }
 
-std::vector<float> findMinAndBounds(TGraph *g, float val,float range) {
+std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
     float step = 0.001;
-    range = range+step;
     int n = g->GetN();
     float minY = 1e9, minX = 0;
     for (int i = 0; i < n; ++i) {
@@ -253,21 +252,27 @@ std::vector<float> findMinAndBounds(TGraph *g, float val,float range) {
     float leftX = minX, rightX = minX;
     
     // Search to the left of the minimum
-    for (float x = minX; x >= -range; x -= step) {
+    for (float x = minX; x >= lo; x -= step) {
         float y = g->Eval(x) - minY; //DeltaChi^2
         if (y >= val) {
             leftX = x;
             break;
+        } else if(x - step < lo) {
+            // If at end of loop and haven't found left side
+            leftX = lo;
         }
     }
     
 
     // Search to the right of the minimum
-    for (float x = minX; x <= range; x += step) {
+    for (float x = minX; x <= hi; x += step) {
         float y = g->Eval(x)-minY;
         if (y >= val) {
             rightX = x;
             break;
+        } else if(x + step > hi) {
+            // If at end of loop and haven't found right side
+            rightX = hi;
         }
     }
     
@@ -391,8 +396,11 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     int count = 0;
     for(auto &g:graphs){
         //if(metric->GetModel().nparams)continue;
-        float range = count == 0 ? 2.0 : count == 1 ? 1.0 : 3.0;
-        std::vector<float> tmp = findMinAndBounds(g.get(),1.0, range);
+        float lo = count < metric.GetModel().nparams ? metric.GetModel().lb(count) :
+                     metric.GetSysts().spline_lo[count - metric.GetModel().nparams];
+        float hi = count < metric.GetModel().nparams ? metric.GetModel().ub(count) :
+                     metric.GetSysts().spline_hi[count - metric.GetModel().nparams];
+        std::vector<float> tmp = findMinAndBounds(g.get(),1.0, lo, hi);
 	barvalues.push_back(float(count)+0.5);
 	barvalues_err.push_back(0.4);
         bfvalues.push_back(tmp[0]);
@@ -406,7 +414,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 	log<LOG_DEBUG>(L"%1% || RangeValues : %2% %3% %4% ") % __func__ % count % values1_down[count] % values1_up[count];
 	log<LOG_DEBUG>(L"%1% || ErrValues : %2% %3% %4% ") % __func__ % count % values1_errdown[count] % values1_errup[count];
         if(twosig){
-            std::vector<float> tmp2 = findMinAndBounds(g.get(),4.0,range);
+            std::vector<float> tmp2 = findMinAndBounds(g.get(),4.0,lo, hi);
             values2_down.push_back(abs(tmp2[1]-tmp[0]));
             values2_up.push_back(abs(tmp2[2]-tmp[0]));
         }

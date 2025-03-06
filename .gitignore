@@ -5,3 +5,8 @@ build
 /dist/
 /install/
 __pycache__
+*.pdf
+*.root
+*.png
+*.txt
+compile_commands.json
