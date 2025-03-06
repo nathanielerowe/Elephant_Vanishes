@@ -17,5 +17,5 @@ if(MPI_ENABLE)
     target_link_libraries(PROmfa4u PRIVATE PROfitLib tinyxml2 eigen Boost::serialization lbfgspp )
 endif(MPI_ENABLE)
 
-iinstall(TARGETS PROfit PROfc
+install(TARGETS PROfit PROfc
     LIBRARY DESTINATION ${CMAKE_BINARY_DIR})
