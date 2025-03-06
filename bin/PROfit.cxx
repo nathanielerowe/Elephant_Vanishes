@@ -534,7 +534,12 @@ int main(int argc, char* argv[])
                     std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale );
                     err_band->SetFillColor(kBlack);
                     err_band->SetFillStyle(3005);
-                    err_band->GetYaxis()->SetTitle("Events/GeV");
+                    if(binwidth_scale)
+                        err_band->GetYaxis()->SetTitle("Events/GeV");
+                    else
+                        err_band->GetYaxis()->SetTitle("Events");
+
+
                     err_band->Draw("A2P");
                     err_band->GetXaxis()->SetRangeUser(config.m_channel_bin_edges[global_channel_index].front(),config.m_channel_bin_edges[global_channel_index].back());
             
