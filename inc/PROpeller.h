@@ -23,6 +23,7 @@ namespace PROfit{
                 void serialize(Archive& ar, [[maybe_unused]] const unsigned int version) {
                     ar & nevents;
                     ar & pcosth;
+                    ar & pmom;
                     ar & trueLE;
                     ar & added_weights;
                     ar & bin_indices;
