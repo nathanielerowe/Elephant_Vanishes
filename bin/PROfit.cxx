@@ -533,16 +533,19 @@ int main(int argc, char* argv[])
                     err_band->SetFillStyle(3005);
                     err_band->GetYaxis()->SetTitle("Events/GeV");
                     err_band->Draw("A2P");
-                    err_band->GetXaxis()->SetRangeUser(0.3, 3.0);
+                    err_band->GetXaxis()->SetRangeUser(config.m_channel_bin_edges[global_channel_index].front(),config.m_channel_bin_edges[global_channel_index].back());
             
                     TH1D hdat = data.toTH1D(config,global_channel_index);
+                    for(size_t k=0; k<=hdat.GetNbinsX(); k++){
+                        hdat.SetBinError(k,sqrt(hdat.GetBinContent(k)));
+                    }
                     hdat.SetLineColor(kBlack);
                     hdat.SetLineWidth(2);
                     hdat.SetMarkerStyle(20);
                     hdat.SetMarkerSize(1);
                     gStyle->SetEndErrorSize(3);
+                    if(binwidth_scale) hdat.Scale(1, "width");
                     hdat.Draw("same E1P");
-                    leg->AddEntry(&hdat,"Data","EP");
 
                     s->Draw("hist SAME");
                     leg->Draw("SAME");
@@ -551,11 +554,21 @@ int main(int argc, char* argv[])
                     //TH1* dummy = new TH1F("", "", 1, 0, 1);
                     //dummy->SetLineColor(kRed+1);
                     leg->AddEntry(err_band->Clone(), "Syst", "ep");
+                    leg->AddEntry(&hdat,"Data","EP");
                     err_band->Draw("SAME 2P");
                     hdat.Draw("SAME E1P");
 
+
+                    TH1* dummy = new TH1F("", "", 1, 0, 1);
+                    dummy->SetLineColor(kWhite);
+                     double chival = metric->getSingleChannelChi(global_channel_index);
+                     leg->AddEntry(dummy, ("#Chi^{2}/ndof : "+to_string_prec(chival,2)+"/"+std::to_string(config.m_channel_num_bins[global_channel_index])).c_str()  ,"l");
+                    log<LOG_INFO>(L"%1% || On channel %2% the datamc chi^2/ndof is %3%/%4% .") % __func__ % global_channel_index % chival % config.m_channel_num_bins[global_channel_index];
+
+
                     c.Print((analysis_tag+"_PROplot_ErrorBand.pdf").c_str(), "pdf");
-                }
+                
+                                   }
             }
         }
         c.Print((analysis_tag+"_PROplot_ErrorBand.pdf" + "]").c_str(), "pdf");
