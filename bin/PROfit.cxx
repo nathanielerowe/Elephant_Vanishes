@@ -33,6 +33,7 @@ int main(int argc, char* argv[])
     std::map<std::string, float> injected_systs;
     int maxevents = 100;
     size_t nthread = 1;
+    std::map<std::string, float> fit_options;
     //floats
     app.add_option("-x,--xml", xmlname, "Input PROfit XML config.");
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
@@ -40,6 +41,8 @@ int main(int argc, char* argv[])
     app.add_option("-o,--outfile", filename, "Output filename")->default_str("profit");
     app.add_option("-t, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
     app.add_option("--inject", injected_pt, "Physics parameters to inject as true signal.")->default_str("0 0");
+
+    app.add_option("--fit-options", fit_options, "Parameters for LBFGSB.");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -93,6 +96,16 @@ int main(int argc, char* argv[])
     param.max_iterations = 100;
     param.max_linesearch = 250;
     param.delta = 1e-6;
+    for(const auto &[param_name, value]: fit_options) {
+        if(param_name == "epsilon") {
+            param.epsilon = value;
+        } else if(param_name == "delta") {
+            param.delta = value;
+        } else {
+            log<LOG_WARNING>(L"%1% || Unrecognized LBFGSB parameter %2%. Will ignore.") 
+                % __func__ % param_name.c_str();
+        }
+    }
 
     size_t nparams = 2 + systs.GetNSplines();
     Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
@@ -180,7 +193,7 @@ int main(int argc, char* argv[])
 
     }
 
-    PROfile(myConf, myprop, systs, *model, data, chi,filename, true, nthread, best_fit, pparams);
+    PROfile profile(myConf, myprop, systs, *model, data, chi, param, filename, true, nthread, best_fit, pparams);
 
     return 0;
 }

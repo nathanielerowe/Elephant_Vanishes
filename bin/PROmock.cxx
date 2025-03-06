@@ -256,7 +256,7 @@ int main(int argc, char* argv[])
 
     log<LOG_DEBUG>(L"%1% || Fit finished, now running PROfile") % __func__ ;    
 
-    PROfile(config, prop, systs, *model, data, chi, filename, floatosc, nthread, best_fit, physics_params);
+    PROfile(config, prop, systs, *model, data, chi, param, filename, floatosc, nthread, best_fit, physics_params);
   }
   
   return 0;
