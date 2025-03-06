@@ -171,10 +171,33 @@ namespace PROfit {
         // know about cvspec.
         Eigen::MatrixXf diag = cvspec.asDiagonal();
         Eigen::MatrixXf full_cov = diag * insyst.fractional_covariance * diag;
-        Eigen::LLT<Eigen::MatrixXf> llt(CollapseMatrix(inconfig, full_cov));
+        Eigen::MatrixXf coll = CollapseMatrix(inconfig, full_cov);
+        Eigen::LDLT<Eigen::MatrixXf> ldlt(coll);
+        Eigen::MatrixXf L = ldlt.matrixL(); 
+        Eigen::VectorXf D_sqrt = ldlt.vectorD().array().sqrt();  
+        Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> P(ldlt.transpositionsP());
 
-        Eigen::VectorXf final_spec = CollapseMatrix(inconfig, spec) + llt.matrixL() * throwC;
-        
+        if (ldlt.info() != Eigen::Success) {
+            log<LOG_ERROR>(L"%1% | Eigen LLT has failed!") % __func__ ;
+            if (!coll.isApprox(coll.transpose())) {
+                    log<LOG_ERROR>(L"%1% | Matrix is not symmetric!") % __func__ ;
+            }
+            Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(coll);
+            if (eigensolver.eigenvalues().minCoeff() <= 0) {
+                    log<LOG_ERROR>(L"%1% | Matrix is not positive semi definite, minCoeff is %2% ") % __func__ % eigensolver.eigenvalues().minCoeff();
+            }
+            Eigen::IOFormat fmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", "\n", "", "", "", "");
+            std::ostringstream oss;
+            oss << coll.format(fmt);
+            log<LOG_ERROR>(L"%1% | Matrix is %2% ") % __func__ % oss.str().c_str();
+            exit(EXIT_FAILURE);
+        }
+        Eigen::VectorXf final_spec = CollapseMatrix(inconfig, spec) + P*L*D_sqrt.asDiagonal() * throwC;
+
+        //std::vector<float> stdVec(final_spec.data(), final_spec.data() + final_spec.size());
+        //log<LOG_INFO>(L"%1% | final_spec is %2% ") % __func__ % stdVec;
+       
+
         return PROspec(final_spec, final_spec.array().sqrt());
     }
 };
