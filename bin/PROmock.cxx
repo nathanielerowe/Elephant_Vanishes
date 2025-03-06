@@ -250,17 +250,13 @@ int main(int argc, char* argv[])
         lb(i) = systs.spline_lo[i-2];
         ub(i) = systs.spline_hi[i-2];
     }
-    log<LOG_DEBUG>(L"%1% || Set up eigenvector, nparams is %2%") % __func__ % nparams;    
     PROfitter fitter(ub, lb, param);
-    log<LOG_DEBUG>(L"%1% || fitter done") % __func__ ;
     float chi2 = fitter.Fit(chi);
-    log<LOG_DEBUG>(L"%1% || chi2 extracted") % __func__ ;    
     Eigen::VectorXf best_fit = fitter.best_fit;
-    log<LOG_DEBUG>(L"%1% || best fit extracted") % __func__ ;        
 
     log<LOG_DEBUG>(L"%1% || Fit finished, now running PROfile") % __func__ ;    
 
-    PROfile(config, prop, systs, *model, data, chi, filename, floatosc, nthread, best_fit);
+    PROfile(config, prop, systs, *model, data, chi, filename, floatosc, nthread, best_fit, physics_params);
   }
   
   return 0;

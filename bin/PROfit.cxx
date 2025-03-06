@@ -46,7 +46,7 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
 int main(int argc, char* argv[])
 {
     gStyle->SetOptStat(0);
-    CLI::App app{"PROfit, a PROfessional, PROductive fitting and oscillation framework. Together let's minimize PROfit!"}; 
+    CLI::App app{"PROfit: a PROfessional, PROductive fitting and oscillation framework. Together let's minimize PROfit!"}; 
 
     // Define options
     std::string xmlname = "NULL.xml"; 
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
     app.add_option("-n, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
-    app.add_option("--inject", osc_params, "Physics parameters to inject as true signal.")->expected(-1);// HOW TO
+    app.add_option("-i, --inject", osc_params, "Physics parameters to inject as true signal.")->expected(-1);// HOW TO
     app.add_option("--inject-systs", injected_systs, "Systematic shifts to inject. Map of name and shift value in sigmas. Only spline systs are supported right now.");
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
     CLI::App *protest_command = app.add_subcommand("protest", "Testing ground for rapid quick tests.");
 
 
-
+    //Parse inputs. 
     CLI11_PARSE(app, argc, argv);
     log<LOG_INFO>(L" %1% ") % getIcon().c_str()  ;
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, nthread: %4% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % nthread ;
@@ -171,13 +171,14 @@ int main(int argc, char* argv[])
     PROsyst systs(systsstructs);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
+    //Some eystematics might be ignored for this
     if(syst_list.size()) {
         systs = systs.subset(syst_list);
     } else if(systs_excluded.size()) {
         systs = systs.excluding(systs_excluded);
     }
 
-
+    //Pysics parameter input
     Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
     if(osc_params.size()) {
         if(osc_params.size() != model->nparams) {
@@ -190,6 +191,7 @@ int main(int argc, char* argv[])
         }
     }
 
+    //Spline injection studies
     Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
     for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
     for(const auto& [name, shift]: injected_systs) {
@@ -527,20 +529,31 @@ int main(int argc, char* argv[])
                         ++global_subchannel_index;
                     }
                     std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale );
-                    err_band->SetLineColor(kRed+1);                        
+                    err_band->SetFillColor(kBlack);
+                    err_band->SetFillStyle(3005);
                     err_band->GetYaxis()->SetTitle("Events/GeV");
-                    err_band->Draw("AP");
+                    err_band->Draw("A2P");
                     err_band->GetXaxis()->SetRangeUser(0.3, 3.0);
-
+            
+                    TH1D hdat = data.toTH1D(config,global_channel_index);
+                    hdat.SetLineColor(kBlack);
+                    hdat.SetLineWidth(2);
+                    hdat.SetMarkerStyle(20);
+                    hdat.SetMarkerSize(1);
+                    gStyle->SetEndErrorSize(3);
+                    hdat.Draw("same E1P");
+                    leg->AddEntry(&hdat,"Data","EP");
 
                     s->Draw("hist SAME");
                     leg->Draw("SAME");
                     err_band->SetTitle((config.m_mode_names[im]  +" "+ config.m_detector_names[id]+" "+ config.m_channel_names[ic]).c_str());
                     err_band->GetXaxis()->SetTitle(config.m_channel_units[ic].c_str());
-                    TH1* dummy = new TH1F("", "", 1, 0, 1);
-                    dummy->SetLineColor(kRed+1);
-                    leg->AddEntry(dummy->Clone(), "Syst", "l");
-                    err_band->Draw("SAME P");
+                    //TH1* dummy = new TH1F("", "", 1, 0, 1);
+                    //dummy->SetLineColor(kRed+1);
+                    leg->AddEntry(err_band->Clone(), "Syst", "ep");
+                    err_band->Draw("SAME 2P");
+                    hdat.Draw("SAME E1P");
+
                     c.Print((analysis_tag+"_PROplot_ErrorBand.pdf").c_str(), "pdf");
                 }
             }
@@ -858,10 +871,11 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     Eigen::VectorXf cv = CollapseMatrix(config, FillCVSpectrum(config, prop, true).Spec());
     std::vector<float> edges = config.GetChannelBinEdges(0);
     std::vector<float> centers;
+    size_t nerrorsample = 5000;
     for(size_t i = 0; i < edges.size() - 1; ++i)
         centers.push_back((edges[i+1] + edges[i])/2);
     std::vector<Eigen::VectorXf> specs;
-    for(size_t i = 0; i < 1000; ++i)
+    for(size_t i = 0; i < nerrorsample; ++i)
         specs.push_back(FillSystRandomThrow(config, prop, syst).Spec());
     //specs.push_back(CollapseMatrix(config, FillSystRandomThrow(config, prop, syst).Spec()));
     TH1D tmphist("th", "", cv.size(), edges.data());
@@ -871,14 +885,14 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     //std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
     std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(&tmphist);
     for(size_t i = 0; i < cv.size(); ++i) {
-        std::array<float, 1000> binconts;
-        for(size_t j = 0; j < 1000; ++j) {
+        std::vector<float> binconts(nerrorsample);
+        for(size_t j = 0; j < nerrorsample; ++j) {
             binconts[j] = specs[j](i);
         }
         float scale_factor = tmphist.GetBinContent(i+1)/cv(i);
         std::sort(binconts.begin(), binconts.end());
-        float ehi = std::abs((binconts[840] - cv(i))*scale_factor);
-        float elo = std::abs((cv(i) - binconts[160])*scale_factor);
+        float ehi = std::abs((binconts[5*840] - cv(i))*scale_factor);
+        float elo = std::abs((cv(i) - binconts[5*160])*scale_factor);
         ret->SetPointEYhigh(i, ehi);
         ret->SetPointEYlow(i, elo);
     }
