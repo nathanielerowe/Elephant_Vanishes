@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
     //Parse inputs. 
     CLI11_PARSE(app, argc, argv);
     log<LOG_INFO>(L" %1% ") % getIcon().c_str()  ;
-    std:string final_output_tag =analysis_tag +"_"+output_tag;
+std:string final_output_tag =analysis_tag +"_"+output_tag;
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, output %4%, nthread: %5% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % output_tag.c_str() % nthread ;
 
     //Initilize configuration from the XML;
@@ -504,14 +504,17 @@ int main(int argc, char* argv[])
 
 
         //Now some covariances
-        std::map<std::string, std::unique_ptr<TH2D>> matrices = covarianceTH2D(systs, config, spec);
-        c.Print((final_output_tag+"_PROplot_Covar.pdf" + "[").c_str(), "pdf");
-        for(const auto &[name, mat]: matrices) {
-            mat->Draw("colz");
-            c.Print((final_output_tag+"_PROplot_Covar.pdf").c_str(), "pdf");
-        }
-        c.Print((final_output_tag+"_PROplot_Covar.pdf" + "]").c_str(), "pdf");
+        std::map<std::string, std::unique_ptr<TH2D>> matrices;
 
+        if(systs.GetNCovar()>0){
+            matrices = covarianceTH2D(systs, config, spec);
+            c.Print((final_output_tag+"_PROplot_Covar.pdf" + "[").c_str(), "pdf");
+            for(const auto &[name, mat]: matrices) {
+                mat->Draw("colz");
+                c.Print((final_output_tag+"_PROplot_Covar.pdf").c_str(), "pdf");
+            }
+            c.Print((final_output_tag+"_PROplot_Covar.pdf" + "]").c_str(), "pdf");
+        }
 
         //errorband
         //
@@ -543,7 +546,7 @@ int main(int argc, char* argv[])
 
                     err_band->Draw("A2P");
                     err_band->GetXaxis()->SetRangeUser(config.m_channel_bin_edges[global_channel_index].front(),config.m_channel_bin_edges[global_channel_index].back());
-            
+
                     TH1D hdat = data.toTH1D(config,global_channel_index);
                     for(size_t k=0; k<=hdat.GetNbinsX(); k++){
                         hdat.SetBinError(k,sqrt(hdat.GetBinContent(k)));
@@ -570,14 +573,14 @@ int main(int argc, char* argv[])
 
                     TH1* dummy = new TH1F("", "", 1, 0, 1);
                     dummy->SetLineColor(kWhite);
-                     double chival = metric->getSingleChannelChi(global_channel_index);
-                     leg->AddEntry(dummy, ("#Chi^{2}/ndof : "+to_string_prec(chival,2)+"/"+std::to_string(config.m_channel_num_bins[global_channel_index])).c_str()  ,"l");
+                    double chival = metric->getSingleChannelChi(global_channel_index);
+                    leg->AddEntry(dummy, ("#Chi^{2}/ndof : "+to_string_prec(chival,2)+"/"+std::to_string(config.m_channel_num_bins[global_channel_index])).c_str()  ,"l");
                     log<LOG_INFO>(L"%1% || On channel %2% the datamc chi^2/ndof is %3%/%4% .") % __func__ % global_channel_index % chival % config.m_channel_num_bins[global_channel_index];
 
 
                     c.Print((final_output_tag+"_PROplot_ErrorBand.pdf").c_str(), "pdf");
-                
-                                   }
+
+                }
             }
         }
         c.Print((final_output_tag+"_PROplot_ErrorBand.pdf" + "]").c_str(), "pdf");
@@ -757,9 +760,9 @@ int main(int argc, char* argv[])
 
         //***************************** END *********************************
     }
-   
+
     delete metric;
-    
+
     return 0;
 }
 
