@@ -37,7 +37,7 @@ struct profOut{
 
 class PROfile {
 
-	public:
+        public:
 	PROmetric &metric;
 
   PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc = false, int nThreads = 1, const Eigen::VectorXf& init_seed = Eigen::VectorXf(), const Eigen::VectorXf& true_params = Eigen::VectorXf() ) ;

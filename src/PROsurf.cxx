@@ -431,7 +431,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 
     h1->SetTitle("");
     h1->Draw("A2");
-    h1->GetYaxis()->SetTitle("#sigma Shift");
+    //h1->GetYaxis()->SetTitle("#sigma Shift");
 
     float y_min = h1->GetMinimum();
     for (size_t i = 0; i < barvalues.size(); ++i) {
@@ -462,12 +462,19 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     l.Draw();
 
     for (int i = 0; i < nBins; ++i) {
-	if (i < true_params.size()) {
+      TMarker* initstar = new TMarker(i+0.5, init_seed[i], 29);
+      initstar->SetMarkerSize(0.6); 
+      initstar->SetMarkerColor(kBlue); 
+      initstar->Draw();
+
+      if (i < true_params.size()) {
+
 	  TMarker* truestar = new TMarker(i+0.5, true_params[i], 29);
-	  truestar->SetMarkerSize(0.6); 
+	  truestar->SetMarkerSize(0.5); 
 	  truestar->SetMarkerColor(kRed); 
 	  truestar->Draw();
-	}	  
+	}
+      
       TMarker* star = new TMarker(i+0.5, bfvalues[i], 29);
         star->SetMarkerSize(0.5); 
         star->SetMarkerColor(kBlack); 
