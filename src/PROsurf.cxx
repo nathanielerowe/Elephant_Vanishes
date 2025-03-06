@@ -1,4 +1,5 @@
 #include "PROsurf.h"
+#include "LBFGSpp/Param.h"
 #include "PROfitter.h"
 #include "PROlog.h"
 
@@ -47,7 +48,7 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
     delete local_metric;
 }
 
-std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc, const Eigen::VectorXf& init_seed) {
+std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBFGSpp::LBFGSBParam<float> &param, int start, int end, bool with_osc, const Eigen::VectorXf& init_seed) {
 
     std::vector<profOut> outs;
     // Make a local copy for this thread
@@ -103,12 +104,6 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, int start
 
             lb[which_spline] = which_value;
             ub[which_spline] = which_value;
-
-            LBFGSpp::LBFGSBParam<float> param;
-            param.epsilon = 1e-6;
-            param.max_iterations = 100;
-            param.max_linesearch = 50;
-            param.delta = 1e-6;
 
             local_metric->fixSpline(which_spline,which_value);
 
@@ -280,14 +275,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
 }
 
 
-PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed, const Eigen::VectorXf & true_params) : metric(metric) {
-
-    LBFGSpp::LBFGSBParam<float> param;
-    param.epsilon = 1e-6;
-    param.max_iterations = 100;
-    param.max_linesearch = 50;
-    param.delta = 1e-6;
-
+PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, const LBFGSpp::LBFGSBParam<float> &param, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed, const Eigen::VectorXf & true_params) : metric(metric) {
     LBFGSpp::LBFGSBSolver<float> solver(param);
     int nparams = systs.GetNSplines() + model.nparams*with_osc;
     std::vector<float> physics_params; 
@@ -326,7 +314,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-            return this->PROfilePointHelper(&systs, start, end,with_osc,init_seed);
+            return this->PROfilePointHelper(&systs, param, start, end,with_osc,init_seed);
         }));
 
     }

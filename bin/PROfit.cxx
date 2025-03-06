@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
     bool rateonly = false;//not coded yet
     bool force = false;
     size_t nthread = 1;
+    std::map<std::string, float> fit_options;
     size_t maxevents;
 
     bool with_splines = false, binwidth_scale = false;
@@ -88,6 +89,7 @@ int main(int argc, char* argv[])
     app.add_option("--inject-systs", injected_systs, "Systematic shifts to inject. Map of name and shift value in sigmas. Only spline systs are supported right now.");
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
+    app.add_option("--fit-options", fit_options, "Parameters for LBFGSB.");
     app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting");
     app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data");
     app.add_flag("--scale-by-width", binwidth_scale, "Scale histgrams by 1/(bin width).");
@@ -240,6 +242,16 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
     param.max_iterations = 100;
     param.max_linesearch = 250;
     param.delta = 1e-6;
+    for(const auto &[param_name, value]: fit_options) {
+        if(param_name == "epsilon") {
+            param.epsilon = value;
+        } else if(param_name == "delta") {
+            param.delta = value;
+        } else {
+            log<LOG_WARNING>(L"%1% || Unrecognized LBFGSB parameter %2%. Will ignore.") 
+                % __func__ % param_name.c_str();
+        }
+    }
 
     //Metric Time
     PROmetric *metric;
@@ -292,7 +304,7 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
             post_hist.SetBinContent(i+1, post_fit(i));
         }
 
-        PROfile(config, prop, systs, *model, data, *metric , final_output_tag+"_PROfile", true, nthread, best_fit);
+        PROfile(config, prop, systs, *model, data, *metric , param, final_output_tag+"_PROfile", true, nthread, best_fit,pparams);
 
 
         //***********************************************************************

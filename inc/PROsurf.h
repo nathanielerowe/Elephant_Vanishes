@@ -1,6 +1,7 @@
 #ifndef PROSURF_H
 #define PROSURF_H
 
+#include "LBFGSpp/Param.h"
 #include "PROconfig.h"
 #include "PROspec.h"
 #include "PROpeller.h"
@@ -40,9 +41,9 @@ class PROfile {
         public:
 	PROmetric &metric;
 
-  PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, std::string filename, bool with_osc = false, int nThreads = 1, const Eigen::VectorXf& init_seed = Eigen::VectorXf(), const Eigen::VectorXf& true_params = Eigen::VectorXf() ) ;
+  PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, const LBFGSpp::LBFGSBParam<float> &param, std::string filename, bool with_osc = false, int nThreads = 1, const Eigen::VectorXf& init_seed = Eigen::VectorXf(), const Eigen::VectorXf& true_params = Eigen::VectorXf() ) ;
 
-    	std::vector<profOut> PROfilePointHelper(const PROsyst *systs, int start, int end, bool with_osc, const Eigen::VectorXf& init_seed = Eigen::VectorXf());
+    	std::vector<profOut> PROfilePointHelper(const PROsyst *systs, const LBFGSpp::LBFGSBParam<float> &param, int start, int end, bool with_osc, const Eigen::VectorXf& init_seed = Eigen::VectorXf());
 };
 
 class PROsurf {
