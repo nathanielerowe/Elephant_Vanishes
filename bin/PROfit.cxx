@@ -28,6 +28,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <exception>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <string>
@@ -72,6 +73,7 @@ int main(int argc, char* argv[])
     std::vector<int> grid_size;
     bool statonly = false, logx=true, logy=true;
     std::string xlabel, ylabel;
+    std::string xvar = "sinsq2thmm", yvar = "dmsq";
 
     std::string reweights_file;
     std::vector<std::string> mockreweights;
@@ -106,14 +108,16 @@ int main(int argc, char* argv[])
     //PROsurf, make a 2D surface scan of physics parameters
     CLI::App *surface_command = app.add_subcommand("surface", "Make a 2D surface scan of two physics parameters, profiling over all others.");
     surface_command->add_option("-g, --grid", grid_size, "Set grid size. If one dimension passed, grid assumed to be square, else rectangular")->expected(0, 2)->default_val(40);
+    surface_command->add_option("--xvar", xvar, "Name of variable to put on x-axis")->default_val("sinsq2thmm");
+    surface_command->add_option("--yvar", yvar, "Name of variable to put on x-axis")->default_val("dmsq");
     CLI::Option *xlim_opt = surface_command->add_option("--xlims", xlims, "Limits for x-axis");
     CLI::Option *ylim_opt = surface_command->add_option("--ylims", ylims, "Limits for y-axis");
     surface_command->add_option("--xlo", xlo, "Lower limit for x-axis")->excludes(xlim_opt)->default_val(1e-4);
     surface_command->add_option("--xhi", xhi, "Upper limit for x-axis")->excludes(xlim_opt)->default_val(1);
     surface_command->add_option("--ylo", ylo, "Lower limit for y-axis")->excludes(ylim_opt)->default_val(1e-2);
     surface_command->add_option("--yhi", yhi, "Upper limit for y-axis")->excludes(ylim_opt)->default_val(1e2);
-    surface_command->add_option("--xlabel", xlabel, "X-axis label")->default_val("sin^{2}2#theta_{#mu#mu}");
-    surface_command->add_option("--ylabel", ylabel, "Y-axis label")->default_val("#Deltam^{2}_{41}");
+    surface_command->add_option("--xlabel", xlabel, "X-axis label");
+    surface_command->add_option("--ylabel", ylabel, "Y-axis label");
     surface_command->add_flag("--logx,!--linx", logx, "Specify if x-axis is logarithmic or linear (default log)");
     surface_command->add_flag("--logy,!--liny", logy, "Specify if y-axis is logarithmic or linear (default log)");
 
@@ -332,8 +336,19 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
         }
 
         //Define grid and Surface
+        size_t xaxis_idx = 1, yaxis_idx = 0;
+        if(const auto loc = std::find(model->param_names.begin(), model->param_names.end(), xvar); loc != model->param_names.end()) {
+            xaxis_idx = std::distance(model->param_names.begin(), loc);
+        } else if(const auto loc = std::find(systs.spline_names.begin(), systs.spline_names.end(), xvar); loc != systs.spline_names.end()) {
+            xaxis_idx = std::distance(systs.spline_names.begin(), loc);
+        }
+        if(const auto loc = std::find(model->param_names.begin(), model->param_names.end(), yvar); loc != model->param_names.end()) {
+            yaxis_idx = std::distance(model->param_names.begin(), loc);
+        } else if(const auto loc = std::find(systs.spline_names.begin(), systs.spline_names.end(), yvar); loc != systs.spline_names.end()) {
+            yaxis_idx = std::distance(systs.spline_names.begin(), loc);
+        }
         size_t nbinsx = grid_size[0], nbinsy = grid_size[1];
-        PROsurf surface(*metric, 1, 0, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+        PROsurf surface(*metric, xaxis_idx, yaxis_idx, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
                 nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
 
         if(statonly)
@@ -347,6 +362,12 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
         for(size_t i = 0; i < surface.nbinsy+1; i++)
             binedges_y.push_back(logy ? std::pow(10, surface.edges_y(i)) : surface.edges_y(i));
 
+        if(xlabel == "") 
+            xlabel = xaxis_idx < model->nparams ? model->pretty_param_names[xaxis_idx] : 
+                config.m_mcgen_variation_plotname_map[systs.spline_names[xaxis_idx]];
+        if(ylabel == "") 
+            ylabel = yaxis_idx < model->nparams ? model->pretty_param_names[yaxis_idx] : 
+                config.m_mcgen_variation_plotname_map[systs.spline_names[yaxis_idx]];
         TH2D surf("surf", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
 
         for(size_t i = 0; i < surface.nbinsx; i++) {
