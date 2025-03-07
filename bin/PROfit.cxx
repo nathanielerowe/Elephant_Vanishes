@@ -227,7 +227,7 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
             weighthists.push_back(rwhist);
             log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
         }
-        data = FillWeightedSpectrumFromHist(config,prop,weighthists,*model, allparams,!eventbyevent);
+        data = FillWeightedSpectrumFromHist(config, prop, weighthists, *model, allparams, !eventbyevent);
     }
 
     Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
@@ -563,6 +563,7 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
                     TH1D hdat = data.toTH1D(config,global_channel_index);
                     for(size_t k=0; k<=hdat.GetNbinsX(); k++){
                         hdat.SetBinError(k,sqrt(hdat.GetBinContent(k)));
+                        log<LOG_INFO>(L"%1% || AGHR %2% .") % __func__ % hdat.GetBinContent(k);
                     }
                     hdat.SetLineColor(kBlack);
                     hdat.SetLineWidth(2);
@@ -623,10 +624,12 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
                 xi = 3;
             }
 
-            TH1D hcv = spec.toTH1D(config,0);
+            TH1D hcv = spec.toTH1D_Collapsed(config,0);
             TH1D hmock = data.toTH1D(config,0);
-            hcv.Scale(1, "width");
-            hmock.Scale(1, "width");
+            if(binwidth_scale){
+                hcv.Scale(1, "width");
+                hmock.Scale(1, "width");
+            }
             hcv.GetYaxis()->SetTitle("Events/GeV");
             hmock.GetYaxis()->SetTitle("Events/GeV");
             hcv.GetXaxis()->SetTitle(xlabel[xi]);

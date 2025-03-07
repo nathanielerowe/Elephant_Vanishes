@@ -1,5 +1,5 @@
 #include "PROspec.h"
-
+#include "PROtocall.h"
 #include <random>
 
 using namespace PROfit;
@@ -65,12 +65,15 @@ TH1D PROspec::toTH1D_Collapsed(const PROconfig &inconfig, int channel_index) con
     std::string hist_name = inconfig.m_channel_names[channel_index];
     std::string xaxis_title = inconfig.m_channel_units[channel_index];
 
+    Eigen::VectorXf coll_spec = CollapseMatrix(inconfig,spec);
+    //Eigen::VectorXf coll_error = CollapseMatrix(inconfig,error);
+
     //fill 1D hist
     TH1D hSpec(hist_name.c_str(),hist_name.c_str(), nbins, &bin_edges[0]); 
     hSpec.GetXaxis()->SetTitle(xaxis_title.c_str());
     for(int i = 1; i <= nbins; ++i){
-        hSpec.SetBinContent(i, spec(global_bin_start + i -1));
-        hSpec.SetBinError(i, error(global_bin_start + i -1));
+        hSpec.SetBinContent(i, coll_spec(global_bin_start + i -1));
+        //hSpec.SetBinError(i, coll_error(global_bin_start + i -1));
     }
 
     return hSpec;
