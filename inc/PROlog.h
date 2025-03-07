@@ -7,6 +7,8 @@
 #include <exception>
 #include <vector>
 
+#include <Eigen/Eigen>
+
 using namespace std;
 
 /*
@@ -43,6 +45,32 @@ namespace log_impl {
                 std::wstringstream ss;
                 ss << L"[";
                 for (size_t i = 0; i < vec.size(); ++i) {
+                    if (i != 0) ss << L", ";
+                    ss << vec[i];
+                }
+                ss << L"]";
+                fmt % ss.str();
+                return *this;
+            }
+            template <>
+            formatted_log_t& operator %(const std::vector<std::string>& vec) {
+                std::wstringstream ss;
+                ss << L"[";
+                for (size_t i = 0; i < vec.size(); ++i) {
+                    if (i != 0) ss << L", ";
+                    ss << vec[i].c_str();
+                }
+                ss << L"]";
+                fmt % ss.str();
+                return *this;
+            }
+            template<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime, int Options,
+                        int MaxRowsAtCompileTime, int MaxColsAtCompileTime>
+            formatted_log_t& operator %(const Eigen::Matrix<Scalar, RowsAtCompileTime, ColsAtCompileTime, Options, MaxRowsAtCompileTime, MaxColsAtCompileTime>& vec) {
+                std::wstringstream ss;
+                ss << L"[";
+                // TODO: Probably broken for matrices
+                for (int i = 0; i < vec.size(); ++i) {
                     if (i != 0) ss << L", ";
                     ss << vec[i];
                 }

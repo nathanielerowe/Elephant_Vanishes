@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -18,7 +19,7 @@ public:
     size_t nparams;
     std::vector<std::string> param_names;
     std::vector<std::string> pretty_param_names;
-    Eigen::VectorXf lb, ub;
+    Eigen::VectorXf lb, ub, default_val;
     std::vector<std::function<float(const Eigen::VectorXf&, float)>> model_functions;
     std::vector<Eigen::MatrixXf> hists; //2D hists for binned oscilattions
 };
@@ -44,8 +45,10 @@ public:
         pretty_param_names = {"#Deltam^{2}", "sin^{2}2#theta_{#mu#mu}"}; 
         lb = Eigen::VectorXf(2);
         ub = Eigen::VectorXf(2);
+        default_val = Eigen::VectorXf(2);
         lb << -2, -std::numeric_limits<float>::infinity();
         ub << 2, 0;
+        default_val << -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity();
     };
 
     /* Function: 3+1 numu->numue disapperance prob in SBL approx */
@@ -99,8 +102,10 @@ public:
         pretty_param_names = {"#Deltam^{2}", "sin^{2}2#theta_{#mu{e}}"}; 
         lb = Eigen::VectorXf(2);
         ub = Eigen::VectorXf(2);
+        default_val = Eigen::VectorXf(2);
         lb << -2, -std::numeric_limits<float>::infinity();
         ub << 2, 0;
+        default_val << -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity();
     };
 
     float Pmue(float dmsq, float sinsq2thmue, float le) const{
@@ -156,8 +161,10 @@ public:
         pretty_param_names = {"dmsq", "Ue4^2", "Um4^2"}; 
         lb = Eigen::VectorXf(3);
         ub = Eigen::VectorXf(3);
+        default_val = Eigen::VectorXf(3);
         lb << -2, -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity();
         ub << 2, 0, 0;
+        default_val << -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity();
     };
 
     float Pmue(float dmsq, float Ue4sq, float Um4sq, float le) const{
