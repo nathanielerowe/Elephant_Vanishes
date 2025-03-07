@@ -94,7 +94,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         try {
             niter = solver.minimize(metric, x, fx, lb, ub);
         } catch(std::runtime_error &except) {
-            log<LOG_WARNING>(L"%1% || Fit failed on niter,%2% : %3%") % __func__ % niter % except.what();
+            log<LOG_WARNING>(L"%1% || Fit failed on: %2%") % __func__ % except.what();
             continue;
         }
         chi2s_localfits.push_back(fx);
