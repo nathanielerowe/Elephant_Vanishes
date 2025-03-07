@@ -67,71 +67,71 @@ namespace PROfit {
         return myspectrum;
     }
 
-  PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, std::vector<TH2D*> inweighthists, const PROmodel &inmodel, const Eigen::VectorXf &params, bool binned){
-    PROspec myspectrum(inconfig.m_num_bins_total);
-    Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);
-    Eigen::VectorXf shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
+    PROspec FillWeightedSpectrumFromHist(const PROconfig &inconfig, const PROpeller &inprop, std::vector<TH2D*> inweighthists, const PROmodel &inmodel, const Eigen::VectorXf &params, bool binned){
+        PROspec myspectrum(inconfig.m_num_bins_total);
+        Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);
+        Eigen::VectorXf shifts = params.segment(inmodel.nparams, params.size() - inmodel.nparams);
 
-    if (binned) {
-      for(long int i = 0; i < inprop.hist.rows(); ++i) {
-	float le = inprop.histLE[i];
-	float hist_w = 1.0 ;
-	
-	//Figure out what subchannel the event is in
-	size_t subchan = inconfig.GetSubchannelIndexFromGlobalTrueBin(inprop.true_bin_indices[i]);
-	std::string name = inconfig.m_fullnames[subchan];
-	  
-	//Put name for ICARUS study here. How to handle more generically?
-	if (name == "nu_ICARUS_numu_numucc") {
+        if (binned) {
+            for(long int i = 0; i < inprop.hist.rows(); ++i) {
+                float le = inprop.histLE[i];
+                float hist_w = 1.0 ;
 
-	  float pmom = static_cast<float>(inprop.pmom[i]);
-	  float pcosth = static_cast<float>(inprop.pcosth[i]);
-	  for (size_t j = 0; j<inweighthists.size(); ++j){
-	    TH2D h = *inweighthists[j];
-	    int bin = h.FindBin(pmom,pcosth);
-	    hist_w *= h.GetBinContent(bin);
-	  }
-	}
-	
-	for(size_t j = 0; j < inmodel.model_functions.size(); ++j) {
-	  float oscw = inmodel.model_functions[j](phys, le);
-	  for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
-	    myspectrum.Fill(k, hist_w * oscw * inmodel.hists[j](i, k));
-	  }
-	}
-      }
+                //Figure out what subchannel the event is in
+                size_t subchan = inconfig.GetSubchannelIndexFromGlobalTrueBin(inprop.true_bin_indices[i]);
+                std::string name = inconfig.m_fullnames[subchan];
+
+                //Put name for ICARUS study here. How to handle more generically?
+                if (name == "nu_ICARUS_numu_numucc") {
+
+                    float pmom = static_cast<float>(inprop.pmom[i]);
+                    float pcosth = static_cast<float>(inprop.pcosth[i]);
+                    for (size_t j = 0; j<inweighthists.size(); ++j){
+                        TH2D h = *inweighthists[j];
+                        int bin = h.FindBin(pmom,pcosth);
+                        hist_w *= h.GetBinContent(bin);
+                    }
+                }
+
+                for(size_t j = 0; j < inmodel.model_functions.size(); ++j) {
+                    float oscw = inmodel.model_functions[j](phys, le);
+                    for(size_t k = 0; k < myspectrum.GetNbins(); ++k) {
+                        myspectrum.Fill(k, hist_w * oscw * inmodel.hists[j](i, k));
+                    }
+                }
+            }
+        }
+        else {
+            for(size_t i = 0; i<inprop.trueLE.size(); ++i){
+
+                float oscw  = phys.size() != 0 ? 
+                    inmodel.model_functions[inprop.model_rule[i]](phys, inprop.trueLE[i]) :
+                    1;	
+                float add_w = inprop.added_weights[i];
+                float hist_w = 1.0 ;
+
+                //Figure out what subchannel the event is in
+                size_t subchan = inconfig.GetSubchannelIndexFromGlobalTrueBin(inprop.true_bin_indices[i]);
+                std::string name = inconfig.m_fullnames[subchan];
+
+                //Put name for ICARUS study here. How to handle more generically?
+                if (name == "nu_ICARUS_numu_numucc") {
+                    float pmom = static_cast<float>(inprop.pmom[i]);
+                    float pcosth = static_cast<float>(inprop.pcosth[i]);
+
+                    for (size_t j = 0; j<inweighthists.size(); ++j){
+                        TH2D h = *inweighthists[j];
+                        int bin = h.FindBin(pmom,pcosth);
+                        hist_w *= h.GetBinContent(bin);
+                    }
+                }
+
+                float finalw = oscw * add_w * hist_w;
+                myspectrum.Fill(inprop.bin_indices[i], finalw);
+            }
+        }
+        return myspectrum;
     }
-    else {
-      for(size_t i = 0; i<inprop.trueLE.size(); ++i){
-
-	float oscw  = phys.size() != 0 ? 
-	  inmodel.model_functions[inprop.model_rule[i]](phys, inprop.trueLE[i]) :
-	  1;	
-	float add_w = inprop.added_weights[i];
-	float hist_w = 1.0 ;
-
-	//Figure out what subchannel the event is in
-	size_t subchan = inconfig.GetSubchannelIndexFromGlobalTrueBin(inprop.true_bin_indices[i]);
-	std::string name = inconfig.m_fullnames[subchan];
-	  
-	//Put name for ICARUS study here. How to handle more generically?
-	if (name == "nu_ICARUS_numu_numucc") {
-	  float pmom = static_cast<float>(inprop.pmom[i]);
-	  float pcosth = static_cast<float>(inprop.pcosth[i]);
-
-	  for (size_t j = 0; j<inweighthists.size(); ++j){
-	    TH2D h = *inweighthists[j];
-	    int bin = h.FindBin(pmom,pcosth);
-	    hist_w *= h.GetBinContent(bin);
-	  }
-	}
-
-	float finalw = oscw * add_w * hist_w;
-	myspectrum.Fill(inprop.bin_indices[i], finalw);
-      }
-    }
-    return myspectrum;
-  }
 
     PROspec FillSystRandomThrow(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst) {
         Eigen::VectorXf spec = Eigen::VectorXf::Constant(inconfig.m_num_bins_total, 0);
@@ -180,11 +180,11 @@ namespace PROfit {
         if (ldlt.info() != Eigen::Success) {
             log<LOG_ERROR>(L"%1% | Eigen LLT has failed!") % __func__ ;
             if (!coll.isApprox(coll.transpose())) {
-                    log<LOG_ERROR>(L"%1% | Matrix is not symmetric!") % __func__ ;
+                log<LOG_ERROR>(L"%1% | Matrix is not symmetric!") % __func__ ;
             }
             Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(coll);
             if (eigensolver.eigenvalues().minCoeff() <= 0) {
-                    log<LOG_ERROR>(L"%1% | Matrix is not positive semi definite, minCoeff is %2% ") % __func__ % eigensolver.eigenvalues().minCoeff();
+                log<LOG_ERROR>(L"%1% | Matrix is not positive semi definite, minCoeff is %2% ") % __func__ % eigensolver.eigenvalues().minCoeff();
             }
             Eigen::IOFormat fmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", "\n", "", "", "", "");
             std::ostringstream oss;
@@ -196,7 +196,7 @@ namespace PROfit {
 
         //std::vector<float> stdVec(final_spec.data(), final_spec.data() + final_spec.size());
         //log<LOG_INFO>(L"%1% | final_spec is %2% ") % __func__ % stdVec;
-       
+
 
         return PROspec(final_spec, final_spec.array().sqrt());
     }
