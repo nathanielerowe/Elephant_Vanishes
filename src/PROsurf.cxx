@@ -4,8 +4,7 @@
 #include "PROlog.h"
 
 #include <Eigen/Eigen>
-#include <cmath>
-
+#include <cmath> 
 #include "TLatex.h"
 
 using namespace PROfit;
