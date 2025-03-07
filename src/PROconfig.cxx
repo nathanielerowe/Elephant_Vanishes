@@ -826,7 +826,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
         }
     }//end model
 
-    for(int i = 0 ; i<m_mcgen_variation_type.size(); ++i){
+    for(size_t i = 0 ; i<m_mcgen_variation_type.size(); ++i){
         if(m_mcgen_variation_type[i] == "spline"){
             m_num_variation_type_spline+=1;
         }
