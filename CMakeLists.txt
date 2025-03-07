@@ -31,18 +31,32 @@ endif()
 
 ##### Some Dependancies ######
 
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
+FetchContent_Declare(
+    eigen
+    SYSTEM
+    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git 
+    GIT_TAG        3.4.0
+    )
+FetchContent_Declare(
+    lbfgspp
+    SYSTEM
+    GIT_REPOSITORY https://github.com/gputnam/LBFGSpp
+    GIT_TAG        d0149638e0f89b6c5b001d202f65273705ec7117
+    )
+else()
 FetchContent_Declare(
     eigen
     GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git 
     GIT_TAG        3.4.0
     )
-FetchContent_MakeAvailable(eigen)
-
 FetchContent_Declare(
     lbfgspp
     GIT_REPOSITORY https://github.com/gputnam/LBFGSpp
     GIT_TAG        d0149638e0f89b6c5b001d202f65273705ec7117
     )
+endif()
+FetchContent_MakeAvailable(eigen)
 FetchContent_MakeAvailable(lbfgspp)
 
 FetchContent_Declare(

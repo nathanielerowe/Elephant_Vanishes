@@ -1,5 +1,4 @@
 #include "PROfitter.h"
-#include "Eigen/src/Core/Matrix.h"
 #include "PROlog.h"
 #include "PROmetric.h"
 
