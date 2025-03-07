@@ -102,7 +102,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
             best_fit = x;
             chimin = fx;
         }
-        log<LOG_INFO>(L"%1% ||  LocalGrad Run : %2% has a chi %3%") % __func__ % s % fx;
+        log<LOG_INFO>(L"%1% ||  LocalGrad Run : %2% has a chi %3% after %4% iterations") % __func__ % s % fx % niter;
         std::string spec_string = "";
         for(auto &f : x) spec_string+=" "+std::to_string(f); 
         log<LOG_DEBUG>(L"%1% || Best Point is  : %2% ") % __func__ % spec_string.c_str();
@@ -123,7 +123,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
                 chimin = fx;
             }
 
-            log<LOG_INFO>(L"%1% ||  Seed Run has a chi %2%") % __func__ %  fx;
+            log<LOG_INFO>(L"%1% ||  Seed Run has a chi %2% after %3% iterations") % __func__ %  fx % niter;
             std::string spec_string = "";
             for(auto &f : x) spec_string+=" "+std::to_string(f); 
             log<LOG_DEBUG>(L"%1% || Best Point post Seed is  : %2% ") % __func__ % spec_string.c_str();
@@ -144,7 +144,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
             chimin = fx;
         }
 
-        log<LOG_INFO>(L"%1% ||  CV Run has a chi %2%") % __func__ %  fx;
+        log<LOG_INFO>(L"%1% ||  CV Run has a chi %2% after %3% iterations") % __func__ %  fx % niter;
         std::string spec_string = "";
         for(auto &f : x) spec_string+=" "+std::to_string(f); 
         log<LOG_DEBUG>(L"%1% || Best Point post CV is  : %2% ") % __func__ % spec_string.c_str();
