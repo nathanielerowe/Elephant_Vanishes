@@ -563,7 +563,6 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
                     TH1D hdat = data.toTH1D(config,global_channel_index);
                     for(size_t k=0; k<=hdat.GetNbinsX(); k++){
                         hdat.SetBinError(k,sqrt(hdat.GetBinContent(k)));
-                        log<LOG_INFO>(L"%1% || AGHR %2% .") % __func__ % hdat.GetBinContent(k);
                     }
                     hdat.SetLineColor(kBlack);
                     hdat.SetLineWidth(2);
@@ -638,10 +637,10 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
             hmock.SetTitle("");
 
             TCanvas *c2 = new TCanvas((final_output_tag+"_spec_cv").c_str(), (final_output_tag+"_spec_cv").c_str(), 800, 800);
-            hcv.SetLineColor(kBlack);
-            hmock.SetLineColor(5);
-            hmock.SetFillColor(5);
-            TRatioPlot * rp = new TRatioPlot(&hmock,&hcv);
+            hmock.SetLineColor(kBlack);
+            hcv.SetLineColor(5);
+            hcv.SetFillColor(5);
+            TRatioPlot * rp = new TRatioPlot(&hcv,&hmock);
             rp->Draw();
             rp->GetLowerRefGraph()->SetMarkerStyle(21);
             TGraphAsymmErrors *lowerGraph = dynamic_cast<TGraphAsymmErrors*>(rp->GetLowerRefGraph());
@@ -654,8 +653,8 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
             std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.35,0.7,0.89,0.89);
             leg->SetFillStyle(0);
             leg->SetLineWidth(0);
-            leg->AddEntry(&hcv,"CV","l");
-            leg->AddEntry(&hmock,"Mock data: ", "f");
+            leg->AddEntry(&hcv,"CV","f");
+            leg->AddEntry(&hmock,"Mock data: ", "l");
             TObject *null = new TObject(); 
             int i=0;
 
