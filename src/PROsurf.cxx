@@ -61,7 +61,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
     for(int i=start; i<end;i++){
         local_metric->reset();
 
-        int which_spline= i;
+        size_t which_spline= i;
         bool isphys = which_spline < local_metric->GetModel().nparams;
         if(isphys) nstep=4*nstep;
         profOut output;
@@ -78,7 +78,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
                 lb = Eigen::VectorXf::Constant(nparams, -3.0);
                 ub = Eigen::VectorXf::Constant(nparams, 3.0);
                 //set physics to correct values
-                for(int j=0; j<local_metric->GetModel().nparams; j++){
+                for(size_t j=0; j<local_metric->GetModel().nparams; j++){
                     ub(j) = local_metric->GetModel().ub(j);
                     lb(j) = local_metric->GetModel().lb(j); 
                 }
@@ -276,7 +276,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
 }
 
 
-PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &systs, const PROmodel &model, const PROspec &data, PROmetric &metric, const LBFGSpp::LBFGSBParam<float> &param, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed, const Eigen::VectorXf & true_params) : metric(metric) {
+PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &model, PROmetric &metric, const LBFGSpp::LBFGSBParam<float> &param, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed, const Eigen::VectorXf & true_params) : metric(metric) {
     LBFGSpp::LBFGSBSolver<float> solver(param);
     int nparams = systs.GetNSplines() + model.nparams*with_osc;
     std::vector<float> physics_params; 
@@ -331,7 +331,7 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
     TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
     c->Divide(4,depth);
 
-    int w = 0;
+    size_t w = 0;
     for(auto & out: combinedResults){
         
         log<LOG_INFO>(L"%1% || Knob Values: %2%") % __func__ %  out.knob_vals;
