@@ -613,10 +613,12 @@ int PROconfig::LoadFromXML(const std::string &filename){
             tinyxml2::XMLElement *pAllowList = pList->FirstChildElement("allowlist");
             while(pAllowList){
                 std::string wt = std::string(pAllowList->GetText());
-                const char* variation_type = pAllowList->Attribute("type");
+                const char *variation_type = pAllowList->Attribute("type");
+                const char *plot_name = pAllowList->Attribute("plotname");
                 m_mcgen_variation_type.push_back(variation_type);
                 m_mcgen_variation_type_map[wt] = variation_type;
                 m_mcgen_variation_allowlist.push_back(wt);
+                m_mcgen_variation_plotname_map[wt] = plot_name ? plot_name : wt;
                 log<LOG_DEBUG>(L"%1% || Allowlisting variations: %2%") % __func__ % wt.c_str() ;
                 pAllowList = pAllowList->NextSiblingElement("allowlist");
             }

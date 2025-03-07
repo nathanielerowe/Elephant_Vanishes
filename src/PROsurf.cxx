@@ -6,6 +6,8 @@
 #include <Eigen/Eigen>
 #include <cmath>
 
+#include "TLatex.h"
+
 using namespace PROfit;
 
 PROsurf::PROsurf(PROmetric &metric, size_t x_idx, size_t y_idx, size_t nbinsx, LogLin llx, float x_lo, float x_hi, size_t nbinsy, LogLin lly, float y_lo, float y_hi) : metric(metric), x_idx(x_idx), y_idx(y_idx), nbinsx(nbinsx), nbinsy(nbinsy), edges_x(Eigen::VectorXf::Constant(nbinsx + 1, 0)), edges_y(Eigen::VectorXf::Constant(nbinsy + 1, 0)), surface(nbinsx, nbinsy) {
@@ -433,8 +435,8 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 
     float y_min = h1->GetMinimum();
     for (size_t i = 0; i < barvalues.size(); ++i) {
-      std::string label = i < model.nparams ? "Log_{10}(" + model.pretty_param_names[i]+")" : names[i];
-      TText* text = new TText(barvalues[i], y_min - 0.05, label.c_str());  // Position text below axis
+      std::string label = i < model.nparams ? "Log_{10}(" + model.pretty_param_names[i]+")" : config.m_mcgen_variation_plotname_map.at(names[i]);
+      TLatex* text = new TLatex(barvalues[i], y_min - 0.05, label.c_str());  // Position text below axis
       text->SetTextAlign(13);  
       text->SetTextSize(0.03); 
       text->SetTextAngle(-45); 
