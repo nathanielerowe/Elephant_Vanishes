@@ -351,9 +351,9 @@ int main(int argc, char* argv[])
                 nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
 
         if(statonly)
-            surface.FillSurfaceStat(config, final_output_tag+"_statonly_surface.txt");
+            surface.FillSurfaceStat(config, param, final_output_tag+"_statonly_surface.txt");
         else
-            surface.FillSurface(final_output_tag+"_surface.txt",nthread);
+            surface.FillSurface(param, final_output_tag+"_surface.txt",nthread);
 
         std::vector<float> binedges_x, binedges_y;
         for(size_t i = 0; i < surface.nbinsx+1; i++)
