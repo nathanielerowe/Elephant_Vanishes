@@ -1,5 +1,4 @@
 #include "PROcreate.h"
-#include "Eigen/src/Core/Matrix.h"
 #include "PROlog.h"
 #include "PROpeller.h"
 #include "PROtocall.h"

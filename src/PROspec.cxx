@@ -277,7 +277,7 @@ Eigen::VectorXf PROspec::eigenvector_multiplication(const Eigen::VectorXf& a, co
 
 void PROspec::plotSpectrum(const PROconfig& inconfig, const std::string& output_name) const{
 
-    bool collapsed = spec.size() == inconfig.m_num_bins_total_collapsed;
+    bool collapsed = spec.size() == (long)inconfig.m_num_bins_total_collapsed;
     bool div_bin = true;
     int n_subplots = inconfig.m_num_channels*inconfig.m_num_modes*inconfig.m_num_detectors;
     log<LOG_DEBUG>(L"%1% || Creatign canvas with  %2% subplots") % __func__ % n_subplots;

@@ -26,7 +26,7 @@ public:
 class PROnumudis : public PROmodel {
 public:
     PROnumudis(const PROpeller &prop) {
-        model_functions.push_back([this](const Eigen::VectorXf &v, float) {(void)this; return 1.0;});
+        model_functions.push_back([this]([[maybe_unused]] const Eigen::VectorXf &v, float) {(void)this; return 1.0;});
         model_functions.push_back([this](const Eigen::VectorXf &v, float le) {return this->Pmumu(v(0),v(1),le);});
 
         for(size_t m = 0; m < model_functions.size(); ++m) {
@@ -81,7 +81,7 @@ public:
 class PROnueapp : public PROmodel {
 public:
     PROnueapp(const PROpeller &prop) {
-        model_functions.push_back([this](const Eigen::VectorXf &v, float) {(void)this; return 1.0;});
+        model_functions.push_back([this]([[maybe_unused]] const Eigen::VectorXf &v, float) {(void)this; return 1.0;});
         model_functions.push_back([this](const Eigen::VectorXf &v, float le) {return this->Pmue(v(0),v(1),le);});
 
         for(size_t m = 0; m < model_functions.size(); ++m) {
@@ -136,7 +136,7 @@ class PRO3p1 : public PROmodel {
 public:
     PRO3p1(const PROpeller &prop) {
 
-        model_functions.push_back([this](const Eigen::VectorXf &v, float) {(void)this; return 1.0; });
+        model_functions.push_back([this]([[maybe_unused]] const Eigen::VectorXf &v, float) {(void)this; return 1.0; });
         model_functions.push_back([this](const Eigen::VectorXf &v, float le) {return this->Pmumu(v(0),v(1),v(2),le); });
         model_functions.push_back([this](const Eigen::VectorXf &v, float le) {return this->Pmue(v(0),v(1),v(2),le); });
         model_functions.push_back([this](const Eigen::VectorXf &v, float le) {return this->Pee(v(0),v(1),v(2),le); });
