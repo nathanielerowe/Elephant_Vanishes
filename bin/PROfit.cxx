@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
     //Parse inputs. 
     CLI11_PARSE(app, argc, argv);
     log<LOG_INFO>(L" %1% ") % getIcon().c_str()  ;
-std:string final_output_tag =analysis_tag +"_"+output_tag;
+    std::string final_output_tag =analysis_tag +"_"+output_tag;
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, output %4%, nthread: %5% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % output_tag.c_str() % nthread ;
 
     //Initilize configuration from the XML;
@@ -293,8 +293,7 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
         Eigen::VectorXf best_fit = fitter.best_fit;
         Eigen::MatrixXf post_covar = fitter.Covariance();
 
-        //std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(config.m_num_bins_total_collapsed);
-        std::string hname = "";
+        std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(config.m_num_bins_total_collapsed);
 
         Eigen::VectorXf subvector1 = best_fit.segment(0, 2);
         std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
@@ -445,7 +444,6 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
             PROspec osc_spec = FillRecoSpectra(config, prop, systs, *model, pparams, !eventbyevent);
             std::map<std::string, std::unique_ptr<TH1D>> osc_hists = getCVHists(osc_spec, config, binwidth_scale);
             size_t global_subchannel_index = 0;
-            size_t global_channel_index = 0;
             for(size_t im = 0; im < config.m_num_modes; im++){
                 for(size_t id =0; id < config.m_num_detectors; id++){
                     for(size_t ic = 0; ic < config.m_num_channels; ic++){
@@ -492,7 +490,7 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
                         leg->SetLineWidth(0);
                         leg->AddEntry(cv_hist, "No Oscillations", "l");
                         std::string oscstr = "";//"#splitline{Oscilations:}{";
-                        for(int j=0;j<model->nparams;j++){
+                        for(size_t j=0;j<model->nparams;j++){
                             oscstr+=model->pretty_param_names[j]+ " : "+ to_string_prec(osc_params[j],2) + (j==0 ? ", " : "" );
                         }
                         //oscstr+="}";
@@ -582,7 +580,7 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
                     err_band->GetXaxis()->SetRangeUser(config.m_channel_bin_edges[global_channel_index].front(),config.m_channel_bin_edges[global_channel_index].back());
 
                     TH1D hdat = data.toTH1D(config,global_channel_index);
-                    for(size_t k=0; k<=hdat.GetNbinsX(); k++){
+                    for(int k=0; k<=hdat.GetNbinsX(); k++){
                         hdat.SetBinError(k,sqrt(hdat.GetBinContent(k)));
                     }
                     hdat.SetLineColor(kBlack);
@@ -677,37 +675,26 @@ std:string final_output_tag =analysis_tag +"_"+output_tag;
             leg->AddEntry(&hcv,"CV","f");
             leg->AddEntry(&hmock,"Mock data: ", "l");
             TObject *null = new TObject(); 
-            int i=0;
 
             for(const auto& [name, shift]: injected_systs) {
                 char ns[6];
                 snprintf(ns, sizeof(ns),"%.2f", shift);
                 leg->AddEntry(null, (name+": "+ns+ " sigma").c_str(),"");
-                i++;
             }
 
             for (const auto& m : mockreweights) {
                 leg->AddEntry(null, m.c_str(),"");
-                i++;
             }
             for (const auto& m : osc_params) {
                 leg->AddEntry(null, ("param: "+std::to_string(m)).c_str(),"");
-                i++;
             }
 
             leg->Draw();
             c2->SaveAs((final_output_tag+"_ReWeight_spec.pdf").c_str());
-
-
         }
-
-
-
-
 
         if(with_splines) {
             c.Print((final_output_tag+"_PROplot_Spline.pdf" + "[").c_str(), "pdf");
-
 
             std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> spline_graphs = getSplineGraphs(systs, config);
             c.Clear();
@@ -939,12 +926,12 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
         specs.push_back(FillSystRandomThrow(config, prop, syst).Spec());
     //specs.push_back(CollapseMatrix(config, FillSystRandomThrow(config, prop, syst).Spec()));
     TH1D tmphist("th", "", cv.size(), edges.data());
-    for(size_t i = 0; i < cv.size(); ++i)
+    for(int i = 0; i < cv.size(); ++i)
         tmphist.SetBinContent(i+1, cv(i));
     if(scale) tmphist.Scale(1, "width");
     //std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
     std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(&tmphist);
-    for(size_t i = 0; i < cv.size(); ++i) {
+    for(int i = 0; i < cv.size(); ++i) {
         std::vector<float> binconts(nerrorsample);
         for(size_t j = 0; j < nerrorsample; ++j) {
             binconts[j] = specs[j](i);
