@@ -24,11 +24,14 @@ PROsurf::PROsurf(PROmetric &metric, size_t x_idx, size_t y_idx, size_t nbinsx, L
         edges_y(i) = y_lo + i * (y_hi - y_lo) / nbinsy;
 }
 
-void PROsurf::FillSurfaceStat(const PROconfig &config, std::string filename) {
+void PROsurf::FillSurfaceStat(const PROconfig &config, const LBFGSpp::LBFGSBParam<float> &param, std::string filename) {
     std::ofstream chi_file;
     if(!filename.empty()){
         chi_file.open(filename);
     }
+
+    // I think this will be needed for stat fits with more than 2 physics parameters
+    (void)param;
 
     PROsyst dummy_syst;
     dummy_syst.fractional_covariance = Eigen::MatrixXf::Constant(config.m_num_bins_total, config.m_num_bins_total, 0);
@@ -135,7 +138,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
     return outs;
 }
 
-std::vector<surfOut> PROsurf::PointHelper(std::vector<surfOut> multi_physics_params, int start, int end){
+std::vector<surfOut> PROsurf::PointHelper(const LBFGSpp::LBFGSBParam<float> &param, std::vector<surfOut> multi_physics_params, int start, int end){
     std::vector<surfOut> outs;
 
     // Make a local copy for this thread
@@ -159,12 +162,6 @@ std::vector<surfOut> PROsurf::PointHelper(std::vector<surfOut> multi_physics_par
             continue;
         }
 
-        LBFGSpp::LBFGSBParam<float> param;
-        param.epsilon = 1e-6;
-        param.max_iterations = 100;
-        param.max_linesearch = 50;
-        param.delta = 1e-6;
-
         Eigen::VectorXf lb(nparams+2);
         lb << local_metric->GetModel().lb, Eigen::VectorXf::Map(local_metric->GetSysts().spline_lo.data(), local_metric->GetSysts().spline_lo.size());
         Eigen::VectorXf ub(nparams+2);
@@ -186,7 +183,7 @@ std::vector<surfOut> PROsurf::PointHelper(std::vector<surfOut> multi_physics_par
 }
 
 
-void PROsurf::FillSurface(std::string filename, int nThreads) {
+void PROsurf::FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string filename, int nThreads) {
     std::ofstream chi_file;
     if(!filename.empty()){
         chi_file.open(filename);
@@ -213,7 +210,7 @@ void PROsurf::FillSurface(std::string filename, int nThreads) {
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-            return this->PointHelper(grid, start, end);
+            return this->PointHelper(param, grid, start, end);
         }));
 
     }

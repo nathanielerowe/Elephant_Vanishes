@@ -62,10 +62,10 @@ public:
 
     PROsurf(PROmetric &metric, size_t x_idx, size_t y_idx, size_t nbinsx, LogLin llx, float x_lo, float x_hi, size_t nbinsy, LogLin lly, float y_lo, float y_hi);
 
-    std::vector<surfOut> PointHelper(std::vector<surfOut> multi_physics_params, int start, int end);
+    std::vector<surfOut> PointHelper(const LBFGSpp::LBFGSBParam<float> &param, std::vector<surfOut> multi_physics_params, int start, int end);
 
-    void FillSurfaceStat(const PROconfig &config, std::string filename);
-    void FillSurface(std::string filename, int nthreads = 1);
+    void FillSurfaceStat(const PROconfig &config, const LBFGSpp::LBFGSBParam<float> &param, std::string filename);
+    void FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string filename, int nthreads = 1);
 
 };
 
