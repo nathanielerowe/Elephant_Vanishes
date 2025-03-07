@@ -198,6 +198,10 @@ int main(int argc, char* argv[])
         for(size_t i = 0; i < osc_params.size(); ++i) {
             pparams(i) = std::log10(osc_params[i]);
         }
+    } else {
+        for(size_t i = 0; i < model->nparams; ++i) {
+            pparams(i) = model->default_val(i);
+        }
     }
 
     //Spline injection studies
@@ -211,7 +215,7 @@ int main(int argc, char* argv[])
             continue;
         }
         int idx = std::distance(systs.spline_names.begin(), it);
-        allparams(idx) = shift;
+        allparams(idx+model->nparams) = shift;
     }
 
     //Create CV or injected data spectrum for all subsequent steps
