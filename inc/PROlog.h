@@ -52,18 +52,6 @@ namespace log_impl {
                 fmt % ss.str();
                 return *this;
             }
-            template <>
-            formatted_log_t& operator %(const std::vector<std::string>& vec) {
-                std::wstringstream ss;
-                ss << L"[";
-                for (size_t i = 0; i < vec.size(); ++i) {
-                    if (i != 0) ss << L", ";
-                    ss << vec[i].c_str();
-                }
-                ss << L"]";
-                fmt % ss.str();
-                return *this;
-            }
             template<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime, int Options,
                         int MaxRowsAtCompileTime, int MaxColsAtCompileTime>
             formatted_log_t& operator %(const Eigen::Matrix<Scalar, RowsAtCompileTime, ColsAtCompileTime, Options, MaxRowsAtCompileTime, MaxColsAtCompileTime>& vec) {
@@ -83,6 +71,19 @@ namespace log_impl {
             log_level_t     level;
             boost::wformat      fmt;
     };
+
+    template <>
+    inline formatted_log_t& formatted_log_t::operator %(const std::vector<std::string>& vec) {
+        std::wstringstream ss;
+        ss << L"[";
+        for (size_t i = 0; i < vec.size(); ++i) {
+            if (i != 0) ss << L", ";
+            ss << vec[i].c_str();
+        }
+        ss << L"]";
+        fmt % ss.str();
+        return *this;
+    }
 }//namespace log_impl
 // Helper function. Class formatted_log_t will not be used directly.
 template <log_level_t level>
