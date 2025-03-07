@@ -4,6 +4,7 @@
 #include "PROlog.h"
 
 #include <Eigen/Eigen>
+#include <cmath>
 
 using namespace PROfit;
 
@@ -245,7 +246,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
     //..ok so minX is the min and Currentl minY is the chi^2. Want this to be delta chi^2
 
     float leftX = minX, rightX = minX;
-    
+
     // Search to the left of the minimum
     for (float x = minX; x >= lo; x -= step) {
         float y = g->Eval(x) - minY; //DeltaChi^2
@@ -257,7 +258,6 @@ std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
             leftX = lo;
         }
     }
-    
 
     // Search to the right of the minimum
     for (float x = minX; x <= hi; x += step) {
@@ -270,7 +270,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
             rightX = hi;
         }
     }
-    
+
     return {minX,leftX,rightX};
 }
 
@@ -381,13 +381,15 @@ PROfile::PROfile(const PROconfig &config, const PROpeller &prop, const PROsyst &
 
     log<LOG_INFO>(L"%1% || Getting BF, +/- one sigma ranges. Is Two sigma turned on? : %2% ") % __func__ % twosig;
 
-    int count = 0;
+    size_t count = 0;
     for(auto &g:graphs){
         //if(metric->GetModel().nparams)continue;
         float lo = count < metric.GetModel().nparams ? metric.GetModel().lb(count) :
                      metric.GetSysts().spline_lo[count - metric.GetModel().nparams];
+        if(std::isinf(lo)) lo = lo < 0 ? -5 : 5;
         float hi = count < metric.GetModel().nparams ? metric.GetModel().ub(count) :
                      metric.GetSysts().spline_hi[count - metric.GetModel().nparams];
+        if(std::isinf(hi)) hi = hi < 0 ? -5 : 5;
         std::vector<float> tmp = findMinAndBounds(g.get(),1.0, lo, hi);
 	barvalues.push_back(float(count)+0.5);
 	barvalues_err.push_back(0.4);
