@@ -39,7 +39,6 @@ namespace PROfit{
             size_t nbins;
             Eigen::VectorXf spec;
             Eigen::VectorXf error;
-            uint32_t hash;
             
 
             //---- private helper function --------
@@ -54,6 +53,7 @@ namespace PROfit{
 
         public:
 
+            uint32_t hash;
             template<class Archive>
             void serialize(Archive &ar, [[maybe_unused]] const unsigned int version) {
                 ar & nbins;
@@ -146,7 +146,8 @@ namespace PROfit{
 
             /* Save to binary file*/
             inline
-            void save(const std::string& config, const std::string& filename) const {
+            void save(const PROconfig& config, const std::string& filename) {
+                hash = config.hash;
                 auto start = std::chrono::high_resolution_clock::now();
                 std::ofstream ofs(filename, std::ios::binary);
                 boost::archive::binary_oarchive oa(ofs);

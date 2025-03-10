@@ -189,38 +189,7 @@ int main(int argc, char* argv[])
         systs = systs.excluding(systs_excluded);
     }
 
-
-    //Some logic for EITHER injecting fake/mock data of oscillated signal/syst shifts OR using real data
-    PROspec data;
-    if(!data_xml.empty()){
-        PROconfig dataconfig(data_xml);
-
-        if((*process_command) || (!std::filesystem::exists(dataBinName))  ){
-            log<LOG_INFO>(L"%1% || Processing Data Spectrum and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
-
-            //Process the CAF files to grab and fill spectrum directly
-            data = CreatePROspecCV(dataconfig);
-            data.save(dataconfig,dataBinName);
-            log<LOG_INFO>(L"%1% || Done processing Data from XML defined root files, and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
-        }else{
-            log<LOG_INFO>(L"%1% || Loading Data from precalc binary input: %2%") % __func__ % dataBinName.c_str();
-            data.load(dataBinName);
-
-            log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded Data (%3%) hash are here. ") % __func__ %  dataconfig.hash % data.hash;
-            if(dataconfig.hash!=data.hash){
-                if(force){
-                    log<LOG_WARNING>(L"%1% || WARNING config hash (%2%) and binary loaded data (%3%) hash not compatable! ") % __func__ %  dataconfig.hash % data.hash ;
-                    log<LOG_WARNING>(L"%1% || WARNING But we are forcing ahead, be SUPER clear and happy you understand what your doing.  ") % __func__;
-                }else{
-                    log<LOG_ERROR>(L"%1% || ERROR config hash (%2%) and binary loaded data (%3%) hash not compatable! ") % __func__ %  dataconfig.hash % data.hash ;
-                    return 1;
-                }
-            }
-        }
-
-    }//if no data, use injected or fake data;
-    else{
-        //Pysics parameter input
+    //Pysics parameter input
         Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
         if(osc_params.size()) {
             if(osc_params.size() != model->nparams) {
@@ -250,6 +219,39 @@ int main(int argc, char* argv[])
             int idx = std::distance(systs.spline_names.begin(), it);
             allparams(idx+model->nparams) = shift;
         }
+
+    //Some logic for EITHER injecting fake/mock data of oscillated signal/syst shifts OR using real data
+    PROspec data;
+    if(!data_xml.empty()){
+        PROconfig dataconfig(data_xml);
+        std::string dataBinName = analysis_tag+"_data.bin";
+
+        if((*process_command) || (!std::filesystem::exists(dataBinName))  ){
+            log<LOG_INFO>(L"%1% || Processing Data Spectrum and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
+
+            //Process the CAF files to grab and fill spectrum directly
+            data = CreatePROspecCV(dataconfig);
+            data.save(dataconfig,dataBinName);
+            log<LOG_INFO>(L"%1% || Done processing Data from XML defined root files, and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
+        }else{
+            log<LOG_INFO>(L"%1% || Loading Data from precalc binary input: %2%") % __func__ % dataBinName.c_str();
+            data.load(dataBinName);
+
+            log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded Data (%3%) hash are here. ") % __func__ %  dataconfig.hash % data.hash;
+            if(dataconfig.hash!=data.hash){
+                if(force){
+                    log<LOG_WARNING>(L"%1% || WARNING config hash (%2%) and binary loaded data (%3%) hash not compatable! ") % __func__ %  dataconfig.hash % data.hash ;
+                    log<LOG_WARNING>(L"%1% || WARNING But we are forcing ahead, be SUPER clear and happy you understand what your doing.  ") % __func__;
+                }else{
+                    log<LOG_ERROR>(L"%1% || ERROR config hash (%2%) and binary loaded data (%3%) hash not compatable! ") % __func__ %  dataconfig.hash % data.hash ;
+                    return 1;
+                }
+            }
+        }
+
+    }//if no data, use injected or fake data;
+    else{
+        
 
         //Create CV or injected data spectrum for all subsequent steps
         //this now will inject osc param, splines and reweight all at once
