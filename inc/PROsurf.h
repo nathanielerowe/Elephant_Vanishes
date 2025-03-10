@@ -27,6 +27,7 @@ namespace PROfit {
 struct surfOut{
     std::vector<int> grid_index;
     std::vector<float> grid_val;
+    Eigen::VectorXf best_fit;
     float chi;
 };
 
@@ -52,6 +53,14 @@ public:
     size_t x_idx, y_idx, nbinsx, nbinsy;
     Eigen::VectorXf edges_x, edges_y;
     Eigen::MatrixXf surface;
+    
+    struct SurfPointResult {
+        int binx, biny;
+        Eigen::VectorXf best_fit;
+        float chi2;
+    };
+
+    std::vector<SurfPointResult> results;
 
     enum LogLin {
         LinAxis,

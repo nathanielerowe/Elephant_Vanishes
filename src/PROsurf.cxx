@@ -80,15 +80,16 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
             if(with_osc) {
                 lb = Eigen::VectorXf::Constant(nparams, -3.0);
                 ub = Eigen::VectorXf::Constant(nparams, 3.0);
+                size_t nphys = local_metric->GetModel().nparams;
                 //set physics to correct values
-                for(size_t j=0; j<local_metric->GetModel().nparams; j++){
+                for(size_t j=0; j<nphys; j++){
                     ub(j) = local_metric->GetModel().ub(j);
                     lb(j) = local_metric->GetModel().lb(j); 
                 }
                 //upper lower bounds for splines
-                for(int j = local_metric->GetModel().nparams; j < nparams; ++j) {
-                    lb(j) = systs->spline_lo[j-2];
-                    ub(j) = systs->spline_hi[j-2];
+                for(int j = nphys; j < nparams; ++j) {
+                    lb(j) = systs->spline_lo[j-nphys];
+                    ub(j) = systs->spline_hi[j-nphys];
                 }
             } else {
                 ub = Eigen::VectorXf::Map(systs->spline_hi.data(), systs->spline_hi.size());
@@ -174,6 +175,7 @@ std::vector<surfOut> PROsurf::PointHelper(const LBFGSpp::LBFGSBParam<float> &par
 
         PROfitter fitter(ub, lb, param);
         output.chi = fitter.Fit(*local_metric);
+        output.best_fit = fitter.best_fit;
         outs.push_back(output);
     }
     
@@ -198,6 +200,7 @@ void PROsurf::FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string 
             grid.push_back(pt);
         }
     }
+    results.resize(nbinsy*nbinsx);
 
     int loopSize = grid.size();
     int chunkSize = loopSize / nThreads;
@@ -224,6 +227,7 @@ void PROsurf::FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string 
     for (const auto& item : combinedResults) {
         log<LOG_INFO>(L"%1% || Finished  : %2% %3% %4%") % __func__ % item.grid_val[1] % item.grid_val[0] %item.chi ;
         surface(item.grid_index[0], item.grid_index[1]) = item.chi;
+        results[item.grid_index[1] * nbinsy + item.grid_index[0]] = {item.grid_index[0], item.grid_index[1], item.best_fit, item.chi};
         chi_file<<"\n"<<item.grid_val[1]<<" "<<item.grid_val[0]<<" "<<item.chi<<std::flush;
     }
 
