@@ -5,7 +5,7 @@
 
 namespace PROfit {
 
-    PROsyst::PROsyst(const std::vector<SystStruct>& systs) {
+    PROsyst::PROsyst(const std::vector<SystStruct>& systs, bool shapeonly, bool rateonly) shape_only(shapeonly), rate_only(rateonly) {
         for(const auto& syst: systs) {
             log<LOG_DEBUG>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
             if(syst.mode == "spline") {
