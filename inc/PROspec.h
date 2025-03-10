@@ -39,7 +39,6 @@ namespace PROfit{
             size_t nbins;
             Eigen::VectorXf spec;
             Eigen::VectorXf error;
-
             
 
             //---- private helper function --------
@@ -54,11 +53,14 @@ namespace PROfit{
 
         public:
 
+            uint32_t hash;
             template<class Archive>
             void serialize(Archive &ar, [[maybe_unused]] const unsigned int version) {
                 ar & nbins;
                 ar & spec;
                 ar & error;
+                ar & hash;
+
             }
 
 
@@ -141,6 +143,34 @@ namespace PROfit{
 
             /* Return true if two PROspec have the same dimension (number of bins */
             static bool SameDim(const PROspec& a, const PROspec& b);
+
+            /* Save to binary file*/
+            inline
+            void save(const PROconfig& config, const std::string& filename) {
+                hash = config.hash;
+                auto start = std::chrono::high_resolution_clock::now();
+                std::ofstream ofs(filename, std::ios::binary);
+                boost::archive::binary_oarchive oa(ofs);
+                oa << *this;
+                auto end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> elapsed = end - start;
+                log<LOG_INFO>(L"%1% || Serialization save of PROspec data into file  %2% took %3% seconds") % __func__ % filename.c_str() % elapsed.count();
+            }
+
+            // Load from file
+            inline
+            void load(const std::string& filename) {
+                auto start = std::chrono::high_resolution_clock::now();
+                std::ifstream ifs(filename,std::ios::binary);
+                boost::archive::binary_iarchive ia(ifs);
+                ia >> *this;
+                auto end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> elapsed = end - start;
+                log<LOG_INFO>(L"%1% || Serialization load of PRospec from file  %2% took %3% seconds") % __func__ % filename.c_str() %elapsed.count();
+            }
+
+
+
 
             //----- Arithmetic Operations ---------
             //addition 

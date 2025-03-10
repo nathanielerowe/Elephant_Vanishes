@@ -10,6 +10,7 @@
 #include "PROfitter.h"
 #include "PROmodel.h"
 #include "PROtocall.h"
+#include "PROseed.h"
 
 #include "CLI11.h"
 #include "LBFGSB.h"
@@ -52,6 +53,7 @@ int main(int argc, char* argv[])
 
     // Define options
     std::string xmlname = "NULL.xml"; 
+    std::string data_xml = "";
     std::string analysis_tag = "PROfit";
     std::string output_tag = "v1";
     std::string chi2 = "PROchi";
@@ -62,6 +64,7 @@ int main(int argc, char* argv[])
     size_t nthread = 1;
     std::map<std::string, float> fit_options;
     size_t maxevents;
+    int global_seed = -1;
 
     bool with_splines = false, binwidth_scale = false;
 
@@ -88,7 +91,9 @@ int main(int argc, char* argv[])
     app.add_option("-n, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
+    app.add_option("-d, --data", data_xml, "Load from a seperate data xml/data file instead of signal injection. Only used with plot subcommand.")->default_str("");
     app.add_option("-i, --inject", osc_params, "Physics parameters to inject as true signal.")->expected(-1);// HOW TO
+    app.add_option("-s, --seed", global_seed, "A global seed for PROseed rng. Default to -1 for hardware rng seed.")->default_val(-1);
     app.add_option("--inject-systs", injected_systs, "Systematic shifts to inject. Map of name and shift value in sigmas. Only spline systs are supported right now.");
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
     app.add_option("--exclude-systs", systs_excluded, "List of systematics to exclude.")->excludes("--syst-list"); 
@@ -189,54 +194,94 @@ int main(int argc, char* argv[])
     }
 
     //Pysics parameter input
-    Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
-    if(osc_params.size()) {
-        if(osc_params.size() != model->nparams) {
-            log<LOG_ERROR>(L"%1% || Incorrect number of physics parameters provided. Expected %2%, found %3%.")
-                % __func__ % model->nparams % osc_params.size();
-            exit(EXIT_FAILURE);
+        Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
+        if(osc_params.size()) {
+            if(osc_params.size() != model->nparams) {
+                log<LOG_ERROR>(L"%1% || Incorrect number of physics parameters provided. Expected %2%, found %3%.")
+                    % __func__ % model->nparams % osc_params.size();
+                exit(EXIT_FAILURE);
+            }
+            for(size_t i = 0; i < osc_params.size(); ++i) {
+                pparams(i) = std::log10(osc_params[i]);
+            }
+        } else {
+            for(size_t i = 0; i < model->nparams; ++i) {
+                pparams(i) = model->default_val(i);
+            }
         }
-        for(size_t i = 0; i < osc_params.size(); ++i) {
-            pparams(i) = std::log10(osc_params[i]);
+
+        //Spline injection studies
+        Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
+        for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
+        for(const auto& [name, shift]: injected_systs) {
+            log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
+            auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
+            if(it == systs.spline_names.end()) {
+                log<LOG_ERROR>(L"%1% || Error: Unrecognized spline %2%. Ignoring this injected shift.") % __func__ % name.c_str();
+                continue;
+            }
+            int idx = std::distance(systs.spline_names.begin(), it);
+            allparams(idx+model->nparams) = shift;
         }
-    } else {
-        for(size_t i = 0; i < model->nparams; ++i) {
-            pparams(i) = model->default_val(i);
+
+    //Some logic for EITHER injecting fake/mock data of oscillated signal/syst shifts OR using real data
+    PROspec data;
+    if(!data_xml.empty()){
+        PROconfig dataconfig(data_xml);
+        std::string dataBinName = analysis_tag+"_data.bin";
+
+        if((*process_command) || (!std::filesystem::exists(dataBinName))  ){
+            log<LOG_INFO>(L"%1% || Processing Data Spectrum and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
+
+            //Process the CAF files to grab and fill spectrum directly
+            data = CreatePROspecCV(dataconfig);
+            data.save(dataconfig,dataBinName);
+            log<LOG_INFO>(L"%1% || Done processing Data from XML defined root files, and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
+        }else{
+            log<LOG_INFO>(L"%1% || Loading Data from precalc binary input: %2%") % __func__ % dataBinName.c_str();
+            data.load(dataBinName);
+
+            log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded Data (%3%) hash are here. ") % __func__ %  dataconfig.hash % data.hash;
+            if(dataconfig.hash!=data.hash){
+                if(force){
+                    log<LOG_WARNING>(L"%1% || WARNING config hash (%2%) and binary loaded data (%3%) hash not compatable! ") % __func__ %  dataconfig.hash % data.hash ;
+                    log<LOG_WARNING>(L"%1% || WARNING But we are forcing ahead, be SUPER clear and happy you understand what your doing.  ") % __func__;
+                }else{
+                    log<LOG_ERROR>(L"%1% || ERROR config hash (%2%) and binary loaded data (%3%) hash not compatable! ") % __func__ %  dataconfig.hash % data.hash ;
+                    return 1;
+                }
+            }
         }
+
+    if(*profile_command || *surface_command || *protest_command){
+                    log<LOG_ERROR>(L"%1% || ERROR --data can only be used with plot subcommand! ") % __func__  ;
+                    return 1;
     }
 
-    //Spline injection studies
-    Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
-    for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
-    for(const auto& [name, shift]: injected_systs) {
-        log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
-        auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
-        if(it == systs.spline_names.end()) {
-            log<LOG_ERROR>(L"%1% || Error: Unrecognized spline %2%. Ignoring this injected shift.") % __func__ % name.c_str();
-            continue;
-        }
-        int idx = std::distance(systs.spline_names.begin(), it);
-        allparams(idx+model->nparams) = shift;
-    }
 
-    //Create CV or injected data spectrum for all subsequent steps
-    //this now will inject osc param, splines and reweight all at once
-    PROspec data = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
+    }//if no data, use injected or fake data;
+    else{
+        
 
-    //Only for reweighting tests
-    if (!mockreweights.empty()) {
-        log<LOG_INFO>(L"%1% || Will use reweighted MC (with any requested oscillations) as data for this study") % __func__  ;
-        log<LOG_INFO>(L"%1% || Any parameter shifts requested will be ignored (fix later?)") % __func__  ;
-        auto file = std::make_unique<TFile>(reweights_file.c_str());
-        log<LOG_DEBUG>(L"%1% || Set file to : %2% ") % __func__ % reweights_file.c_str();
-        log<LOG_DEBUG>(L"%1% || Size of reweights vector : %2% ") % __func__ % mockreweights.size() ;
-        for (size_t i=0; i < mockreweights.size(); ++i) {
-            log<LOG_DEBUG>(L"%1% || Mock reweight i : %2% ") % __func__ % mockreweights[i].c_str() ;
-            TH2D* rwhist = (TH2D*)file->Get(mockreweights[i].c_str());
-            weighthists.push_back(rwhist);
-            log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
+        //Create CV or injected data spectrum for all subsequent steps
+        //this now will inject osc param, splines and reweight all at once
+        data = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
+
+        //Only for reweighting tests
+        if (!mockreweights.empty()) {
+            log<LOG_INFO>(L"%1% || Will use reweighted MC (with any requested oscillations) as data for this study") % __func__  ;
+            log<LOG_INFO>(L"%1% || Any parameter shifts requested will be ignored (fix later?)") % __func__  ;
+            auto file = std::make_unique<TFile>(reweights_file.c_str());
+            log<LOG_DEBUG>(L"%1% || Set file to : %2% ") % __func__ % reweights_file.c_str();
+            log<LOG_DEBUG>(L"%1% || Size of reweights vector : %2% ") % __func__ % mockreweights.size() ;
+            for (size_t i=0; i < mockreweights.size(); ++i) {
+                log<LOG_DEBUG>(L"%1% || Mock reweight i : %2% ") % __func__ % mockreweights[i].c_str() ;
+                TH2D* rwhist = (TH2D*)file->Get(mockreweights[i].c_str());
+                weighthists.push_back(rwhist);
+                log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
+            }
+            data = FillWeightedSpectrumFromHist(config, prop, weighthists, *model, allparams, !eventbyevent);
         }
-        data = FillWeightedSpectrumFromHist(config, prop, weighthists, *model, allparams, !eventbyevent);
     }
 
     Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
@@ -244,6 +289,10 @@ int main(int argc, char* argv[])
     Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
     data = PROspec(data_vec, err_vec);
 
+    //Seed time
+    PROseed myseed(nthread, global_seed);
+    
+    
 
     //Some global minimizer params
     LBFGSpp::LBFGSBParam<float> param;  
@@ -312,7 +361,7 @@ int main(int argc, char* argv[])
             post_hist.SetBinContent(i+1, post_fit(i));
         }
 
-        PROfile(config, systs, *model, *metric , param, final_output_tag+"_PROfile", true, nthread, best_fit, allparams);
+        PROfile(config, systs, *model, *metric , myseed, param, final_output_tag+"_PROfile", true, nthread, best_fit, allparams);
 
 
         //***********************************************************************
@@ -358,7 +407,7 @@ int main(int argc, char* argv[])
         if(statonly)
             surface.FillSurfaceStat(config, param, final_output_tag+"_statonly_surface.txt");
         else
-            surface.FillSurface(param, final_output_tag+"_surface.txt",nthread);
+            surface.FillSurface(param, final_output_tag+"_surface.txt",myseed,nthread);
 
         std::vector<float> binedges_x, binedges_y;
         for(size_t i = 0; i < surface.nbinsx+1; i++)
@@ -605,7 +654,7 @@ int main(int argc, char* argv[])
                     else
                         err_band->GetYaxis()->SetTitle("Events");
 
-                    
+
                     err_band->Draw("A2P");
                     err_band->SetMinimum(0);
                     err_band->GetXaxis()->SetRangeUser(config.m_channel_bin_edges[global_channel_index].front(),config.m_channel_bin_edges[global_channel_index].back());
