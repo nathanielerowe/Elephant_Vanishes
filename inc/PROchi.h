@@ -9,6 +9,7 @@
 
 // OUR INCLUDES
 #include "PROconfig.h"
+#include "PROdata.h"
 #include "PROsyst.h"
 #include "PROpeller.h"
 #include "PROmodel.h"
@@ -39,7 +40,7 @@ namespace PROfit{
             const PROpeller &peller;
             const PROsyst *syst; 
             const PROmodel &model;
-            const PROspec data;
+            const PROdata data;
             EvalStrategy strat;
             std::vector<float> physics_param_fixed;
                         //Do we want to fix any param?
@@ -56,7 +57,7 @@ namespace PROfit{
 
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig &conin, const PROpeller &pin, const PROsyst *systin, const PROmodel &modelin, const PROspec &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROchi(const std::string tag, const PROconfig &conin, const PROpeller &pin, const PROsyst *systin, const PROmodel &modelin, const PROdata &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
 
             /*Function: operator() is what is passed to minimizer.*/

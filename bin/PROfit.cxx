@@ -1,4 +1,5 @@
 #include "PROconfig.h"
+#include "PROdata.h"
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
@@ -225,7 +226,7 @@ int main(int argc, char* argv[])
         }
 
     //Some logic for EITHER injecting fake/mock data of oscillated signal/syst shifts OR using real data
-    PROspec data;
+    PROdata data;
     if(!data_xml.empty()){
         PROconfig dataconfig(data_xml);
         std::string dataBinName = analysis_tag+"_data.bin";
@@ -234,7 +235,7 @@ int main(int argc, char* argv[])
             log<LOG_INFO>(L"%1% || Processing Data Spectrum and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
 
             //Process the CAF files to grab and fill spectrum directly
-            data = CreatePROspecCV(dataconfig);
+            data = CreatePROdata(dataconfig);
             data.save(dataconfig,dataBinName);
             log<LOG_INFO>(L"%1% || Done processing Data from XML defined root files, and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
         }else{
@@ -265,7 +266,7 @@ int main(int argc, char* argv[])
 
         //Create CV or injected data spectrum for all subsequent steps
         //this now will inject osc param, splines and reweight all at once
-        data = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
+        PROspec data_spec = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
 
         //Only for reweighting tests
         if (!mockreweights.empty()) {
@@ -280,20 +281,17 @@ int main(int argc, char* argv[])
                 weighthists.push_back(rwhist);
                 log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
             }
-            data = FillWeightedSpectrumFromHist(config, prop, weighthists, *model, allparams, !eventbyevent);
+            data_spec = FillWeightedSpectrumFromHist(config, prop, weighthists, *model, allparams, !eventbyevent);
         }
+        Eigen::VectorXf data_vec = CollapseMatrix(config, data_spec.Spec());
+        Eigen::VectorXf err_vec_sq = data_spec.Error().array().square();
+        Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+        data = PROdata(data_vec, err_vec);
     }
-
-    Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
-    Eigen::VectorXf err_vec_sq = data.Error().array().square();
-    Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
-    data = PROspec(data_vec, err_vec);
 
     //Seed time
     PROseed myseed(nthread, global_seed);
     
-    
-
     //Some global minimizer params
     LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;

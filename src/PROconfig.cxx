@@ -558,16 +558,24 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 TEMP_branch_variables.back()->SetIncludeSystematics(TEMP_eventweight_branch_syst.back());
 
-                TEMP_branch_variables.back()->SetTrueParam(pBranch->Attribute("true_param_name"));
-                TEMP_branch_variables.back()->SetPDG(pBranch->Attribute("pdg_name"));
-                TEMP_branch_variables.back()->SetModelRule(pBranch->Attribute("model_rule"));
-                log<LOG_DEBUG>(L"%1% || Branch has Model Rule  %2% ") % __func__ % pBranch->Attribute("model_rule") ;
+                if(pBranch->Attribute("true_param_name")) {
+                    TEMP_branch_variables.back()->SetTrueParam(pBranch->Attribute("true_param_name"));
+                }
+                if(pBranch->Attribute("pdg_name")) {
+                    TEMP_branch_variables.back()->SetPDG(pBranch->Attribute("pdg_name"));
+                }
+                if(pBranch->Attribute("model_rule")) {
+                    TEMP_branch_variables.back()->SetModelRule(pBranch->Attribute("model_rule"));
+                }
+                if(pBranch->Attribute("model_rule")) {
+                    log<LOG_DEBUG>(L"%1% || Branch has Model Rule  %2% ") % __func__ % pBranch->Attribute("model_rule") ;
+                }
 
                 if(pBranch->Attribute("true_L_name") != NULL){
                     //for oscillation that needs both E and L
                     TEMP_branch_variables.back()->SetTrueL(pBranch->Attribute("true_L_name"));
                     log<LOG_DEBUG>(L"%1% || Oscillations using true param name:   %2% and baseline %3% ") % __func__ % pBranch->Attribute("true_param_name") % pBranch->Attribute("true_L_name") ;
-                }else{
+                }else if(pBranch->Attribute("true_param_name")){
                     //for oscillations that only needs E, such as an energy-dependent scaling for single photon NCpi0!
                     log<LOG_DEBUG>(L"%1% || Oscillations using  Energy only dependent oscillation ( or shift/normalization)  %2% ") % __func__ % pBranch->Attribute("true_param_name") ;
                 }
