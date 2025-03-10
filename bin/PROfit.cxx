@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
             post_hist.SetBinContent(i+1, post_fit(i));
         }
 
-        PROfile(config, systs, *model, *metric , param, final_output_tag+"_PROfile", true, nthread, best_fit,pparams);
+        PROfile(config, systs, *model, *metric , param, final_output_tag+"_PROfile", true, nthread, best_fit, allparams);
 
 
         //***********************************************************************
