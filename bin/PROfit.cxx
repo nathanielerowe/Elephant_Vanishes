@@ -230,6 +230,28 @@ int main(int argc, char* argv[])
     if(!data_xml.empty()){
         PROconfig dataconfig(data_xml);
         std::string dataBinName = analysis_tag+"_data.bin";
+        for(size_t i = 0; i < dataconfig.m_num_channels; ++i) {
+            size_t nsubch = dataconfig.m_num_subchannels[i];
+            if(nsubch != 1) {
+                log<LOG_ERROR>(L"%1% || Data xml required to have exactly 1 subchannel per channel. Found %2% for channel %3%")
+                    % __func__ % nsubch % i;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+            }
+            std::string &subchname = dataconfig.m_subchannel_names[i][0];
+            if(subchname != "data") {
+                log<LOG_ERROR>(L"%1% || Data subchannel required to be called \"data.\" Found name %2% for channel %3%")
+                    % __func__ % subchname.c_str() % i;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+            }
+        }
+        if(!PROconfig::SameChannels(config, dataconfig)) {
+            log<LOG_ERROR>(L"%1% || Require data and MC to have same channels. A difference was found, check messages above.")
+                % __func__;
+            log<LOG_ERROR>(L"Terminating.");
+            exit(EXIT_FAILURE);
+        }
 
         if((*process_command) || (!std::filesystem::exists(dataBinName))  ){
             log<LOG_INFO>(L"%1% || Processing Data Spectrum and saving to binary output also: %2%") % __func__ % dataBinName.c_str();

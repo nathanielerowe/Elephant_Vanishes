@@ -31,6 +31,59 @@ PROconfig::PROconfig(const std::string &xml):
 
 }
 
+bool PROconfig::SameChannels(const PROconfig &one, const PROconfig &two) {
+    if(one.m_num_modes != two.m_num_modes) {
+        log<LOG_WARNING>(L"%1% || Found different number of modes %2% vs %3%")
+            % __func__ % one.m_num_modes % two.m_num_modes;
+        return false;
+    }
+    for(size_t i = 0; i < one.m_num_modes; ++i) {
+        if(one.m_mode_names[i] != two.m_mode_names[i]) {
+            log<LOG_WARNING>(L"%1% || Found different mode names %2% vs %3%")
+                % __func__ % one.m_mode_names[i].c_str() % two.m_mode_names[i].c_str();
+            return false;
+        }
+    }
+    if(one.m_num_detectors != two.m_num_detectors) {
+        log<LOG_WARNING>(L"%1% || Found different number of detectors %2% vs %3%")
+            % __func__ % one.m_num_detectors % two.m_num_detectors;
+        return false;
+    }
+    for(size_t i = 0; i < one.m_num_detectors; ++i) {
+        if(one.m_detector_names[i] != two.m_detector_names[i]) {
+            log<LOG_WARNING>(L"%1% || Found different detector names %2% vs %3%")
+                % __func__ % one.m_detector_names[i].c_str() % two.m_detector_names[i].c_str();
+            return false;
+        }
+    }
+    if(one.m_num_channels != two.m_num_channels) {
+        log<LOG_WARNING>(L"%1% || Found different number of channels %2% vs %3%")
+            % __func__ % one.m_num_channels % two.m_num_channels;
+        return false;
+    }
+    for(size_t i = 0; i < one.m_num_channels; ++i) {
+        if(one.m_channel_names[i] != two.m_channel_names[i]) {
+            log<LOG_WARNING>(L"%1% || Found different channel names %2% vs %3%")
+                % __func__ % one.m_channel_names[i].c_str() % two.m_channel_names[i].c_str();
+            return false;
+        }
+        if(one.m_channel_num_bins[i] != two.m_channel_num_bins[i]) {
+            log<LOG_WARNING>(L"%1% || Found different number of channel bins %2% vs %3%")
+                % __func__ % one.m_channel_num_bins[i] % two.m_channel_num_bins[i];
+            return false;
+        }
+        for(size_t j = 0; j < one.m_channel_num_bins[i]+1; ++j) {
+            if(one.m_channel_bin_edges[i][j] != two.m_channel_bin_edges[i][j]) {
+                log<LOG_WARNING>(L"%1% || Found different bin edge for bin %2% in channel %3%. %4% vs %5%")
+                    % __func__ % j % one.m_channel_names[i].c_str() % one.m_channel_bin_edges[i][j] % two.m_channel_bin_edges[i][j];
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 
 int PROconfig::LoadFromXML(const std::string &filename){
 
