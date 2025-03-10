@@ -112,7 +112,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
 
             local_metric->fixSpline(which_spline,which_value);
 
-            PROfitter fitter(ub, lb, param, seed);
+            PROfitter fitter(ub, lb, param, seed+i);
             if(last_bf.norm()>0){
                 fx = fitter.Fit(*local_metric,last_bf);
             }else{
@@ -173,7 +173,7 @@ std::vector<surfOut> PROsurf::PointHelper(const LBFGSpp::LBFGSBParam<float> &par
         lb(y_idx) = multi_physics_params[i].grid_val[0];
         ub(y_idx) = multi_physics_params[i].grid_val[0];
 
-        PROfitter fitter(ub, lb, param, seed);
+        PROfitter fitter(ub, lb, param, seed+i);
         output.chi = fitter.Fit(*local_metric);
         outs.push_back(output);
     }

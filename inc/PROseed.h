@@ -19,12 +19,12 @@ namespace PROfit{
                 }
                 
                 n_threads = in_threads;
-                thread_seeds.resize(n_threads);
+                thread_seeds.resize(n_threads+1);
                 std::uniform_int_distribution<uint32_t> dist(0, std::numeric_limits<uint32_t>::max());
-                for(size_t s=0; s<n_threads;s++){
+                for(size_t s=0; s<n_threads+1;s++){
                     thread_seeds[s] = dist(global_rng);
                 }
-                log<LOG_INFO>(L"%1% || For %2% threads we precalculated thread seeds as: %3% ") % __func__ % n_threads % thread_seeds ;
+                log<LOG_INFO>(L"%1% || For %2%+1 threads we precalculated thread seeds as: %3% ") % __func__ % n_threads % thread_seeds ;
 
             }
 
