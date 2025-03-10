@@ -28,6 +28,16 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, const LBFGSpp::LBFGSBPara
     std::ofstream chi_file;
     if(!filename.empty()){
         chi_file.open(filename);
+        chi_file << "Dimensions: " << nbinsx << " " << nbinsy << "\n";
+        chi_file << "Fixed indices: " << x_idx << " " << y_idx << "\n";
+        chi_file << "Parameters:\n";
+        for(const auto &name: metric.GetModel().param_names) chi_file << name << "\n";
+
+        chi_file << "xval yval chi2";
+        // TODO: Not saving this info for stats only right now (but we should)
+        //for(size_t i = 0; i < metric.GetModel().nparams; ++i)
+        //    chi_file << " p" << i;
+        chi_file << "\n";
     }
 
     // I think this will be needed for stat fits with more than 2 physics parameters
@@ -224,13 +234,23 @@ void PROsurf::FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string 
         combinedResults.insert(combinedResults.end(), result.begin(), result.end());
     }
 
+    chi_file << "Dimensions: " << nbinsx << " " << nbinsy << "\n";
+    chi_file << "Fixed indices: " << x_idx << " " << y_idx << "\n";
+    chi_file << "Parameters:\n";
+    for(const auto &name: metric.GetModel().param_names) chi_file << name << "\n";
+    for(const auto &name: metric.GetSysts().spline_names) chi_file << name << "\n";
+
+    chi_file << "\nxval yval chi2";
+    for(size_t i = 0; i < metric.GetModel().nparams + metric.GetSysts().GetNSplines(); ++i)
+        chi_file << " p" << i;
     for (const auto& item : combinedResults) {
         log<LOG_INFO>(L"%1% || Finished  : %2% %3% %4%") % __func__ % item.grid_val[1] % item.grid_val[0] %item.chi ;
         surface(item.grid_index[0], item.grid_index[1]) = item.chi;
         results[item.grid_index[1] * nbinsy + item.grid_index[0]] = {item.grid_index[0], item.grid_index[1], item.best_fit, item.chi};
-        chi_file<<"\n"<<item.grid_val[1]<<" "<<item.grid_val[0]<<" "<<item.chi<<std::flush;
+        chi_file<<"\n"<<item.grid_val[1]<<" "<<item.grid_val[0]<<" "<<item.chi;
+        for(float val: item.best_fit)
+            chi_file << " " << val;
     }
-
 }
 
 std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
