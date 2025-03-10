@@ -1,4 +1,5 @@
 #include "PROcreate.h"
+#include "PROdata.h"
 #include "PROlog.h"
 #include "PROpeller.h"
 #include "PROtocall.h"
@@ -1017,6 +1018,151 @@ namespace PROfit {
         }
 
         return 0;
+    }
+
+    PROdata CreatePROdata(const PROconfig& inconfig){
+        float spec_pot = inconfig.m_plot_pot;
+        log<LOG_INFO>(L"%1% || Start generating data spectrum") % __func__ ;
+        log<LOG_INFO>(L"%1% || Spectrum will be generated with %2% POT") % __func__ % spec_pot;
+
+        int num_files = inconfig.m_num_mcgen_files;
+        log<LOG_DEBUG>(L"%1% || Starting to read file and build spectrum!") % __func__ ;
+        log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
+
+        std::vector<long int> nentries(num_files,0);
+        std::vector<float> pot_scale(num_files, 1.0);
+        std::vector<std::unique_ptr<TFile>> files(num_files);
+        std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
+
+        for(int fid=0; fid < num_files; ++fid) {
+            const auto& fn = inconfig.m_mcgen_file_name.at(fid);
+
+            files[fid] = std::make_unique<TFile>(fn.c_str(),"read");
+            trees[fid] = (TTree*)(files[fid]->Get(inconfig.m_mcgen_tree_name.at(fid).c_str()));
+            nentries[fid]= (long int)trees.at(fid)->GetEntries();
+
+            if(files[fid]->IsOpen()){
+                log<LOG_INFO>(L"%1% || Root file succesfully opened: %2%") % __func__  % fn.c_str();
+            }else{
+                log<LOG_ERROR>(L"%1% || Fail to open root file: %2%") % __func__  % fn.c_str();
+                exit(EXIT_FAILURE);
+            }
+            log<LOG_INFO>(L"%1% || Total Entries: %2%") % __func__ %  nentries[fid];
+
+            //calculate POT scale factor
+            if(inconfig.m_mcgen_pot.at(fid) != -1){
+                pot_scale[fid] = spec_pot/inconfig.m_mcgen_pot.at(fid);
+            }
+            pot_scale[fid] *= inconfig.m_mcgen_scale[fid];
+            log<LOG_INFO>(L"%1% || File POT: %2%, additional scale: %3%") % __func__ %  inconfig.m_mcgen_pot.at(fid) % inconfig.m_mcgen_scale[fid];
+            log<LOG_INFO>(L"%1% || POT scale factor: %2%") % __func__ %  pot_scale[fid];
+
+            //first, grab friend trees
+            if (inconfig.m_mcgen_numfriends[fid]>0){
+                auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
+                if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
+                    auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
+                    if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
+                        log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
+                        log<LOG_ERROR>(L"Terminating.");
+                        exit(EXIT_FAILURE);
+                    }
+                    for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+                        std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
+                        std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
+                        trees[fid]->AddFriend(treefriendname.c_str(),treefriendfile.c_str());
+                    }
+                }
+            }
+
+            // grab branches 
+            int num_branch = inconfig.m_branch_variables[fid].size();
+            for(int ib = 0; ib != num_branch; ++ib) {
+
+                std::shared_ptr<BranchVariable> branch_variable = inconfig.m_branch_variables[fid][ib];
+
+                //quick check that this branch associated subchannel is in the known chanels;
+                int is_valid_subchannel = 0;
+                for(const auto &name: inconfig.m_fullnames){
+                    if(branch_variable->associated_hist==name){
+                        log<LOG_DEBUG>(L"%1% || Found a valid subchannel for this branch %2%") % __func__  % name.c_str();
+                        ++is_valid_subchannel;
+                    }
+                }
+                if(is_valid_subchannel==0){
+                    log<LOG_ERROR>(L"%1% || This branch did not match one defined in the .xml : %2%") % __func__ % inconfig.m_xmlname.c_str();
+                    log<LOG_ERROR>(L"%1% || There is probably a typo somehwhere in xml!") % __func__;
+                    log<LOG_ERROR>(L"Terminating.");
+                    exit(EXIT_FAILURE);
+
+                }else if(is_valid_subchannel>1){
+                    log<LOG_ERROR>(L"%1% || This branch matched more than 1 subchannel!: %2%") % __func__ %  branch_variable->associated_hist.c_str();
+                    log<LOG_ERROR>(L"Terminating.");
+                    exit(EXIT_FAILURE);
+                }
+
+                branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), trees[fid]);
+                log<LOG_INFO>(L"%1% || Setting up reco variable for this branch: %2%") % __func__ %  branch_variable->name.c_str();
+
+                //grab monte carlo weight
+                if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
+                    branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][ib].c_str(),trees[fid]);
+                    log<LOG_INFO>(L"%1% || Setting up additional monte carlo weight for this branch: %2%") % __func__ %  inconfig.m_mcgen_additional_weight_name[fid][ib].c_str();
+                }
+
+            } //end of branch loop
+        } // end fid
+
+        time_t start_time = time(nullptr);
+        PROdata data(inconfig.m_num_bins_total);
+        log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
+        for(int fid=0; fid < num_files; ++fid) {
+            const auto& fn = inconfig.m_mcgen_file_name.at(fid);
+            long int nevents = std::min(inconfig.m_mcgen_maxevents[fid], nentries[fid]);
+            log<LOG_DEBUG>(L"%1% || Start @files: %2% which has %3% events") % __func__ % fn.c_str() % nevents;
+
+            // grab the subchannel index
+            int num_branch = inconfig.m_branch_variables[fid].size();
+            auto& branches = inconfig.m_branch_variables[fid];
+            std::vector<int> channel_index(num_branch, 0); 
+            log<LOG_INFO>(L"%1% || This file includes %2% branch/channels") % __func__ % num_branch;
+            for(int ib = 0; ib != num_branch; ++ib) {
+
+                const std::string& subchannel_name = inconfig.m_branch_variables[fid][ib]->associated_hist;
+                // Note: This will only work if there's only 1 subchannel per channel
+                channel_index[ib] = inconfig.GetSubchannelIndex(subchannel_name);
+                log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % channel_index[ib];
+            }
+
+            // loop over all entries
+            for(long int i=0; i < nevents; ++i) {
+                if(i%1000==0)	log<LOG_INFO>(L"%1% || -- uni : %2% / %3%") % __func__ % i % nevents;
+                trees[fid]->GetEntry(i);
+
+                //branch loop
+                for(int ib = 0; ib != num_branch; ++ib) {
+                    float reco_value = branches[ib]->GetValue<float>();
+                    float additional_weight = branches[ib]->GetMonteCarloWeight();
+                    additional_weight *= pot_scale[fid];
+
+                    if(additional_weight == 0) //skip on event failing cuts
+                        continue;
+
+                    //find bins
+                    int global_bin = FindGlobalBin(inconfig, reco_value, channel_index[ib]);
+                    if(global_bin < 0 )  //out of range
+                        continue;
+
+                    if(i%100==0)	
+                        log<LOG_DEBUG>(L"%1% || Subchannel %2% -- Reco variable value: %3%, MC event weight: %4%, correponds to global bin: %5%") % __func__ %  channel_index[ib] % reco_value % additional_weight % global_bin;
+
+                    data.Fill(global_bin, additional_weight);
+                }  //end of branch loop
+            } //end of entry loop
+        } //end of file loop
+        time_t time_took = time(nullptr) - start_time;
+        log<LOG_INFO>(L"%1% || Generating data spectrum took %2% seconds..") % __func__ % time_took;
+        return data;
     }
 
 
