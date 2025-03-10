@@ -102,9 +102,10 @@ int main(int argc, char* argv[])
     app.add_flag("--scale-by-width", binwidth_scale, "Scale histgrams by 1/(bin width).");
     app.add_flag("--event-by-event", eventbyevent, "Do you want to weight event-by-event?");
     app.add_flag("--statonly", statonly, "Run a stats only surface instead of fitting systematics");
-    app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
-    app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
     app.add_flag("--force",force,"Force loading binary data even if hash is incorrect (Be Careful!)");
+    auto* shape_flag = app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
+    auto* rate_flag = app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
+    shape_flag->excludes(rate_flag);
 
 
     //PROcess, into binary data [Do this once first!]

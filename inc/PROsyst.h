@@ -91,7 +91,6 @@ namespace PROfit {
             /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
             static bool isPositiveSemiDefinite(const Eigen::MatrixXf& in_matrix);
 
-
             /* Function: Fill splines assuming p_cv and p_multi_spec have been filled in the SystStruct*/
             void FillSpline(const SystStruct& syst);
 
@@ -120,9 +119,8 @@ namespace PROfit {
             [[maybe_unused]] size_t n_splines;
             std::vector<Eigen::MatrixXf> covmat;
             std::vector<Eigen::MatrixXf> corrmat;
-            bool shape_only;
-            bool rate_only;
-            //std::vector<MFA> mfa;
+            static bool shape_only;
+            static bool rate_only;
     };
 
 };
