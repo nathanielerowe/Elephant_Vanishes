@@ -169,6 +169,7 @@ std::vector<surfOut> PROsurf::PointHelper(const LBFGSpp::LBFGSBParam<float> &par
             Eigen::VectorXf empty_vec, 
                             params = Eigen::VectorXf::Map(physics_params.data(), physics_params.size());
             output.chi = (*local_metric)(params, empty_vec, false);
+            output.best_fit = params; 
             outs.push_back(output);
             continue;
         }
@@ -210,7 +211,6 @@ void PROsurf::FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string 
             grid.push_back(pt);
         }
     }
-    results.resize(nbinsy*nbinsx);
 
     int loopSize = grid.size();
     int chunkSize = loopSize / nThreads;
@@ -246,7 +246,7 @@ void PROsurf::FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string 
     for (const auto& item : combinedResults) {
         log<LOG_INFO>(L"%1% || Finished  : %2% %3% %4%") % __func__ % item.grid_val[1] % item.grid_val[0] %item.chi ;
         surface(item.grid_index[0], item.grid_index[1]) = item.chi;
-        results[item.grid_index[1] * nbinsy + item.grid_index[0]] = {item.grid_index[0], item.grid_index[1], item.best_fit, item.chi};
+        results.push_back({item.grid_index[0], item.grid_index[1], item.best_fit, item.chi});
         chi_file<<"\n"<<item.grid_val[1]<<" "<<item.grid_val[0]<<" "<<item.chi;
         for(float val: item.best_fit)
             chi_file << " " << val;

@@ -22,6 +22,7 @@
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TRatioPlot.h"
+#include "TTree.h"
 
 #include <Eigen/Eigen>
 
@@ -382,6 +383,32 @@ int main(int argc, char* argv[])
         log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % final_output_tag.c_str();
         TFile fout((final_output_tag+"_surf.root").c_str(), "RECREATE");
         surf.Write();
+        float chi2;
+        int xbin, ybin;
+        std::map<std::string, float> best_fit;
+        TTree tree("tree", "BestFitTree");
+        tree.Branch("chi2", &chi2); 
+        tree.Branch("xbin", &xbin); 
+        tree.Branch("ybin", &ybin); 
+        tree.Branch("best_fit", &best_fit); 
+
+        for(const auto &res: surface.results) {
+            chi2 = res.chi2;
+            xbin = res.binx;
+            ybin = res.biny;
+            // If all fit points fail
+            if(!res.best_fit.size()) { tree.Fill(); continue; }
+            for(size_t i = 0; i < model->nparams; ++i) {
+                best_fit[model->param_names[i]] = res.best_fit(i);
+            }
+            for(size_t i = 0; i < systs.GetNSplines(); ++i) {
+                best_fit[systs.spline_names[i]] = res.best_fit(i + model->nparams);
+            }
+            tree.Fill();
+        }
+        // TODO: Should we save the spectra as TH1s?
+
+        tree.Write();
 
         TCanvas c;
         if(logy)
