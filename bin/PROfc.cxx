@@ -91,7 +91,8 @@ void fc_worker(fc_args args) {
             lb_osc(i) = lb(i-2);
             ub_osc(i) = ub(i-2);
         }
-        PROfitter fitter_osc(ub_osc, lb_osc, param);
+        std::uniform_int_distribution<uint32_t> dseed(0, std::numeric_limits<uint32_t>::max());
+        PROfitter fitter_osc(ub_osc, lb_osc, param,dseed(rng));
 
         PROchi chi_osc("3plus1",args.config,args.prop,&args.systs, *model, newSpec, strat);
         float chi2_osc = fitter_osc.Fit(chi_osc); 
