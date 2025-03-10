@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
             }
         }
 
-    if(*profile_command || *prosurface_command || *protest_command){
+    if(*profile_command || *surface_command || *protest_command){
                     log<LOG_ERROR>(L"%1% || ERROR --data can only be used with plot subcommand! ") % __func__  ;
                     return 1;
     }
