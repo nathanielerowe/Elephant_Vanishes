@@ -318,7 +318,7 @@ int main(int argc, char* argv[])
             post_hist.SetBinContent(i+1, post_fit(i));
         }
 
-        PROfile(config, systs, *model, *metric , param, final_output_tag+"_PROfile", true, nthread, best_fit,pparams);
+        PROfile(config, systs, *model, *metric , myseed, param, final_output_tag+"_PROfile", true, nthread, best_fit,pparams);
 
 
         //***********************************************************************
@@ -364,7 +364,7 @@ int main(int argc, char* argv[])
         if(statonly)
             surface.FillSurfaceStat(config, param, final_output_tag+"_statonly_surface.txt");
         else
-            surface.FillSurface(param, final_output_tag+"_surface.txt",nthread);
+            surface.FillSurface(param, final_output_tag+"_surface.txt",myseed,nthread);
 
         std::vector<float> binedges_x, binedges_y;
         for(size_t i = 0; i < surface.nbinsx+1; i++)
