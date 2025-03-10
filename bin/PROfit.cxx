@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
     app.add_option("-n, --nthread",   nthread, "Number of threads to parallelize over.")->default_val(1);
     app.add_option("-m,--max", maxevents, "Max number of events to run over.");
     app.add_option("-c, --chi2", chi2, "Which chi2 function to use. Options are PROchi or PROCNP")->default_str("PROchi");
-    app.add_option("-d, --data", data_xml, "Load from a seperate data xml/data file instead of signal injection.")->default_str("");
+    app.add_option("-d, --data", data_xml, "Load from a seperate data xml/data file instead of signal injection. Only used with plot subcommand.")->default_str("");
     app.add_option("-i, --inject", osc_params, "Physics parameters to inject as true signal.")->expected(-1);// HOW TO
     app.add_option("--inject-systs", injected_systs, "Systematic shifts to inject. Map of name and shift value in sigmas. Only spline systs are supported right now.");
     app.add_option("--syst-list", syst_list, "Override list of systematics to use (note: all systs must be in the xml).");
@@ -248,6 +248,12 @@ int main(int argc, char* argv[])
                 }
             }
         }
+
+    if(*profile_command || *prosurface_command || *protest_command){
+                    log<LOG_ERROR>(L"%1% || ERROR --data can only be used with plot subcommand! ") % __func__  ;
+                    return 1;
+    }
+
 
     }//if no data, use injected or fake data;
     else{
