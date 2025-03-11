@@ -219,7 +219,7 @@ namespace PROfit{
             PROconfig() {}; //always have an empty constructor?
 
             /* Constructor Function: Need a string passed which is the filename (with path) of the configuration xml */
-            PROconfig(const std::string &xmlname);
+            PROconfig(const std::string &xmlname,bool rate_only=false);
 
             /*
              * Function: Use TinyXML2 to load XML */
@@ -327,6 +327,7 @@ namespace PROfit{
             std::vector<std::string> m_model_rule_names;
 
 
+            bool m_bool_rate_only;
             //----- PUBLIC FUNCTIONS ------
             //
 

@@ -3,7 +3,7 @@
 using namespace PROfit;
 
 
-PROconfig::PROconfig(const std::string &xml): 
+PROconfig::PROconfig(const std::string &xml, bool rate_only): 
     m_xmlname(xml), 
     m_plot_pot(1.0),
     m_num_detectors(0),
@@ -21,7 +21,8 @@ PROconfig::PROconfig(const std::string &xml):
     m_write_out_variation(false), 
     m_form_covariance(true),
     m_write_out_tag("UNSET_DEFAULT"),
-    m_num_mcgen_files(0)    
+    m_num_mcgen_files(0),
+    m_bool_rate_only(rate_only)
 {
 
     LoadFromXML(m_xmlname);
@@ -281,9 +282,17 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with  %2% bins, Edges defined as %3%    ") % __func__ % nbinsp % binedge ;
 
-                m_channel_num_bins.push_back(nbinsp);
-                m_channel_bin_edges.push_back(binedge);
-                m_channel_bin_widths.push_back(binwidth);
+                if(m_bool_rate_only){
+                    m_channel_num_bins.push_back(1);
+                    std::vector<float> counting_exp_bin = {binedge.front(), binedge.back()};
+                    m_channel_bin_edges.push_back(counting_exp_bin);
+                    std::vector<float> counting_exp_width = {binedge.front()-binedge.back()};
+                    m_channel_bin_widths.push_back(counting_exp_width);
+                }else{
+                    m_channel_num_bins.push_back(nbinsp);
+                    m_channel_bin_edges.push_back(binedge);
+                    m_channel_bin_widths.push_back(binwidth);
+                }
 
             }else if (rmin!=NULL && rmax!=NULL && rnbins!=NULL ){
 
@@ -299,9 +308,17 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 log<LOG_DEBUG>(L"%1% || This variable has a Reco Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
                 log<LOG_DEBUG>(L"%1% || Which corresponds to edges %2%   ") % __func__ % binedge ;
 
-                m_channel_num_bins.push_back(nbinsp);
-                m_channel_bin_edges.push_back(binedge);
-                m_channel_bin_widths.push_back(binwidth);
+                if(m_bool_rate_only){
+                    m_channel_num_bins.push_back(1);
+                    std::vector<float> counting_exp_bin = {binedge.front(), binedge.back()};
+                    m_channel_bin_edges.push_back(counting_exp_bin);
+                    std::vector<float> counting_exp_width = {binedge.front()-binedge.back()};
+                    m_channel_bin_widths.push_back(counting_exp_width);
+                }else{
+                    m_channel_num_bins.push_back(nbinsp);
+                    m_channel_bin_edges.push_back(binedge);
+                    m_channel_bin_widths.push_back(binwidth);
+                }
             }else{
                 log<LOG_ERROR>(L"%1% || ERROR: You need to define a reco binning using either edges or min/max/nsteps @ line %2% in %3% ") % __func__ % __LINE__  % __FILE__;
                 log<LOG_ERROR>(L"Terminating.");

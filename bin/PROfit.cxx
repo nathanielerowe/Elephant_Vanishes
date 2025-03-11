@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, output %4%, nthread: %5% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % output_tag.c_str() % nthread ;
 
     //Initilize configuration from the XML;
-    PROconfig config(xmlname);
+    PROconfig config(xmlname, rateonly);
 
     //Inititilize PROpeller to keep MC
     PROpeller prop;
