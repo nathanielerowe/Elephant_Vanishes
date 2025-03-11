@@ -7,7 +7,7 @@
 #include "TFile.h"
 #include "TFriendElement.h"
 #include "TChain.h"
-#include <Eigen/src/Core/Matrix.h>
+#include <Eigen/Eigen>
 #include <algorithm>
 #include <iostream>
 #include <fstream>

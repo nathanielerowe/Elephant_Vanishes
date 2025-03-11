@@ -3,7 +3,7 @@
 #include "PROdata.h"
 #include "PROlog.h"
 #include "PROtocall.h"
-#include <Eigen/src/Core/Matrix.h>
+#include <Eigen/Eigen>
 #include <cmath>
 using namespace PROfit;
 
