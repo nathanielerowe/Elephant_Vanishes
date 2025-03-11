@@ -28,7 +28,7 @@ namespace PROfit {
             PROsyst(){}
 
             /*Function: Primary constructor from a vector of SystStructs  */
-            PROsyst(const PROpeller &prop, const std::vector<SystStruct>& systs);
+            PROsyst(const PROpeller &prop, const std::vector<SystStruct>& systs, bool shapeonly=false);
 
             PROsyst subset(const std::vector<std::string> &systs);
             PROsyst excluding(const std::vector<std::string> &systs);
@@ -92,7 +92,6 @@ namespace PROfit {
             /* Function: check if given matrix is positive semi-definite, no tolerance at all (besides precision error from Eigen) */
             static bool isPositiveSemiDefinite(const Eigen::MatrixXf& in_matrix);
 
-
             /* Function: Fill splines assuming p_cv and p_multi_spec have been filled in the SystStruct*/
             void FillSpline(const SystStruct& syst);
 
@@ -121,7 +120,7 @@ namespace PROfit {
             [[maybe_unused]] size_t n_splines;
             std::vector<Eigen::MatrixXf> covmat;
             std::vector<Eigen::MatrixXf> corrmat;
-            //std::vector<MFA> mfa;
+            static bool shape_only;
     };
 
 };

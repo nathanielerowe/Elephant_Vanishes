@@ -62,8 +62,8 @@ int main(int argc, char* argv[])
     std::string output_tag = "v1";
     std::string chi2 = "PROchi";
     bool eventbyevent=false;
-    bool shapeonly = false;//not coded yet
-    bool rateonly = false;//not coded yet
+    bool shapeonly = false;
+    bool rateonly = false;
     bool force = false;
     size_t nthread = 1;
     std::map<std::string, float> fit_options;
@@ -107,12 +107,10 @@ int main(int argc, char* argv[])
     app.add_flag("--scale-by-width", binwidth_scale, "Scale histgrams by 1/(bin width).");
     app.add_flag("--event-by-event", eventbyevent, "Do you want to weight event-by-event?");
     app.add_flag("--statonly", statonly, "Run a stats only surface instead of fitting systematics");
-    app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
-    app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
     app.add_flag("--force",force,"Force loading binary data even if hash is incorrect (Be Careful!)");
-
-
-    //PROcess, into binary data [Do this once first!]
+    auto* shape_flag = app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
+    auto* rate_flag = app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
+    shape_flag->excludes(   //PROcess, into binary data [Do this once first!]
     CLI::App *process_command = app.add_subcommand("process", "PROcess the MC and systematics in root files into binary data for future rapid loading.");
 
     //PROsurf, make a 2D surface scan of physics parameters
@@ -149,7 +147,7 @@ int main(int argc, char* argv[])
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, output %4%, nthread: %5% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % output_tag.c_str() % nthread ;
 
     //Initilize configuration from the XML;
-    PROconfig config(xmlname);
+    PROconfig config(xmlname, rateonly);
 
     //Inititilize PROpeller to keep MC
     PROpeller prop;
@@ -187,7 +185,7 @@ int main(int argc, char* argv[])
     }
 
     //Build a PROsyst to sort and analyze all systematics
-    PROsyst systs(prop, systsstructs);
+    PROsyst systs(prop,systsstructs, shapeonly);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
     //Some eystematics might be ignored for this
@@ -1090,6 +1088,10 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
         float elo = std::abs((cv(i) - binconts[5*160])*scale_factor);
         ret->SetPointEYhigh(i, ehi);
         ret->SetPointEYlow(i, elo);
+
+        log<LOG_DEBUG>(L"%1% || ErrorBand bin %2% %3% %4% %5% %6% %7%") % __func__ % i % cv(i) % ehi % elo % scale_factor % tmphist.GetBinContent(i+1);
+
+
     }
     return ret;
 }

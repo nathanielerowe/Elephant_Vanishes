@@ -6,7 +6,10 @@
 
 namespace PROfit {
 
-    PROsyst::PROsyst(const PROpeller &prop, const std::vector<SystStruct>& systs) {
+    bool PROsyst::shape_only = false;
+
+    PROsyst::PROsyst( const PROpeller &prop, const std::vector<SystStruct>& systs, bool shapeonly) {
+        shape_only = shapeonly;
         for(const auto& syst: systs) {
             log<LOG_DEBUG>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
             if(syst.mode == "spline") {
@@ -167,12 +170,19 @@ namespace PROfit {
 
         const PROspec& cv_spec = sys_obj.CV();
         int nbins = cv_spec.GetNbins();
+        float cv_integral = cv_spec.Spec().sum(); 
         log<LOG_INFO>(L"%1% || Generating covariance matrix.. size: %2% x %3%") % __func__ % nbins % nbins;
 
         //build full covariance matrix 
         Eigen::MatrixXf full_covar_matrix = Eigen::MatrixXf::Zero(nbins, nbins);
         for(int i = 0; i != n_universe; ++i){
-            PROspec spec_diff  = cv_spec - sys_obj.Variation(i);
+
+            PROspec spec_diff;
+            if(shape_only){
+                spec_diff = cv_spec - sys_obj.Variation(i)*(cv_integral/sys_obj.Variation(i).Spec().sum());
+            }else{
+                spec_diff = cv_spec - sys_obj.Variation(i);
+            }
             full_covar_matrix += (spec_diff.Spec() * spec_diff.Spec().transpose() ) / static_cast<float>(n_universe);
         }
 
@@ -297,16 +307,21 @@ namespace PROfit {
     void PROsyst::FillSpline(const SystStruct& syst) {
         std::vector<PROspec> ratios;
         ratios.reserve(syst.p_multi_spec.size());
+        float cv_integral = syst.p_cv->Spec().sum() ;
+
         bool found0 = false;
         for(size_t i = 0; i < syst.p_multi_spec.size(); ++i) {
             //log<LOG_ERROR>(L"%1% || p_multi_spec, knobval, i, cv (%2%): %3%") % __func__ % tolerance % val;
 
+        
             if(syst.knobval[i] > 0 && !found0) {
                 ratios.push_back(*syst.p_cv / *syst.p_cv);
                 found0 = true;
             }
             if(syst.knobval[i] == 0) found0 = true;
-            ratios.push_back(*syst.p_multi_spec[i] / *syst.p_cv);
+
+            float mod = shape_only ?  cv_integral/syst.p_multi_spec[i]->Spec().sum() : 1.0 ;
+            ratios.push_back( ((*syst.p_multi_spec[i])*mod) / *syst.p_cv);
         }
         if(!found0) ratios.push_back(*syst.p_cv / *syst.p_cv);
         Spline spline_coeffs;
