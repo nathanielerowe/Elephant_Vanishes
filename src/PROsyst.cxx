@@ -25,6 +25,7 @@ namespace PROfit {
             }
         }
         Eigen::MatrixXf fractional_mcstat_cov = prop.mcStatErr.array().square().inverse().matrix().asDiagonal();
+        toFiniteMatrix(fractional_mcstat_cov);
         Eigen::MatrixXf mcstat_corr = GenerateCorrMatrix(fractional_mcstat_cov);
         syst_map["mcstat"] = {covmat.size(), SystType::Covariance};
         covmat.push_back(fractional_mcstat_cov);
