@@ -8,6 +8,7 @@
 #include <cmath>
 
 // Our include
+#include "PROconfig.h"
 #include "PROcreate.h"
 #include "PROlog.h"
 
@@ -27,7 +28,7 @@ namespace PROfit {
             PROsyst(){}
 
             /*Function: Primary constructor from a vector of SystStructs  */
-            PROsyst(const std::vector<SystStruct>& systs);
+            PROsyst(const PROpeller &prop, const std::vector<SystStruct>& systs);
 
             PROsyst subset(const std::vector<std::string> &systs);
             PROsyst excluding(const std::vector<std::string> &systs);

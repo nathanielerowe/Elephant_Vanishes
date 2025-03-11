@@ -2,6 +2,9 @@
 #include "PROcess.h"
 #include "PROdata.h"
 #include "PROlog.h"
+#include "PROtocall.h"
+#include <Eigen/Eigen>
+#include <cmath>
 using namespace PROfit;
 
 
@@ -34,7 +37,7 @@ PROchi::PROchi(const std::string tag, const PROconfig &conin, const PROpeller &p
           prior_covariance(iB, iA) = std::get<2>(t);
         }
     }
-
+    
     collapsed_stat_covariance = data.Spec().array().matrix().asDiagonal();
 }
 
@@ -68,31 +71,12 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
     PROspec result = FillRecoSpectra(config, peller, *syst, model, param, strat == BinnedChi2);
 
     Eigen::MatrixXf inverted_collapsed_full_covariance(config.m_num_bins_total_collapsed,config.m_num_bins_total_collapsed);
+
+    Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
+    Eigen::MatrixXf full_covariance = diag*(syst->fractional_covariance)*diag;
     
-    //only calculate a syst covariance if we have any covariance parameters as defined in the xml
-    if(syst->GetNCovar()){
-
-      // Calculate Full Syst Covariance matrix
-      Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
-      Eigen::MatrixXf full_covariance =  diag*(syst->fractional_covariance)*diag;
-      //std::cout<<"Full: "<<full_covariance.size()<<std::endl;
-      //std::cout<<full_covariance<<std::endl;
-
-      // Collapse Covariance and Spectra 
-      Eigen::MatrixXf collapsed_full_covariance =  CollapseMatrix(config,full_covariance);  
-
-      //std::cout<<"cFull: "<<collapsed_full_covariance.size()<<std::endl;
-      //std::cout<<collapsed_full_covariance<<std::endl;
-
-      // Invert Collaped Matrix Matrix 
-      inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
-      }
-
-    else{
-        
-    	inverted_collapsed_full_covariance = (collapsed_stat_covariance).inverse();
-         
-       }
+    Eigen::MatrixXf collapsed_full_covariance = CollapseMatrix(config, full_covariance); 
+    inverted_collapsed_full_covariance = (collapsed_stat_covariance+ collapsed_full_covariance).inverse();
 
     Eigen::VectorXf delta  = CollapseMatrix(config,result.Spec()) - data.Spec();
     float pull = Pull(subvector2);
@@ -117,18 +101,11 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             // Calcuate Full Covariance matrix
             Eigen::MatrixXf inverted_collapsed_full_covariance(config.m_num_bins_total_collapsed,config.m_num_bins_total_collapsed);
 
-            if(syst->GetNCovar()){
-
-                Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
-                Eigen::MatrixXf full_covariance =  diag*(syst->fractional_covariance)*diag;
-                // Collapse Covariance and Spectra 
-                Eigen::MatrixXf collapsed_full_covariance =  CollapseMatrix(config,full_covariance);  
-                // Invert Collaped Matrix Matrix 
-                inverted_collapsed_full_covariance = (collapsed_full_covariance+collapsed_stat_covariance).inverse();
-            }
-            else{
-    	        inverted_collapsed_full_covariance = (collapsed_stat_covariance).inverse();
-                }
+            Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
+            Eigen::MatrixXf full_covariance = diag*(syst->fractional_covariance)*diag;
+            
+            Eigen::MatrixXf collapsed_full_covariance = CollapseMatrix(config, full_covariance); 
+            inverted_collapsed_full_covariance = (collapsed_stat_covariance+ collapsed_full_covariance).inverse();
            
             // Calculate Chi^2  value
             Eigen::VectorXf delta  = CollapseMatrix(config,result.Spec()) - data.Spec(); 

@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
     }
 
     //Build a PROsyst to sort and analyze all systematics
-    PROsyst systs(systsstructs);
+    PROsyst systs(prop, systsstructs);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
     //Some eystematics might be ignored for this
