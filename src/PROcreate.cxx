@@ -7,6 +7,7 @@
 #include "TFile.h"
 #include "TFriendElement.h"
 #include "TChain.h"
+#include <Eigen/src/Core/Matrix.h>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -619,6 +620,7 @@ namespace PROfit {
             s.CreateSpecs(s.mode == "spline" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
+        inprop.mcStatErr = Eigen::VectorXf::Constant(inconfig.m_num_bins_total, 0);
         inprop.hist = Eigen::MatrixXf::Constant(inconfig.m_num_truebins_total, inconfig.m_num_bins_total, 0);
         inprop.histLE = Eigen::VectorXf::Constant(inconfig.m_num_truebins_total, 0);
         size_t LE_bin = 0;
@@ -700,6 +702,7 @@ namespace PROfit {
 
         //ensure hash is correctly assigned
         inprop.hash=inconfig.hash;
+        inprop.mcStatErr = inprop.mcStatErr.array().sqrt();
 
         time_t time_took = time(nullptr) - start_time;
         log<LOG_INFO>(L"%1% || Finish reading files, it took %2% seconds..") % __func__ % time_took;
@@ -1353,6 +1356,8 @@ namespace PROfit {
             return;
         if(global_true_bin < 0)
             return;
+        if(mc_weight == 0)
+            return;
 
         inprop.added_weights.push_back(mc_weight);
         inprop.bin_indices.push_back(global_bin);
@@ -1362,6 +1367,7 @@ namespace PROfit {
         inprop.hist(global_true_bin, global_bin) += mc_weight;
         inprop.pmom.push_back((float)pmom);
         inprop.pcosth.push_back((float)pcosth);
+        inprop.mcStatErr(global_bin) += 1;
 
         if(!run_syst) return;
 
