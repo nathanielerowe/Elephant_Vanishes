@@ -1000,7 +1000,8 @@ namespace PROfit {
 
             if(std::isinf(sys_weight_value) || sys_weight_value != sys_weight_value){
                 log<LOG_ERROR>(L"%1% || Input values to histogram is NAN or inf %2% !") % __func__  % sys_weight_value ;
-                throw std::runtime_error("NAN or INF in put string");
+                throw std::runtime_error("NAN or INF in pus
+                        t string");
             }
 
             int nuniv = syst.GetNUniverse();
