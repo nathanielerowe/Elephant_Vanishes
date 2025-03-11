@@ -1046,6 +1046,10 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
         float elo = std::abs((cv(i) - binconts[5*160])*scale_factor);
         ret->SetPointEYhigh(i, ehi);
         ret->SetPointEYlow(i, elo);
+
+        log<LOG_DEBUG>(L"%1% || ErrorBand bin %2% %3% %4% %5% %6% %7%") % __func__ % i % cv(i) % ehi % elo % scale_factor % tmphist.GetBinContent(i+1);
+
+
     }
     return ret;
 }
