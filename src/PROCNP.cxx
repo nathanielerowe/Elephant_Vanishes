@@ -39,9 +39,6 @@ PROCNP::PROCNP(const std::string tag, const PROconfig &conin, const PROpeller &p
           prior_covariance(iB, iA) = std::get<2>(t);
         }
     }
-    Eigen::ArrayXf tmp = pin.mcStatErr.array().inverse();
-    for(float &val: tmp) if(std::isinf(val) || std::isnan(val)) val = 0.0f;
-    mcErrCov = tmp.matrix().asDiagonal();
 }
 
 float PROCNP::Pull(const Eigen::VectorXf &systs) {
@@ -83,12 +80,7 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
     
     Eigen::MatrixXf collapsed_stat_covariance = 3 * (collapsed_data_stat_covariance.inverse() + 2 * collapsed_mc_stat_covariance.inverse()).inverse();
     Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
-    Eigen::MatrixXf full_covariance;
-    if(syst->GetNCovar() > 0) {
-        full_covariance = diag*(syst->fractional_covariance + mcErrCov)*diag;
-    } else {
-        full_covariance = diag * mcErrCov * diag;
-    }
+    Eigen::MatrixXf full_covariance = diag*(syst->fractional_covariance)*diag;
     
     Eigen::MatrixXf collapsed_full_covariance = CollapseMatrix(config, full_covariance); 
     inverted_collapsed_full_covariance = (collapsed_stat_covariance+ collapsed_full_covariance).inverse();
@@ -131,12 +123,7 @@ float PROCNP::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             }
 
             Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
-            Eigen::MatrixXf full_covariance;
-            if(syst->GetNCovar() > 0) {
-                full_covariance = diag*(syst->fractional_covariance + mcErrCov)*diag;
-            } else {
-                full_covariance = diag * mcErrCov * diag;
-            }
+            Eigen::MatrixXf full_covariance = diag*(syst->fractional_covariance)*diag;
             
             Eigen::MatrixXf collapsed_full_covariance = CollapseMatrix(config, full_covariance); 
             inverted_collapsed_full_covariance = (collapsed_stat_covariance+ collapsed_full_covariance).inverse();

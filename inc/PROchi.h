@@ -53,7 +53,7 @@ namespace PROfit{
 
             bool correlated_systematics;
             Eigen::MatrixXf prior_covariance;
-            Eigen::MatrixXf collapsed_stat_covariance, mcErrCov;
+            Eigen::MatrixXf collapsed_stat_covariance;
 
 
             /*Function: Constructor bringing all objects together*/

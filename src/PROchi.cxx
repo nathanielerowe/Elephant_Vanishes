@@ -38,9 +38,6 @@ PROchi::PROchi(const std::string tag, const PROconfig &conin, const PROpeller &p
         }
     }
     
-    Eigen::ArrayXf tmp = pin.mcStatErr.array().inverse();
-    for(float &val: tmp) if(std::isinf(val) || std::isnan(val)) val = 0.0f;
-    mcErrCov = tmp.matrix().asDiagonal();
     collapsed_stat_covariance = data.Spec().array().matrix().asDiagonal();
 }
 
@@ -76,12 +73,7 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
     Eigen::MatrixXf inverted_collapsed_full_covariance(config.m_num_bins_total_collapsed,config.m_num_bins_total_collapsed);
 
     Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
-    Eigen::MatrixXf full_covariance;
-    if(syst->GetNCovar() > 0) {
-        full_covariance = diag*(syst->fractional_covariance + mcErrCov)*diag;
-    } else {
-        full_covariance = diag * mcErrCov * diag;
-    }
+    Eigen::MatrixXf full_covariance = diag*(syst->fractional_covariance)*diag;
     
     Eigen::MatrixXf collapsed_full_covariance = CollapseMatrix(config, full_covariance); 
     inverted_collapsed_full_covariance = (collapsed_stat_covariance+ collapsed_full_covariance).inverse();
@@ -110,12 +102,7 @@ float PROchi::operator()(const Eigen::VectorXf &param, Eigen::VectorXf &gradient
             Eigen::MatrixXf inverted_collapsed_full_covariance(config.m_num_bins_total_collapsed,config.m_num_bins_total_collapsed);
 
             Eigen::MatrixXf diag = result.Spec().array().matrix().asDiagonal(); 
-            Eigen::MatrixXf full_covariance;
-            if(syst->GetNCovar() > 0) {
-                full_covariance = diag*(syst->fractional_covariance + mcErrCov)*diag;
-            } else {
-                full_covariance = diag * mcErrCov * diag;
-            }
+            Eigen::MatrixXf full_covariance = diag*(syst->fractional_covariance)*diag;
             
             Eigen::MatrixXf collapsed_full_covariance = CollapseMatrix(config, full_covariance); 
             inverted_collapsed_full_covariance = (collapsed_stat_covariance+ collapsed_full_covariance).inverse();

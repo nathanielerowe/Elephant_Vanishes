@@ -41,7 +41,6 @@ namespace PROfit{
 
             bool correlated_systematics;
             Eigen::MatrixXf prior_covariance;
-            Eigen::MatrixXf mcErrCov;
 
         public:
 
