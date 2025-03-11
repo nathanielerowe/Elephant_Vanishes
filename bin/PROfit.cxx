@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     app.add_flag("--force",force,"Force loading binary data even if hash is incorrect (Be Careful!)");
     auto* shape_flag = app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
     auto* rate_flag = app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
-    shape_flag->excludes(   //PROcess, into binary data [Do this once first!]
+    shape_flag->excludes(rate_flag);   //PROcess, into binary data [Do this once first!]
     CLI::App *process_command = app.add_subcommand("process", "PROcess the MC and systematics in root files into binary data for future rapid loading.");
 
     //PROsurf, make a 2D surface scan of physics parameters
