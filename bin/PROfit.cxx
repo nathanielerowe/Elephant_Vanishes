@@ -6,6 +6,7 @@
 #include "PROpeller.h"
 #include "PROchi.h"
 #include "PROCNP.h"
+#include "PROpoisson.h"
 #include "PROcess.h"
 #include "PROsurf.h"
 #include "PROfitter.h"
@@ -337,6 +338,8 @@ int main(int argc, char* argv[])
         metric = new PROchi("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
     } else if(chi2 == "PROCNP") {
         metric = new PROCNP("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+    } else if(chi2 == "Poisson") {
+        metric = new PROpoisson("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
     } else {
         log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
         abort();
