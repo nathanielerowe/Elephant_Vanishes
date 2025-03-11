@@ -1,4 +1,5 @@
 #include "PROsyst.h"
+#include "PROpeller.h"
 #include "PROconfig.h"
 #include "PROcreate.h"
 #include "PROlog.h"
@@ -6,10 +7,9 @@
 namespace PROfit {
 
     bool PROsyst::shape_only = false;
-    bool PROsyst::rate_only = false;
 
-    PROsyst::PROsyst(const std::vector<SystStruct>& systs, bool shapeonly, bool rateonly) {
-        shape_only = shapeonly; rate_only=rateonly;
+    PROsyst::PROsyst( const PROpeller &prop, const std::vector<SystStruct>& systs, bool shapeonly) {
+        shape_only = shapeonly;
         for(const auto& syst: systs) {
             log<LOG_DEBUG>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
             if(syst.mode == "spline") {
@@ -24,6 +24,12 @@ namespace PROfit {
                 //anycovar=true;
             }
         }
+        Eigen::MatrixXf fractional_mcstat_cov = prop.mcStatErr.array().square().inverse().matrix().asDiagonal();
+        Eigen::MatrixXf mcstat_corr = GenerateCorrMatrix(fractional_mcstat_cov);
+        syst_map["mcstat"] = {covmat.size(), SystType::Covariance};
+        covmat.push_back(fractional_mcstat_cov);
+        corrmat.push_back(mcstat_corr);
+        
         fractional_covariance = this->SumMatrices();
     }
 
@@ -52,7 +58,8 @@ namespace PROfit {
                 break;
             }
         }
-        ret.fractional_covariance = ret.SumMatrices();
+        ret.fractional_covariance = ret.covmat.size() ? ret.SumMatrices()
+            : Eigen::MatrixXf::Constant(fractional_covariance.rows(), fractional_covariance.cols(), 0.0f);
         return ret;
     }
 
@@ -80,7 +87,8 @@ namespace PROfit {
                 break;
             }
         }
-        ret.fractional_covariance = ret.SumMatrices();
+        ret.fractional_covariance = ret.covmat.size() ? ret.SumMatrices()
+            : Eigen::MatrixXf::Constant(fractional_covariance.rows(), fractional_covariance.cols(), 0.0f);
         return ret;
     }
 

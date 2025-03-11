@@ -1,5 +1,6 @@
 #include "PROconfig.h"
 #include "PROdata.h"
+#include "PROlog.h"
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
@@ -35,6 +36,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -60,8 +62,8 @@ int main(int argc, char* argv[])
     std::string output_tag = "v1";
     std::string chi2 = "PROchi";
     bool eventbyevent=false;
-    bool shapeonly = false;//not coded yet
-    bool rateonly = false;//not coded yet
+    bool shapeonly = false;
+    bool rateonly = false;
     bool force = false;
     size_t nthread = 1;
     std::map<std::string, float> fit_options;
@@ -108,10 +110,7 @@ int main(int argc, char* argv[])
     app.add_flag("--force",force,"Force loading binary data even if hash is incorrect (Be Careful!)");
     auto* shape_flag = app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
     auto* rate_flag = app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
-    shape_flag->excludes(rate_flag);
-
-
-    //PROcess, into binary data [Do this once first!]
+    shape_flag->excludes(   //PROcess, into binary data [Do this once first!]
     CLI::App *process_command = app.add_subcommand("process", "PROcess the MC and systematics in root files into binary data for future rapid loading.");
 
     //PROsurf, make a 2D surface scan of physics parameters
@@ -186,7 +185,7 @@ int main(int argc, char* argv[])
     }
 
     //Build a PROsyst to sort and analyze all systematics
-    PROsyst systs(systsstructs, shapeonly, rateonly);
+    PROsyst systs(prop,systsstructs, shapeonly);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
     //Some eystematics might be ignored for this
@@ -327,10 +326,53 @@ int main(int argc, char* argv[])
             param.epsilon = value;
         } else if(param_name == "delta") {
             param.delta = value;
+        } else if(param_name == "m") {
+            param.m = value;
+            if(value < 3) {
+                log<LOG_WARNING>(L"%1% || Number of corrections to approximate inverse Hessian in"
+                                 L" L-BFGS-B is recommended to be at least 3, provided value is %2%."
+                                 L" Note: this is controlled via --fit-options m.")
+                    % __func__ % value;
+            }
+        } else if(param_name == "epsilon_rel") {
+            param.epsilon_rel = value;
+        } else if(param_name == "past") {
+            param.past = value;
+            if(value == 0) {
+                log<LOG_WARNING>(L"%1% || L-BFGS-B 'past' parameter set to 0. This will disable delta convergence test")
+                    % __func__;
+            }
+        } else if(param_name == "max_iterations") {
+            param.max_iterations = value;
+        } else if(param_name == "max_submin") {
+            param.max_submin = value;
+        } else if(param_name == "max_linesearch") {
+            param.max_linesearch = value;
+        } else if(param_name == "min_step") {
+            param.min_step = value;
+            log<LOG_WARNING>(L"%1% || Modifying the minimum step size in the line search to be %2%."
+                             L" This is not usually needed according to the LBFGSpp documentation.")
+                % __func__ % value;
+        } else if(param_name == "max_step") {
+            param.max_step = value;
+            log<LOG_WARNING>(L"%1% || Modifying the maximum step size in the line search to be %2%."
+                             L" This is not usually needed according to the LBFGSpp documentation.")
+                % __func__ % value;
+        } else if(param_name == "ftol") {
+            param.ftol = value;
+        } else if(param_name == "wolfe") {
+            param.wolfe = value;
         } else {
             log<LOG_WARNING>(L"%1% || Unrecognized LBFGSB parameter %2%. Will ignore.") 
                 % __func__ % param_name.c_str();
         }
+    }
+    try {
+        param.check_param();
+    } catch(std::invalid_argument &except) {
+        log<LOG_ERROR>(L"%1% || Invalid L-BFGS-B parameters: %2%") % __func__ % except.what();
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
     }
 
     //Metric Time

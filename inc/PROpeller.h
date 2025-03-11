@@ -31,6 +31,7 @@ namespace PROfit{
                     ar & true_bin_indices;
                     ar & hist;
                     ar & histLE;
+                    ar & mcStatErr;
                     ar & hash;
                 }
 
@@ -69,6 +70,7 @@ namespace PROfit{
             std::vector<float> pcosth;
             Eigen::MatrixXf    hist;
             Eigen::VectorXf    histLE;
+            Eigen::VectorXf    mcStatErr;
             uint32_t           hash;
 
             // boost serialize save to file
