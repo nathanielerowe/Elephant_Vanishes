@@ -226,6 +226,8 @@ namespace PROfit{
             int LoadFromXML(const std::string & filename);
             uint32_t hash;
 
+            static bool SameChannels(const PROconfig &one, const PROconfig &two);
+
             std::string m_xmlname;	
             float m_plot_pot;
             std::vector<std::string> m_fullnames;

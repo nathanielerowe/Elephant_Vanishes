@@ -22,6 +22,7 @@
 //PROfit
 #include "PROlog.h"
 #include "PROconfig.h"
+#include "PROdata.h"
 #include "PROtocall.h"
 #include "PROspec.h"
 #include "PROpeller.h"
@@ -230,6 +231,8 @@ namespace PROfit{
      * Note: assume the input config has SBNfit-style files, TODO: check if compatible with CAF-style
      */
     PROspec CreatePROspecCV(const PROconfig& configin);
+
+    PROdata CreatePROdata(const PROconfig& configin);
 
 
     /* Function: assume currently reading one entry of a file, update systematic variation spectrum 

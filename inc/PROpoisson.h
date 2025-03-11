@@ -1,5 +1,5 @@
-#ifndef PROCHI_H_
-#define PROCHI_H_
+#ifndef PROPOISSON_H_
+#define PROPOISSON_H_
 
 // STANDARD
 #include <string>
@@ -27,7 +27,7 @@ namespace PROfit{
      *  Improve gradient calculation
      *  */
 
-    class PROchi : public PROmetric
+    class PROpoisson : public PROmetric
     {
         private:
 
@@ -53,11 +53,10 @@ namespace PROfit{
 
             bool correlated_systematics;
             Eigen::MatrixXf prior_covariance;
-            Eigen::MatrixXf collapsed_stat_covariance;
 
 
             /*Function: Constructor bringing all objects together*/
-            PROchi(const std::string tag, const PROconfig &conin, const PROpeller &pin, const PROsyst *systin, const PROmodel &modelin, const PROdata &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
+            PROpoisson(const std::string tag, const PROconfig &conin, const PROpeller &pin, const PROsyst *systin, const PROmodel &modelin, const PROdata &datain, EvalStrategy strat = EventByEvent, std::vector<float> physics_param_fixed = std::vector<float>());
 
 
             /*Function: operator() is what is passed to minimizer.*/
@@ -71,7 +70,7 @@ namespace PROfit{
             }
 
             virtual PROmetric *Clone() const {
-                return new PROchi(*this);
+                return new PROpoisson(*this);
             }
 
             virtual const PROmodel &GetModel() const {

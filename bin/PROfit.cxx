@@ -1,10 +1,12 @@
 #include "PROconfig.h"
+#include "PROdata.h"
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
 #include "PROpeller.h"
 #include "PROchi.h"
 #include "PROCNP.h"
+#include "PROpoisson.h"
 #include "PROcess.h"
 #include "PROsurf.h"
 #include "PROfitter.h"
@@ -23,6 +25,7 @@
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TRatioPlot.h"
+#include "TTree.h"
 
 #include <Eigen/Eigen>
 
@@ -225,16 +228,38 @@ int main(int argc, char* argv[])
         }
 
     //Some logic for EITHER injecting fake/mock data of oscillated signal/syst shifts OR using real data
-    PROspec data;
+    PROdata data;
     if(!data_xml.empty()){
         PROconfig dataconfig(data_xml);
         std::string dataBinName = analysis_tag+"_data.bin";
+        for(size_t i = 0; i < dataconfig.m_num_channels; ++i) {
+            size_t nsubch = dataconfig.m_num_subchannels[i];
+            if(nsubch != 1) {
+                log<LOG_ERROR>(L"%1% || Data xml required to have exactly 1 subchannel per channel. Found %2% for channel %3%")
+                    % __func__ % nsubch % i;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+            }
+            std::string &subchname = dataconfig.m_subchannel_names[i][0];
+            if(subchname != "data") {
+                log<LOG_ERROR>(L"%1% || Data subchannel required to be called \"data.\" Found name %2% for channel %3%")
+                    % __func__ % subchname.c_str() % i;
+                log<LOG_ERROR>(L"Terminating.");
+                exit(EXIT_FAILURE);
+            }
+        }
+        if(!PROconfig::SameChannels(config, dataconfig)) {
+            log<LOG_ERROR>(L"%1% || Require data and MC to have same channels. A difference was found, check messages above.")
+                % __func__;
+            log<LOG_ERROR>(L"Terminating.");
+            exit(EXIT_FAILURE);
+        }
 
         if((*process_command) || (!std::filesystem::exists(dataBinName))  ){
             log<LOG_INFO>(L"%1% || Processing Data Spectrum and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
 
             //Process the CAF files to grab and fill spectrum directly
-            data = CreatePROspecCV(dataconfig);
+            data = CreatePROdata(dataconfig);
             data.save(dataconfig,dataBinName);
             log<LOG_INFO>(L"%1% || Done processing Data from XML defined root files, and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
         }else{
@@ -265,7 +290,7 @@ int main(int argc, char* argv[])
 
         //Create CV or injected data spectrum for all subsequent steps
         //this now will inject osc param, splines and reweight all at once
-        data = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
+        PROspec data_spec = osc_params.size() || injected_systs.size() ? FillRecoSpectra(config, prop, systs, *model, allparams, !eventbyevent) :  FillCVSpectrum(config, prop, !eventbyevent);
 
         //Only for reweighting tests
         if (!mockreweights.empty()) {
@@ -280,20 +305,17 @@ int main(int argc, char* argv[])
                 weighthists.push_back(rwhist);
                 log<LOG_DEBUG>(L"%1% || Read in weight hist ") % __func__ ;      
             }
-            data = FillWeightedSpectrumFromHist(config, prop, weighthists, *model, allparams, !eventbyevent);
+            data_spec = FillWeightedSpectrumFromHist(config, prop, weighthists, *model, allparams, !eventbyevent);
         }
+        Eigen::VectorXf data_vec = CollapseMatrix(config, data_spec.Spec());
+        Eigen::VectorXf err_vec_sq = data_spec.Error().array().square();
+        Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
+        data = PROdata(data_vec, err_vec);
     }
-
-    Eigen::VectorXf data_vec = CollapseMatrix(config, data.Spec());
-    Eigen::VectorXf err_vec_sq = data.Error().array().square();
-    Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
-    data = PROspec(data_vec, err_vec);
 
     //Seed time
     PROseed myseed(nthread, global_seed);
     
-    
-
     //Some global minimizer params
     LBFGSpp::LBFGSBParam<float> param;  
     param.epsilon = 1e-6;
@@ -317,6 +339,8 @@ int main(int argc, char* argv[])
         metric = new PROchi("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
     } else if(chi2 == "PROCNP") {
         metric = new PROCNP("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+    } else if(chi2 == "Poisson") {
+        metric = new PROpoisson("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
     } else {
         log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
         abort();
@@ -361,7 +385,7 @@ int main(int argc, char* argv[])
             post_hist.SetBinContent(i+1, post_fit(i));
         }
 
-        PROfile(config, systs, *model, *metric , myseed, param, final_output_tag+"_PROfile", true, nthread, best_fit,pparams);
+        PROfile(config, systs, *model, *metric , myseed, param, final_output_tag+"_PROfile", true, nthread, best_fit, allparams);
 
 
         //***********************************************************************
@@ -432,6 +456,32 @@ int main(int argc, char* argv[])
         log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % final_output_tag.c_str();
         TFile fout((final_output_tag+"_surf.root").c_str(), "RECREATE");
         surf.Write();
+        float chi2;
+        int xbin, ybin;
+        std::map<std::string, float> best_fit;
+        TTree tree("tree", "BestFitTree");
+        tree.Branch("chi2", &chi2); 
+        tree.Branch("xbin", &xbin); 
+        tree.Branch("ybin", &ybin); 
+        tree.Branch("best_fit", &best_fit); 
+
+        for(const auto &res: surface.results) {
+            chi2 = res.chi2;
+            xbin = res.binx;
+            ybin = res.biny;
+            // If all fit points fail
+            if(!res.best_fit.size()) { tree.Fill(); continue; }
+            for(size_t i = 0; i < model->nparams; ++i) {
+                best_fit[model->param_names[i]] = res.best_fit(i);
+            }
+            for(size_t i = 0; i < systs.GetNSplines(); ++i) {
+                best_fit[systs.spline_names[i]] = res.best_fit(i + model->nparams);
+            }
+            tree.Fill();
+        }
+        // TODO: Should we save the spectra as TH1s?
+
+        tree.Write();
 
         TCanvas c;
         if(logy)
