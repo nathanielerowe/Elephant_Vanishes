@@ -1,5 +1,6 @@
 #include "PROconfig.h"
 #include "PROdata.h"
+#include "PROlog.h"
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
@@ -35,6 +36,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -326,10 +328,53 @@ int main(int argc, char* argv[])
             param.epsilon = value;
         } else if(param_name == "delta") {
             param.delta = value;
+        } else if(param_name == "m") {
+            param.m = value;
+            if(value < 3) {
+                log<LOG_WARNING>(L"%1% || Number of corrections to approximate inverse Hessian in"
+                                 L" L-BFGS-B is recommended to be at least 3, provided value is %2%."
+                                 L" Note: this is controlled via --fit-options m.")
+                    % __func__ % value;
+            }
+        } else if(param_name == "epsilon_rel") {
+            param.epsilon_rel = value;
+        } else if(param_name == "past") {
+            param.past = value;
+            if(value == 0) {
+                log<LOG_WARNING>(L"%1% || L-BFGS-B 'past' parameter set to 0. This will disable delta convergence test")
+                    % __func__;
+            }
+        } else if(param_name == "max_iterations") {
+            param.max_iterations = value;
+        } else if(param_name == "max_submin") {
+            param.max_submin = value;
+        } else if(param_name == "max_linesearch") {
+            param.max_linesearch = value;
+        } else if(param_name == "min_step") {
+            param.min_step = value;
+            log<LOG_WARNING>(L"%1% || Modifying the minimum step size in the line search to be %2%."
+                             L" This is not usually needed according to the LBFGSpp documentation.")
+                % __func__ % value;
+        } else if(param_name == "max_step") {
+            param.max_step = value;
+            log<LOG_WARNING>(L"%1% || Modifying the maximum step size in the line search to be %2%."
+                             L" This is not usually needed according to the LBFGSpp documentation.")
+                % __func__ % value;
+        } else if(param_name == "ftol") {
+            param.ftol = value;
+        } else if(param_name == "wolfe") {
+            param.wolfe = value;
         } else {
             log<LOG_WARNING>(L"%1% || Unrecognized LBFGSB parameter %2%. Will ignore.") 
                 % __func__ % param_name.c_str();
         }
+    }
+    try {
+        param.check_param();
+    } catch(std::invalid_argument &except) {
+        log<LOG_ERROR>(L"%1% || Invalid L-BFGS-B parameters: %2%") % __func__ % except.what();
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
     }
 
     //Metric Time
