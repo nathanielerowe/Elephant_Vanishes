@@ -80,7 +80,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
         profOut output;
 
         log<LOG_INFO>(L"%1% || THREADS %2% in this batch if ( %3%,%4% )") % __func__ %  i % start % end;
-        
+
 
         Eigen::VectorXf last_bf;
         if(init_seed.norm()>0) last_bf= init_seed;
@@ -131,7 +131,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
             }
             output.knob_chis.push_back(fx);
             last_bf = fitter.best_fit;
-          
+
 
             std::string spec_string = "";
             for(auto &f : fitter.best_fit) spec_string+=" "+std::to_string(f); 
@@ -140,7 +140,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
 
         }    //end spline loop        
 
-       outs.push_back(output);
+        outs.push_back(output);
 
     }//end thread
 
@@ -168,7 +168,7 @@ std::vector<surfOut> PROsurf::PointHelper(const LBFGSpp::LBFGSBParam<float> &par
 
         if(nparams == 0) {
             Eigen::VectorXf empty_vec, 
-                            params = Eigen::VectorXf::Map(physics_params.data(), physics_params.size());
+                params = Eigen::VectorXf::Map(physics_params.data(), physics_params.size());
             output.chi = (*local_metric)(params, empty_vec, false);
             output.best_fit = params; 
             outs.push_back(output);
@@ -190,7 +190,7 @@ std::vector<surfOut> PROsurf::PointHelper(const LBFGSpp::LBFGSBParam<float> &par
         output.best_fit = fitter.best_fit;
         outs.push_back(output);
     }
-    
+
     delete local_metric;
 
     return outs;
@@ -224,8 +224,8 @@ void PROsurf::FillSurface(const LBFGSpp::LBFGSBParam<float> &param, std::string 
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-            return this->PointHelper(param, grid, start, end, proseed.getThreadSeeds()->at(t));
-        }));
+                    return this->PointHelper(param, grid, start, end, proseed.getThreadSeeds()->at(t));
+                    }));
 
     }
 
@@ -337,8 +337,8 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-            return this->PROfilePointHelper(&systs, param, start, end,with_osc,init_seed, proseed.getThreadSeeds()->at(t));
-        }));
+                    return this->PROfilePointHelper(&systs, param, start, end,with_osc,init_seed, proseed.getThreadSeeds()->at(t));
+                    }));
 
     }
 
@@ -349,42 +349,15 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     }
 
 
-    int depth = std::ceil(nparams/4.0);
-    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
-    c->Divide(4,depth);
-
-    size_t w = 0;
+    //create all graphs, used directly in first setion
     for(auto & out: combinedResults){
-        
         log<LOG_INFO>(L"%1% || Knob Values: %2%") % __func__ %  out.knob_vals;
         log<LOG_INFO>(L"%1% || Knob Chis: %2%") % __func__ %  out.knob_chis;
-
-        c->cd(w+1);
         std::unique_ptr<TGraph> g = std::make_unique<TGraph>(out.knob_vals.size(), out.knob_vals.data(), out.knob_chis.data());
-        std::string xval = w < model.nparams ? "Log_{10}(" + model.pretty_param_names[w]+")" :"#sigma Shift"  ;
-        std::string tit = names[w]+ ";"+xval+"; #Chi^{2}";
-        g->SetTitle(tit.c_str());
         graphs.push_back(std::move(g));
-        graphs.back()->Draw("AL");
-        graphs.back()->SetLineWidth(2);
-
-        if(w>=model.nparams){
-            gprior->Draw("L same");
-            gprior->SetLineStyle(2);
-            gprior->SetLineWidth(1);
-        }
-        w++;
     }
 
-    c->SaveAs((filename+".pdf").c_str(),"pdf");
-
-    delete c;
-
-    //Next version
-    TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
-    c2->cd();
-    c2->SetBottomMargin(0.25);
-    c2->SetRightMargin(0.5);
+    //Analyze them, used in later section
     //plot 2sigma also? default no, as its messier
     bool twosig = false;
     int nBins = nparams;
@@ -397,7 +370,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
 
     std::vector<float> barvalues;
     std::vector<float> barvalues_err;
-      
+
     std::vector<float> values2_up;
     std::vector<float> values2_down;
 
@@ -408,24 +381,24 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     for(auto &g:graphs){
         //if(metric->GetModel().nparams)continue;
         float lo = count < metric.GetModel().nparams ? metric.GetModel().lb(count) :
-                     metric.GetSysts().spline_lo[count - metric.GetModel().nparams];
+            metric.GetSysts().spline_lo[count - metric.GetModel().nparams];
         if(std::isinf(lo)) lo = lo < 0 ? -5 : 5;
         float hi = count < metric.GetModel().nparams ? metric.GetModel().ub(count) :
-                     metric.GetSysts().spline_hi[count - metric.GetModel().nparams];
+            metric.GetSysts().spline_hi[count - metric.GetModel().nparams];
         if(std::isinf(hi)) hi = hi < 0 ? -5 : 5;
         std::vector<float> tmp = findMinAndBounds(g.get(),1.0, lo, hi);
-	barvalues.push_back(float(count)+0.5);
-	barvalues_err.push_back(0.4);
+        barvalues.push_back(float(count)+0.5);
+        barvalues_err.push_back(0.4);
         bfvalues.push_back(tmp[0]);
-	values1_down.push_back(tmp[1]);
-	values1_up.push_back(tmp[2]);
-	values1_errdown.push_back(abs(tmp[1]-tmp[0]));
+        values1_down.push_back(tmp[1]);
+        values1_up.push_back(tmp[2]);
+        values1_errdown.push_back(abs(tmp[1]-tmp[0]));
         values1_errup.push_back(abs(tmp[2]-tmp[0]));
-	log<LOG_DEBUG>(L"%1% || Results of findMinAndBounds : %2% %3% %4% ") % __func__ % tmp[0] % tmp[1] % tmp[2];
-	log<LOG_DEBUG>(L"%1% || Barvalues : %2% %3% %4% %5%") % __func__ % count % barvalues[count] % barvalues_err[count] % barvalues_err[count];
-	log<LOG_DEBUG>(L"%1% || Bfvalues : %2% %3% ") % __func__ % count % bfvalues[count];
-	log<LOG_DEBUG>(L"%1% || RangeValues : %2% %3% %4% ") % __func__ % count % values1_down[count] % values1_up[count];
-	log<LOG_DEBUG>(L"%1% || ErrValues : %2% %3% %4% ") % __func__ % count % values1_errdown[count] % values1_errup[count];
+        log<LOG_DEBUG>(L"%1% || Results of findMinAndBounds : %2% %3% %4% ") % __func__ % tmp[0] % tmp[1] % tmp[2];
+        log<LOG_DEBUG>(L"%1% || Barvalues : %2% %3% %4% %5%") % __func__ % count % barvalues[count] % barvalues_err[count] % barvalues_err[count];
+        log<LOG_DEBUG>(L"%1% || Bfvalues : %2% %3% ") % __func__ % count % bfvalues[count];
+        log<LOG_DEBUG>(L"%1% || RangeValues : %2% %3% %4% ") % __func__ % count % values1_down[count] % values1_up[count];
+        log<LOG_DEBUG>(L"%1% || ErrValues : %2% %3% %4% ") % __func__ % count % values1_errdown[count] % values1_errup[count];
         if(twosig){
             std::vector<float> tmp2 = findMinAndBounds(g.get(),4.0,lo, hi);
             values2_down.push_back(abs(tmp2[1]-tmp[0]));
@@ -434,7 +407,87 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
         count++;
     }
 
-    
+
+
+
+    //First plot
+    int depth = std::ceil((nparams+model.nparams)/4.0);
+    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
+    c->Divide(4,depth);
+
+
+    size_t zoom_shift = 0;
+    for(size_t w = 0; w< combinedResults.size(); w++ ){
+
+        c->cd(w+1+zoom_shift);
+        std::string xval = w < model.nparams ? "Log_{10}(" + model.pretty_param_names[w]+")" :"#sigma Shift"  ;
+        std::string tit = names[w]+ ";"+xval+"; #Chi^{2}";
+        graphs[w]->SetTitle(tit.c_str());
+        graphs[w]->Draw("AL");
+        graphs[w]->SetLineWidth(2);
+        
+        TLine* line = new TLine(graphs[w]->GetXaxis()->GetXmin(), 1, graphs[w]->GetXaxis()->GetXmax(), 1);
+        line->SetLineStyle(3);  // Dotted line style (1 is solid, 2 is dashed, 3 is dotted)
+        line->SetLineWidth(1);  // Thin line
+        line->SetLineColor(kBlack);  // Set color (black for visibility)
+        line->Draw();
+
+        if(w<model.nparams) graphs[w]->SetLineColor(kBlue-7);
+
+        if(w>=model.nparams){
+            gprior->Draw("L same");
+            gprior->SetLineStyle(2);
+            gprior->SetLineWidth(2);
+            gprior->SetLineColor(kRed-7);
+        }
+
+        if(w==model.nparams-1){
+            //on past physics param, lets do a quick zoom, stepping back though the physics param
+            for(size_t zs = 0; zs<model.nparams; zs++){
+                c->cd(w+1+zs+1);
+                std::unique_ptr<TGraph> graphClone = std::make_unique<TGraph>(*graphs[w-zs]);
+                graphClone->Draw("AL");
+                std::string newTitle = std::string(graphClone->GetTitle()) + " Zoomed 1#sigma";
+                graphClone->SetTitle(newTitle.c_str());
+                graphClone->SetLineColor(kViolet);
+                float vd = std::min(values1_down[w]*0.8,values1_up[w]*1.2) ;
+                float vu = std::max(values1_down[w]*0.8,values1_up[w]*1.2) ;
+                graphClone->GetXaxis()->SetLimits(vd,vu); 
+                graphClone->GetYaxis()->SetRangeUser(graphClone->Eval(vd), graphClone->Eval(vu) );
+
+                TLine *line1 = new TLine(vd, 1, vu, 1);
+                line1->SetLineStyle(3);  
+                line1->SetLineWidth(1);  
+                line1->SetLineColor(kBlack); 
+                line1->Draw();
+
+                TLine* line2 = new TLine(vd, graphs[w]->Eval(vd) ,vd, 0);
+                line2->SetLineStyle(3);  
+                line2->SetLineWidth(1);  
+                line2->SetLineColor(kBlack); 
+                line2->Draw();
+
+                TLine *line3 = new TLine(vu, graphs[w]->Eval(vu) ,vu, 0);
+                line3->SetLineStyle(3);  
+                line3->SetLineWidth(1);  
+                line3->SetLineColor(kBlack); 
+                line3->Draw();
+
+            }
+            zoom_shift=model.nparams;
+        }
+    }
+
+    c->SaveAs((filename+".pdf").c_str(),"pdf");
+
+    delete c;
+
+    //Next version
+    TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
+    c2->cd();
+    c2->SetBottomMargin(0.25);
+    c2->SetRightMargin(0.5);
+
     log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% %6%") % __func__ % nBins % barvalues.size() % bfvalues.size() % values1_down.size() % values1_up.size() ;
 
     float minVal = *std::min_element(values1_down.begin(), values1_down.end());
@@ -456,26 +509,26 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
 
     float y_min = h1->GetMinimum();
     for (size_t i = 0; i < barvalues.size(); ++i) {
-      std::string label = i < model.nparams ? "Log_{10}(" + model.pretty_param_names[i]+")" : config.m_mcgen_variation_plotname_map.at(names[i]);
-      TLatex* text = new TLatex(barvalues[i], y_min - 0.05, label.c_str());  // Position text below axis
-      text->SetTextAlign(13);  
-      text->SetTextSize(0.03); 
-      text->SetTextAngle(-45); 
-      text->Draw();
+        std::string label = i < model.nparams ? "Log_{10}(" + model.pretty_param_names[i]+")" : config.m_mcgen_variation_plotname_map.at(names[i]);
+        TLatex* text = new TLatex(barvalues[i], y_min - 0.05, label.c_str());  // Position text below axis
+        text->SetTextAlign(13);  
+        text->SetTextSize(0.03); 
+        text->SetTextAngle(-45); 
+        text->Draw();
     }
 
     c2->Update();
 
     if (twosig) {
-      TGraphAsymmErrors *h2 = new TGraphAsymmErrors(barvalues.size(),barvalues.data(), bfvalues.data(), barvalues_err.data(), barvalues_err.data(), values2_down.data(), values2_up.data());
-      h2->SetFillColor(38);
-      h2->SetStats(0);
-      h2->SetTitle("");
-      h2->Draw("A2");
-      h2->GetYaxis()->SetTitle("");
+        TGraphAsymmErrors *h2 = new TGraphAsymmErrors(barvalues.size(),barvalues.data(), bfvalues.data(), barvalues_err.data(), barvalues_err.data(), values2_down.data(), values2_up.data());
+        h2->SetFillColor(38);
+        h2->SetStats(0);
+        h2->SetTitle("");
+        h2->Draw("A2");
+        h2->GetYaxis()->SetTitle("");
     }
-    
-    
+
+
     TLine l(0,0,nBins+0.5,0);
     l.SetLineStyle(2);
     l.SetLineColor(kBlack);
@@ -483,20 +536,20 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     l.Draw();
 
     for (int i = 0; i < nBins; ++i) {
-      TMarker* initstar = new TMarker(i+0.5, init_seed[i], 29);
-      initstar->SetMarkerSize(0.6); 
-      initstar->SetMarkerColor(kBlue); 
-      initstar->Draw();
+        TMarker* initstar = new TMarker(i+0.5, init_seed[i], 29);
+        initstar->SetMarkerSize(0.6); 
+        initstar->SetMarkerColor(kBlue); 
+        initstar->Draw();
 
-      if (i < true_params.size()) {
+        if (i < true_params.size()) {
 
-	  TMarker* truestar = new TMarker(i+0.5, true_params[i], 29);
-	  truestar->SetMarkerSize(0.5); 
-	  truestar->SetMarkerColor(kRed); 
-	  truestar->Draw();
-	}
-      
-      TMarker* star = new TMarker(i+0.5, bfvalues[i], 29);
+            TMarker* truestar = new TMarker(i+0.5, true_params[i], 29);
+            truestar->SetMarkerSize(0.5); 
+            truestar->SetMarkerColor(kRed); 
+            truestar->Draw();
+        }
+
+        TMarker* star = new TMarker(i+0.5, bfvalues[i], 29);
         star->SetMarkerSize(0.5); 
         star->SetMarkerColor(kBlack); 
         star->Draw();
