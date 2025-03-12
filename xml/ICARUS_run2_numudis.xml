@@ -111,7 +111,7 @@
 </model>
 
 
-<MCFile treename="events/selectedNu" filename="selected_events.root" scale = "1.0" maxevents="50000" pot="2.8e20"> 
+<MCFile treename="events/selectedNu" filename="selected_events.root"  pot="2.8e20"> 
     <friend treename="events/multisimTree" filename="selected_events.root"/>
     <friend treename="events/multisigmaTree" filename="selected_events.root"/>
      <branch
@@ -148,7 +148,7 @@
          />
 </MCFile>
 
-<MCFile treename="events/selectedCos" filename="selected_events.root" scale = "1.0" maxevents="50000" pot="2.8e20"> 
+<MCFile treename="events/selectedCos" filename="selected_events.root"  pot="2.8e20"> 
      <branch
          associated_subchannel = "nu_ICARUS_numu_cos"
          name                  = "recoE"

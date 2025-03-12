@@ -40,7 +40,7 @@
 </model>
 
 
-<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root" scale = "0.9"  pot="2.14111e+18"> 
+<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root"   pot="2.14111e+18"> 
     <friend treename="events/multisimTree" />
     <friend treename="events/multisigmaTree"/>
      <branch
@@ -54,7 +54,7 @@
          />
 </MCFile>
 
-<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root" scale = "0.9" pot="2.14111e+18"> 
+<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root"  pot="2.14111e+18"> 
     <friend treename="events/multisimTree" />
     <friend treename="events/multisigmaTree"/>
      <branch
@@ -68,7 +68,7 @@
          />
 </MCFile>
 
-<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root" scale = "0.9"  pot="2.14111e+18"> 
+<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root"   pot="2.14111e+18"> 
     <friend treename="events/multisimTree" />
     <friend treename="events/multisigmaTree"/>
      <branch
@@ -82,7 +82,7 @@
          />
 </MCFile>
 
-<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root" scale = "0.9" pot="2.14111e+18"> 
+<MCFile treename="events/selectedNu" filename="/exp/sbnd/data/users/markross/PROfit_Data/sbnd_bnb_40k.root"  pot="2.14111e+18"> 
     <friend treename="events/multisimTree" />
     <friend treename="events/multisigmaTree"/>
      <branch
