@@ -912,9 +912,14 @@ int PROconfig::LoadFromXML(const std::string &filename){
         else if(m_mcgen_variation_type[i] == "covariance"){
             m_num_variation_type_covariance+=1;
         }
+        
+        else if(m_mcgen_variation_type[i] == "flat"){
+            m_num_variation_type_flat+=1;
+        }
     }
 
     log<LOG_INFO>(L"%1% || num_variation_type_covariance: %2% ") % __func__ % m_num_variation_type_covariance;
+    log<LOG_INFO>(L"%1% || num_variation_type_flat: %2% ") % __func__ % m_num_variation_type_flat;
     log<LOG_INFO>(L"%1% || num_variation_type_spline: %2% ") % __func__ % m_num_variation_type_spline; 
 
 

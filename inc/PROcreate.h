@@ -39,7 +39,7 @@ namespace PROfit{
 
     /*Struct: Core systeatics object, one per systematics, handels both 1D splines, Covariances and MFA
      *Notes:
-     *  
+     * 
      */
     struct SystStruct {
 
