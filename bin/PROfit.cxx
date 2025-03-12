@@ -33,6 +33,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -43,6 +44,7 @@
 using namespace PROfit;
 
 log_level_t GLOBAL_LEVEL = LOG_INFO;
+std::wostream *OSTREAM = &wcout;
 
 //some helper functions for PROplot
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
@@ -69,6 +71,7 @@ int main(int argc, char* argv[])
     std::map<std::string, float> fit_options;
     size_t maxevents;
     int global_seed = -1;
+    std::string log_file = "";
 
     bool with_splines = false, binwidth_scale = false;
 
@@ -104,6 +107,7 @@ int main(int argc, char* argv[])
     app.add_option("--fit-options", fit_options, "Parameters for LBFGSB.");
     app.add_option("-f, --rwfile", reweights_file, "File containing histograms for reweighting");
     app.add_option("-r, --mockrw",   mockreweights, "Vector of reweights to use for mock data");
+    app.add_option("--log", log_file, "File to save log to. Warning: Will overwrite this file.");
     app.add_flag("--scale-by-width", binwidth_scale, "Scale histgrams by 1/(bin width).");
     app.add_flag("--event-by-event", eventbyevent, "Do you want to weight event-by-event?");
     app.add_flag("--statonly", statonly, "Run a stats only surface instead of fitting systematics");
@@ -142,6 +146,13 @@ int main(int argc, char* argv[])
 
     //Parse inputs. 
     CLI11_PARSE(app, argc, argv);
+
+    std::wofstream log_out;
+    if(log_file != "") {
+        log_out.open(log_file);
+        OSTREAM = &log_out;
+    }
+
     log<LOG_INFO>(L" %1% ") % getIcon().c_str()  ;
     std::string final_output_tag =analysis_tag +"_"+output_tag;
     log<LOG_INFO>(L"%1% || PROfit commandline input arguments. xml: %2%, tag: %3%, output %4%, nthread: %5% ") % __func__ % xmlname.c_str() % analysis_tag.c_str() % output_tag.c_str() % nthread ;
@@ -185,7 +196,7 @@ int main(int argc, char* argv[])
     }
 
     //Build a PROsyst to sort and analyze all systematics
-    PROsyst systs(prop,systsstructs, shapeonly);
+    PROsyst systs(prop, config, systsstructs, shapeonly);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
 
     //Some eystematics might be ignored for this

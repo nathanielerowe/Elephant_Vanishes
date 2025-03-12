@@ -24,6 +24,7 @@
 using namespace PROfit;
 
 log_level_t GLOBAL_LEVEL = LOG_ERROR;
+std::wostream *OSTREAM = &wcout;
 
 struct fc_out{
     float chi2_syst, chi2_osc, dmsq, sinsq2tmm;
@@ -146,7 +147,7 @@ int main(int argc, char* argv[])
     std::vector<SystStruct> systsstructs;
     PROcess_CAFAna(myConf, systsstructs, myprop);
 
-    PROsyst systs(myprop, systsstructs);
+    PROsyst systs(myprop, myConf, systsstructs);
     std::unique_ptr<PROmodel> model = get_model_from_string(myConf.m_model_tag, myprop);
 
     std::vector<float> pparams = {std::log10(injected_pt[0]), std::log10(injected_pt[1])};

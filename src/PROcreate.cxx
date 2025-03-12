@@ -277,9 +277,10 @@ namespace PROfit {
             s.SanityCheck();
 
 
-        //create 2D multi-universe spec.
+        //create 2D multi-universe spec for covariances
         for(auto& s : syst_vector){
-            s.CreateSpecs(inconfig.m_num_bins_total);	
+            if(s.mode=="covariance")
+                s.CreateSpecs(inconfig.m_num_bins_total);	
         }
 
 
@@ -560,6 +561,15 @@ namespace PROfit {
             }
         } // end fid
 
+        //Do we have any flat systeatics?
+        if(inconfig.m_num_variation_type_flat>0){
+            for(auto& allow_sys : inconfig.m_mcgen_variation_type_map){
+                if(allow_sys.second=="flat"){
+                    map_systematic_num_universe[allow_sys.first] = -1;
+                }
+            }
+        }
+
         size_t total_num_systematics = map_systematic_num_universe.size();
         log<LOG_INFO>(L"%1% || Found %2% unique variations") % __func__ % total_num_systematics;
         for(auto& sys_pair : map_systematic_num_universe){
@@ -592,6 +602,12 @@ namespace PROfit {
                 syst_vector.back().knobval = syst_vector.back().knob_index;
                 std::sort(syst_vector.back().knobval.begin(), syst_vector.back().knobval.end());
             }
+            if(sys_mode == "flat"){
+
+                log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for a flat norm systematic. Processing a such. ") % __func__ % sys_name.c_str();
+
+            }
+
 
             for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
                 if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
@@ -617,6 +633,8 @@ namespace PROfit {
 
         //create 2D multi-universe spec.
         for(auto& s : syst_vector){
+            if(s.mode=="flat")
+                continue;	
             s.CreateSpecs(s.mode == "spline" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
@@ -1000,7 +1018,7 @@ namespace PROfit {
 
             if(std::isinf(sys_weight_value) || sys_weight_value != sys_weight_value){
                 log<LOG_ERROR>(L"%1% || Input values to histogram is NAN or inf %2% !") % __func__  % sys_weight_value ;
-                throw std::runtime_error("NAN or INF in put string");
+                throw std::runtime_error("NAN or INF in pushed string");
             }
 
             int nuniv = syst.GetNUniverse();
@@ -1388,7 +1406,7 @@ namespace PROfit {
                     syst_obj.FillUniverse(u, global_true_bin, mc_weight * additional_weight * static_cast<float>(map_iter->second->at(is)));
                 }
                 continue;
-            }else{
+            }else if(syst_obj.mode == "covariance"){
 
                 syst_obj.FillCV(global_bin, mc_weight);
                 for(int iuni = 0; iuni < syst_obj.GetNUniverse(); ++iuni){
