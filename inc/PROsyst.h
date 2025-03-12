@@ -21,14 +21,14 @@ namespace PROfit {
             using Spline = std::vector<std::vector<std::pair<float, std::array<float, 4>>>>;
             
             enum class SystType {
-                Spline, Covariance, MFA
+                Spline, Covariance,  MFA
             };
 
             //Empty constructor
             PROsyst(){}
 
             /*Function: Primary constructor from a vector of SystStructs  */
-            PROsyst(const PROpeller &prop, const std::vector<SystStruct>& systs, bool shapeonly=false);
+            PROsyst(const PROpeller &prop, const PROconfig &config, const std::vector<SystStruct>& systs, bool shapeonly=false);
 
             PROsyst subset(const std::vector<std::string> &systs);
             PROsyst excluding(const std::vector<std::string> &systs);
@@ -64,6 +64,11 @@ namespace PROfit {
              * Note: this function is lazy. It wouldn't do anything if it found covariance matrix with the same name already in the map.
              */
             void CreateMatrix(const SystStruct& syst);
+
+            /* Function: Given a SystStruct, generate a FLAT norm fractinal covariance matrix, and correlation matrix, and add matrices to covmat_map and corrtmat_map
+             * Note: this function is lazy. It wouldn't do anything if it found covariance matrix with the same name already in the map.
+             */
+            void CreateFlatMatrix(const PROconfig& config, const SystStruct& syst);
 
             /* Function: given a syst struct with cv and variation spectra, build fractional covariance matrix for the systematics, as well as correlation matrix 
              * Return: {fractional covariance matrix, correlation covariance matrix}

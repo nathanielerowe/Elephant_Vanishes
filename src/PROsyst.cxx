@@ -8,7 +8,7 @@ namespace PROfit {
 
     bool PROsyst::shape_only = false;
 
-    PROsyst::PROsyst( const PROpeller &prop, const std::vector<SystStruct>& systs, bool shapeonly) {
+    PROsyst::PROsyst( const PROpeller &prop, const PROconfig &config, const std::vector<SystStruct>& systs, bool shapeonly) {
         shape_only = shapeonly;
         for(const auto& syst: systs) {
             log<LOG_DEBUG>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
@@ -17,11 +17,12 @@ namespace PROfit {
                 spline_names.push_back(syst.systname); 
                 spline_lo.push_back(syst.knobval[0]);
                 spline_hi.push_back(syst.knobval.back());
-                //anyspline=true;
             } else if(syst.mode == "covariance") {
                 this->CreateMatrix(syst);
                 covar_names.push_back(syst.systname);
-                //anycovar=true;
+            }else if(syst.mode == "flat"){
+                this->CreateFlatMatrix(config, syst); 
+                covar_names.push_back(syst.systname); 
             }
         }
         Eigen::MatrixXf fractional_mcstat_cov = prop.mcStatErr.array().square().inverse().matrix().asDiagonal();
@@ -149,6 +150,53 @@ namespace PROfit {
             corrmat.push_back(matrices.second);
 
         }
+
+        return;
+    }
+
+    void PROsyst::CreateFlatMatrix(const PROconfig &config, const SystStruct& syst){
+        std::string sysname = syst.GetSysName();
+        log<LOG_INFO>(L"%1% || Generating a FLAT norm covariance matrix.") % __func__ ;
+        Eigen::MatrixXf fracM = Eigen::MatrixXf::Zero(config.m_num_bins_total, config.m_num_bins_total);
+        Eigen::MatrixXf corrM = Eigen::MatrixXf::Identity(config.m_num_bins_total, config.m_num_bins_total);
+
+        size_t colonPos = sysname.find(':');
+        if (colonPos == std::string::npos) {
+            log<LOG_ERROR>(L"%1% || ERROR, you asked for a flat systematic but its not in NAME:percentate format %2%") % __func__  % sysname.c_str();
+            exit(EXIT_FAILURE);
+        }
+        
+        std::string wild = sysname.substr(0, colonPos);
+        std::string sflat_percent  = sysname.substr(colonPos + 1);
+        float flat_percent = std::stof(sflat_percent);
+
+
+        log<LOG_INFO>(L"%1% || Wildcard %2% (and percent %3%) which matches: ") % __func__  % wild.c_str() % flat_percent;
+        std::vector<std::string> flatnames;
+        for(auto & name: config.m_fullnames){
+                if(name.find(wild)!=std::string::npos){
+                    flatnames.push_back(name); 
+                }
+        }
+        log<LOG_INFO>(L"%1% || %2% . ") % __func__  % flatnames;
+
+        std::vector<size_t> flatbins;
+        for(auto &name: flatnames){
+            size_t is = config.GetSubchannelIndex(name);     
+            size_t ic = config.GetChannelIndex(is);     
+
+            size_t start = config.GetGlobalBinStart(is); 
+            for(size_t b = 0; b < config.m_channel_num_bins[ic] ; b++){
+                fracM(start+b,start+b)=flat_percent*flat_percent;
+                flatbins.push_back(start+b);
+            }
+        }
+        log<LOG_INFO>(L"%1% || and fills bins  %2%  .") % __func__  %  flatbins;
+
+        syst_map[sysname] = {covmat.size(), SystType::Covariance};
+
+        covmat.push_back(fracM);
+        corrmat.push_back(corrM);
 
         return;
     }
