@@ -24,6 +24,8 @@ enum log_level_t {
 
 extern log_level_t GLOBAL_LEVEL;
 
+extern std::wostream *OSTREAM;
+
 namespace log_impl {
 
 
@@ -33,7 +35,7 @@ namespace log_impl {
             ~formatted_log_t() {
                 // GLOBAL_LEVEL is a global variable and could be changed at runtime
                 // Any customization could be here
-                if ( level <= GLOBAL_LEVEL ) wcout << level << L" " << fmt << endl;
+                if ( level <= GLOBAL_LEVEL ) *OSTREAM << level << L" " << fmt << endl;
             }        
             template <typename T> 
                 formatted_log_t& operator %(T value) {

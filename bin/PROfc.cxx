@@ -24,6 +24,7 @@
 using namespace PROfit;
 
 log_level_t GLOBAL_LEVEL = LOG_ERROR;
+std::wostream *OSTREAM = &wcout;
 
 struct fc_out{
     float chi2_syst, chi2_osc, dmsq, sinsq2tmm;
