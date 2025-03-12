@@ -45,7 +45,6 @@ using namespace PROfit;
 
 log_level_t GLOBAL_LEVEL = LOG_INFO;
 std::wostream *OSTREAM = &wcout;
-std::wofstream log_out;
 
 //some helper functions for PROplot
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
@@ -148,6 +147,7 @@ int main(int argc, char* argv[])
     //Parse inputs. 
     CLI11_PARSE(app, argc, argv);
 
+    std::wofstream log_out;
     if(log_file != "") {
         log_out.open(log_file);
         OSTREAM = &log_out;
