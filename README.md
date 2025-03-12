@@ -1,7 +1,7 @@
 ![Alt text](/other/profit.png "Minimizing PROfit")
 
 
-## General Installation Setup
+# General Installation Instructions
 
 You should start from an environment with ROOT, HDF5, and BOOST already installed or setup. These can be installed on linux with apt-get, or on mac with homebrew. On the FNAL servers, you can get these setup by running:
 ```
@@ -26,15 +26,15 @@ make -j 64
 ```
 
 You can the add the PROfit executables to your path if you so wish
+```
 export PATH=$PATH:$PWD/bin
+```
 
 ### Installed dependancies
 In order to insure compatability, some smaller depedancies will be installed by the CMAKE scripts. These include
-/*:
   * Eigen, 3.4.0 https://gitlab.com/libeigen/eigen.git
   * TinyXML2, 9.0.0 https://github.com/leethomason/tinyxml2.git
   * lbfgspp, our own fork of v0.3.0 https://github.com/yixuan/LBFGSpp.git
-  */
 
 
 ## Installing through Python Interface
@@ -77,8 +77,10 @@ pip install .
 ```
 If you make some changes, you can update the installation by re-running ``pip install .``
 
+# Usage
 
-### Basic Description of main classes and use cases
+
+## Basic Description of main classes and use cases
 
 - **PROlog** : Fairly simple logging/verbosity wrapper class. This is the only way PROfit should print. Usage as:
     -       log<LOG_DEBUG>(L"%1% || Using a total of %2% individual files") % __func__  % num_files;
