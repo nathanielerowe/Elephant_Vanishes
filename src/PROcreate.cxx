@@ -32,7 +32,7 @@ namespace PROfit {
 
     std::string convertToXRootD(std::string fname_orig){
         std::string fname_use = fname_orig;
-        if(fname_orig.find("pnfs")!=std::string::npos){
+        if(fname_orig.find("pnfs")!=std::string::npos ){
             std::string p = "/pnfs";
             std::string::size_type i = fname_orig.find(p);
             fname_orig.erase(i,p.length());
@@ -1355,11 +1355,14 @@ namespace PROfit {
 
     void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop){
 
+ 
         int total_num_sys = syst_vector.size(); 
+        branch->GetFormula()->UpdateFormulaLeaves();
         float reco_value = branch->GetValue<float>();
         float true_param = branch->GetTrueValue<float>();
         float baseline = branch->GetTrueL<float>();
         float true_value = baseline / true_param;
+
         float pmom = branch->GetTrueLeadProtonMom<double>();
         float pcosth = branch->GetTrueLeadProtonCosth<double>();
         int run_syst = branch->GetIncludeSystematics();
@@ -1391,6 +1394,7 @@ namespace PROfit {
 
         for(int i = 0; i != total_num_sys; ++i){
 
+        
             SystStruct& syst_obj = syst_vector[i];
             float additional_weight = syst_additional_weight.at(i);
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
