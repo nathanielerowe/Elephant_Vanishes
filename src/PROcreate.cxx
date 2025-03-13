@@ -351,7 +351,7 @@ namespace PROfit {
         return 0;
     }
 
-    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller& inprop){
+    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller& inprop,bool noxrootd){
 
         log<LOG_DEBUG>(L"%1% || Loading Monte Carlo Files") % __func__ ;
 
@@ -374,7 +374,7 @@ namespace PROfit {
 
         //open files, and link trees and branches
         int good_event = 0;
-        bool useXrootD = false;
+        bool useXrootD = !noxrootd;
 
 
         for(int fid=0; fid < num_files; ++fid) {
