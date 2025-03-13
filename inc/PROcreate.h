@@ -216,7 +216,7 @@ namespace PROfit{
 
     /* Function: Process spline weights and covariance matrices from uboone CAFAna output trees
     */
-    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop);
+    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop, bool noxrootd = false);
 
     /* Function: Process spline weights AND covariance matrices from flat CAF's 
     */

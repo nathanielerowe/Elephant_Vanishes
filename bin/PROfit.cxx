@@ -67,6 +67,7 @@ int main(int argc, char* argv[])
     bool shapeonly = false;
     bool rateonly = false;
     bool force = false;
+    bool noxrootd = false;
     size_t nthread = 1;
     std::map<std::string, float> fit_options;
     size_t maxevents;
@@ -112,6 +113,7 @@ int main(int argc, char* argv[])
     app.add_flag("--event-by-event", eventbyevent, "Do you want to weight event-by-event?");
     app.add_flag("--statonly", statonly, "Run a stats only surface instead of fitting systematics");
     app.add_flag("--force",force,"Force loading binary data even if hash is incorrect (Be Careful!)");
+    app.add_flag("--no-xrootd",noxrootd,"Do not use XRootD, which is enabled by default");
     auto* shape_flag = app.add_flag("--shapeonly", shapeonly, "Run a shape only analysis");
     auto* rate_flag = app.add_flag("--rateonly", rateonly, "Run a rate only analysis");
     shape_flag->excludes(rate_flag);   //PROcess, into binary data [Do this once first!]
@@ -173,7 +175,7 @@ int main(int argc, char* argv[])
     if((*process_command) || (!std::filesystem::exists(systBinName) || !std::filesystem::exists(propBinName))  ){
         log<LOG_INFO>(L"%1% || Processing PROpeller and PROsysts from XML defined root files, and saving to binary output also: %2%") % __func__ % propBinName.c_str();
         //Process the CAF files to grab and fill all SystStructs and PROpeller
-        PROcess_CAFAna(config, systsstructs, prop);
+        PROcess_CAFAna(config, systsstructs, prop,noxrootd);
         prop.save(propBinName);    
         saveSystStructVector(systsstructs,systBinName);
         log<LOG_INFO>(L"%1% || Done processing PROpeller and PROsysts from XML defined root files, and saving to binary output also: %2%") % __func__ % propBinName.c_str();
