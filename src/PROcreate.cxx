@@ -18,15 +18,15 @@ namespace PROfit {
 
 
     void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename) {
-            std::ofstream ofs(filename, std::ios::binary);
-            boost::archive::binary_oarchive oa(ofs);
-            oa & structs;  
+        std::ofstream ofs(filename, std::ios::binary);
+        boost::archive::binary_oarchive oa(ofs);
+        oa & structs;  
     }
 
     void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename) {
-            std::ifstream ifs(filename, std::ios::binary);
-            boost::archive::binary_iarchive ia(ifs);
-            ia & structs;  
+        std::ifstream ifs(filename, std::ios::binary);
+        boost::archive::binary_iarchive ia(ifs);
+        ia & structs;  
     }
 
 
@@ -363,6 +363,7 @@ namespace PROfit {
         std::vector<std::unique_ptr<TFile>> files(num_files);
         //std::vector<TTree*> trees(num_files,nullptr);//keep as bare pointers because of ROOT :(
         std::vector<TChain*> chains(num_files,nullptr);
+        std::vector<std::vector<TChain*>> friendChains(num_files) ;
 
 
         std::vector<std::vector<std::map<std::string, std::vector<eweight_type>*>>> f_event_weights(num_files);
@@ -373,7 +374,8 @@ namespace PROfit {
 
         //open files, and link trees and branches
         int good_event = 0;
-        bool useXrootD = true;
+        bool useXrootD = false;
+
 
         for(int fid=0; fid < num_files; ++fid) {
             const auto& fn = inconfig.m_mcgen_file_name.at(fid);
@@ -404,15 +406,17 @@ namespace PROfit {
             }
 
             chains[fid] = new TChain(inconfig.m_mcgen_tree_name.at(fid).c_str());
+            if (inconfig.m_mcgen_numfriends[fid] > 0) {
+                friendChains[fid].resize(inconfig.m_mcgen_numfriends[fid], nullptr);
+            }
+
             for(auto &file: filesForChain){ 
 
                 chains[fid]->Add(file.c_str()); 
 
-                //first, grab friend trees
-                if(inconfig.m_mcgen_numfriends[fid]>0){
+                if (inconfig.m_mcgen_numfriends[fid] > 0) {
                     auto mcgen_file_friend_treename_iter = inconfig.m_mcgen_file_friend_treename_map.find(fn);
                     if (mcgen_file_friend_treename_iter != inconfig.m_mcgen_file_friend_treename_map.end()) {
-
                         auto mcgen_file_friend_iter = inconfig.m_mcgen_file_friend_map.find(fn);
                         if (mcgen_file_friend_iter == inconfig.m_mcgen_file_friend_map.end()) {
                             log<LOG_ERROR>(L"%1% || Friend TTree provided but no friend file??") % __func__;
@@ -420,19 +424,34 @@ namespace PROfit {
                             exit(EXIT_FAILURE);
                         }
 
-                        for(size_t k=0; k < mcgen_file_friend_treename_iter->second.size(); k++){
+                        for (size_t k = 0; k < mcgen_file_friend_treename_iter->second.size(); k++) {
                             std::string treefriendname = mcgen_file_friend_treename_iter->second.at(k);
-                            std::string treefriendfile = mcgen_file_friend_iter->second.at(k);
-                            log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from THE SAME FILE %3%") % __func__ %  treefriendname.c_str() % file.c_str();
-                            chains[fid]->AddFriend(treefriendname.c_str(), file.c_str()); 
+                            //std::string treefriendfile = mcgen_file_friend_iter->second.at(k);//not used
+
+                            if (!friendChains[fid][k]) {
+                                friendChains[fid][k] = new TChain(treefriendname.c_str());
+                            }
+
+                            // Add the file to the friend chain
+                            log<LOG_DEBUG>(L"%1% || Adding friend tree %2% from file %3%") % __func__ % treefriendname.c_str() % file.c_str();
+                            friendChains[fid][k]->Add(file.c_str());
                         }
+
                     }
-                }//end friend mess
+                } // End friend initialization
+            } // End chain filling
+
+            for (size_t fid = 0; fid < num_files; fid++) {
+                if (inconfig.m_mcgen_numfriends[fid] > 0) {
+                    for (size_t k = 0; k < friendChains[fid].size(); k++) {
+                        log<LOG_DEBUG>(L"%1% || Adding friend chain %2% to main chain %3%") % __func__ % k % fid;
+                        chains[fid]->AddFriend(friendChains[fid][k]);
+                    }
+                }
+            }
 
 
-            }//end chain filling
             nentries[fid] = chains[fid]->GetEntries();
-
 
 
 
@@ -687,11 +706,21 @@ namespace PROfit {
                 log<LOG_DEBUG>(L"%1% || Subchannel: %2% maps to index: %3%") % __func__ % subchannel_name.c_str() % subchannel_index[ib];
             }
 
-
+            //chains[fid]->SetCacheSize(1000000000); // Set cache size to 10 MB
+            //chains[fid]->AddBranchToCache("*", kTRUE); // Cache all branches
+            TObjArray* tbranches = chains[fid]->GetListOfBranches();
+            for (int i = 0; i < tbranches->GetEntries(); i++) {
+                TBranch* branch = (TBranch*)tbranches->At(i);
+                const char* branchName = branch->GetName();
+                bool isActive = chains[fid]->GetBranchStatus(branchName);
+                log<LOG_DEBUG>(L"%1% || BRANCH %2% is %3%") % __func__ % branchName % (isActive ? "active" : "inactive");
+            }
 
             // loop over all entries
             size_t to_print = nevents / 5;
             if(to_print>50000)to_print=50000;
+            int currentTreeNumber = -1;
+
             for(long int i=0; i < nevents; ++i) {
                 if(i%to_print==0){
                     time_t time_passed = time(nullptr) - time_stamp;
@@ -700,11 +729,54 @@ namespace PROfit {
                 }
                 chains[fid]->GetEntry(i);
 
+
+                if (chains[fid]->GetTreeNumber() != currentTreeNumber) {
+                    currentTreeNumber = chains[fid]->GetTreeNumber();
+
+                    log<LOG_INFO>(L"%1% || Chain Updated %2%. ") % __func__ % currentTreeNumber;
+
+                    for(int ib = 0; ib != num_branch; ++ib) {
+
+
+                        branches[ib]->branch_monte_carlo_weight_formula->GetNdata();
+                        branches[ib]->branch_monte_carlo_weight_formula->UpdateFormulaLeaves();
+                        branches[ib]->branch_true_pdg_formula->GetNdata();
+                        branches[ib]->branch_true_pdg_formula->UpdateFormulaLeaves();
+                        branches[ib]->branch_formula->GetNdata();
+                        branches[ib]->branch_formula->UpdateFormulaLeaves();
+                        branches[ib]->branch_true_L_formula->GetNdata();
+                        branches[ib]->branch_true_L_formula->UpdateFormulaLeaves();
+                        branches[ib]->branch_true_value_formula->GetNdata();
+                        branches[ib]->branch_true_value_formula->UpdateFormulaLeaves();
+                        //branches[ib]->branch_true_proton_mom_formula->GetNdata();
+                        //branches[ib]->branch_true_proton_mom_formula->UpdateFormulaLeaves();
+                        //branches[ib]->branch_true_proton_costh_formula->GetNdata();
+                        //branches[ib]->branch_true_proton_costh_formula->UpdateFormulaLeaves();
+
+
+
+                    }
+
+                    for(size_t is = 0; is != total_num_systematics; ++is){
+                        if(syst_vector[is].HasWeightFormula()){
+                            sys_weight_formula[is]->UpdateFormulaLeaves();
+                            sys_weight_formula[is]->GetNdata();	
+                        }
+                    }//end sys
+                    TObjArray* tbranches = chains[fid]->GetListOfBranches();
+                    for (int i = 0; i < tbranches->GetEntries(); i++) {
+                        TBranch* branch = (TBranch*)tbranches->At(i);
+                        const char* branchName = branch->GetName();
+                        bool isActive = chains[fid]->GetBranchStatus(branchName);
+                        log<LOG_DEBUG>(L"%1% || BRANCH %2% is %3%") % __func__ % branchName % (isActive ? "active" : "inactive");
+                    }
+
+
+                }
+
                 //grab additional weight for systematics
                 for(size_t is = 0; is != total_num_systematics; ++is){
                     if(syst_vector[is].HasWeightFormula()){
-                        //sys_weight_formula[is]->UpdateFormulaLeaves();// not neede
-                        sys_weight_formula[is]->GetNdata();	
                         sys_weight_value[is] = sys_weight_formula[is]->EvalInstance();
                     }
                 }
@@ -964,7 +1036,7 @@ namespace PROfit {
                     float reco_value = branches[ib]->GetValue<float>();
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     //additional_weight *= pot_scale[fid]; POT NOT YET FIX
-                    
+
                     int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index[ib]);
                     float true_param = branches[ib]->GetTrueValue<float>();
                     float baseline = branches[ib]->GetTrueL<float>();
@@ -1356,7 +1428,7 @@ namespace PROfit {
 
     void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop){
 
- 
+
         int total_num_sys = syst_vector.size(); 
         float reco_value = branch->GetValue<float>();
         float true_param = branch->GetTrueValue<float>();
@@ -1394,7 +1466,7 @@ namespace PROfit {
 
         for(int i = 0; i != total_num_sys; ++i){
 
-        
+
             SystStruct& syst_obj = syst_vector[i];
             float additional_weight = syst_additional_weight.at(i);
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
