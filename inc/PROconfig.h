@@ -117,6 +117,8 @@ namespace PROfit{
       float GetMonteCarloWeight() const{
 	if(branch_monte_carlo_weight_formula){ 
 	  branch_monte_carlo_weight_formula->GetNdata();
+      branch_monte_carlo_weight_formula->UpdateFormulaLeaves();
+
 	  return (float)branch_monte_carlo_weight_formula->EvalInstance();
 	}
 	return 1.0;
@@ -407,6 +409,7 @@ namespace PROfit{
             if(branch_true_pdg_formula == NULL) return static_cast<T>(0);
             else{
                 branch_true_pdg_formula->GetNdata();
+                branch_true_pdg_formula->UpdateFormulaLeaves();
                 return static_cast<T>(branch_true_pdg_formula->EvalInstance());
             }
         }
@@ -417,6 +420,7 @@ namespace PROfit{
             if(branch_formula == NULL) return static_cast<T>(0);
             else{
                 branch_formula->GetNdata();
+                branch_formula->UpdateFormulaLeaves();
                 return static_cast<T>(branch_formula->EvalInstance());
             }
         }
@@ -426,6 +430,7 @@ namespace PROfit{
             if(branch_true_L_formula == NULL) return static_cast<T>(0);
             else{
                 branch_true_L_formula->GetNdata();
+                branch_true_L_formula->UpdateFormulaLeaves();
                 return static_cast<T>(branch_true_L_formula->EvalInstance());
             }
         }
@@ -435,6 +440,7 @@ namespace PROfit{
             if(branch_true_value_formula == NULL) return static_cast<T>(0);
             else{
                 branch_true_value_formula->GetNdata();
+                branch_true_value_formula->UpdateFormulaLeaves();
                 return static_cast<T>(branch_true_value_formula->EvalInstance());
             }
         }
@@ -444,6 +450,7 @@ namespace PROfit{
             if(branch_true_proton_mom_formula == NULL) return static_cast<T>(0);
             else{
                 branch_true_proton_mom_formula->GetNdata();
+                branch_true_proton_mom_formula->UpdateFormulaLeaves();
                 return static_cast<T>(branch_true_proton_mom_formula->EvalInstance());
             }
         }
@@ -452,6 +459,7 @@ namespace PROfit{
         T BranchVariable::GetTrueLeadProtonCosth() const{
             if(branch_true_proton_costh_formula == NULL) return static_cast<T>(0);
             else{
+                branch_true_proton_costh_formula->GetNdata();
                 branch_true_proton_costh_formula->GetNdata();
                 return static_cast<T>(branch_true_proton_costh_formula->EvalInstance());
             }

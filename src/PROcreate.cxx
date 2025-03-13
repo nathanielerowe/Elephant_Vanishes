@@ -32,7 +32,7 @@ namespace PROfit {
 
     std::string convertToXRootD(std::string fname_orig){
         std::string fname_use = fname_orig;
-        if(fname_orig.find("pnfs")!=std::string::npos){
+        if(fname_orig.find("pnfs")!=std::string::npos && false){
             std::string p = "/pnfs";
             std::string::size_type i = fname_orig.find(p);
             fname_orig.erase(i,p.length());
@@ -698,6 +698,7 @@ namespace PROfit {
                     time_stamp = time(nullptr);
                 }
                 chains[fid]->GetEntry(i);
+                log<LOG_INFO>(L"%1% || post GetEntry ") % __func__ ;
 
                 //grab additional weight for systematics
                 for(size_t is = 0; is != total_num_systematics; ++is){
@@ -708,10 +709,13 @@ namespace PROfit {
                     }
                 }
 
+                log<LOG_INFO>(L"%1% || post Syst ") % __func__ ;
 
                 //branch loop
                 for(int ib = 0; ib != num_branch; ++ib) {
+                    log<LOG_INFO>(L"%1% || internal event %2% ") % __func__ % ib;
                     process_cafana_event(inconfig, branches[ib], f_event_weights[fid][0], inconfig.m_mcgen_pot[fid], subchannel_index[ib], syst_vector, sys_weight_value, inprop);
+                    log<LOG_INFO>(L"%1% || post event %2% ") % __func__ % ib;
                 } 
 
             } //end of entry loop
@@ -1355,21 +1359,33 @@ namespace PROfit {
 
     void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop){
 
+ 
+        log<LOG_INFO>(L"%1% || int1 ") % __func__ ;
         int total_num_sys = syst_vector.size(); 
+        log<LOG_INFO>(L"%1% || int1.5 %2%  %3% %4% hist  %5% sys %6% ") % __func__ % syst_vector.size() % branch->name.c_str() % branch->type.c_str() % branch->associated_hist.c_str() % branch->associated_systematic.c_str();
+        log<LOG_INFO>(L"%1% || %2% ") % __func__ % branch->GetFormula()->GetNdata();
+        branch->GetFormula()->UpdateFormulaLeaves();
+        log<LOG_INFO>(L"%1% || updated ") % __func__ ; 
         float reco_value = branch->GetValue<float>();
+        log<LOG_INFO>(L"%1% || int1.55 %2% ") % __func__ % syst_vector.size();
         float true_param = branch->GetTrueValue<float>();
         float baseline = branch->GetTrueL<float>();
         float true_value = baseline / true_param;
+
+        log<LOG_INFO>(L"%1% || int1.6 ") % __func__ ;
         float pmom = branch->GetTrueLeadProtonMom<double>();
         float pcosth = branch->GetTrueLeadProtonCosth<double>();
+        log<LOG_INFO>(L"%1% || int1.7 ") % __func__ ;
         int run_syst = branch->GetIncludeSystematics();
         float mc_weight = branch->GetMonteCarloWeight();
         mc_weight *= inconfig.m_plot_pot / mcpot;
 
+        log<LOG_INFO>(L"%1% || int2 ") % __func__ ;
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 
         int model_rule = branch->GetModelRule();
 
+        log<LOG_INFO>(L"%1% || int3 ") % __func__ ;
         if(global_bin < 0 )  //out of range
             return;
         if(global_true_bin < 0)
@@ -1377,6 +1393,7 @@ namespace PROfit {
         if(mc_weight == 0)
             return;
 
+        log<LOG_INFO>(L"%1% || int4 ") % __func__ ;
         inprop.added_weights.push_back(mc_weight);
         inprop.bin_indices.push_back(global_bin);
         inprop.trueLE.push_back((float)(baseline/true_param));
@@ -1388,13 +1405,17 @@ namespace PROfit {
         inprop.mcStatErr(global_bin) += 1;
 
         if(!run_syst) return;
+        log<LOG_INFO>(L"%1% || int5 ") % __func__ ;
 
         for(int i = 0; i != total_num_sys; ++i){
 
+        
+            log<LOG_INFO>(L"%1% || kk 0 %2% ") % __func__ % i;
             SystStruct& syst_obj = syst_vector[i];
             float additional_weight = syst_additional_weight.at(i);
             auto map_iter = eventweight_map.find(syst_obj.GetSysName());
 
+            log<LOG_INFO>(L"%1% || kk 1 %2% ") % __func__ % i;
 
             if(syst_obj.mode == "spline") {
                 syst_obj.FillCV(global_true_bin, mc_weight);
@@ -1408,6 +1429,7 @@ namespace PROfit {
                 continue;
             }else if(syst_obj.mode == "covariance"){
 
+                log<LOG_INFO>(L"%1% || kk 2 %2% ") % __func__ % i;
                 syst_obj.FillCV(global_bin, mc_weight);
                 for(int iuni = 0; iuni < syst_obj.GetNUniverse(); ++iuni){
                     float sys_wei = run_syst ? additional_weight * static_cast<float>(map_iter->second->at(iuni) ) :  1.0;
