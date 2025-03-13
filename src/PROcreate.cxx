@@ -690,7 +690,7 @@ namespace PROfit {
 
 
             // loop over all entries
-            size_t to_print = nevents / 5;
+            size_t to_print = std::min(50000,nevents / 5);
             for(long int i=0; i < nevents; ++i) {
                 if(i%to_print==0){
                     time_t time_passed = time(nullptr) - time_stamp;
@@ -1357,7 +1357,6 @@ namespace PROfit {
 
  
         int total_num_sys = syst_vector.size(); 
-        branch->GetFormula()->UpdateFormulaLeaves();
         float reco_value = branch->GetValue<float>();
         float true_param = branch->GetTrueValue<float>();
         float baseline = branch->GetTrueL<float>();
