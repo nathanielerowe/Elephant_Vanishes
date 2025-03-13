@@ -13,7 +13,7 @@ public:
     Eigen::VectorXf ub, lb, best_fit;
     LBFGSpp::LBFGSBParam<float> param;
     LBFGSpp::LBFGSBSolver<float> solver;
-    int n_multistart = 1250, n_localfit = 3;
+    int n_multistart = 1250, n_localfit = 5;
     uint32_t seed;
 
     PROfitter(const Eigen::VectorXf ub, const Eigen::VectorXf lb, const LBFGSpp::LBFGSBParam<float> &param = {}, uint32_t inseed = 0)
