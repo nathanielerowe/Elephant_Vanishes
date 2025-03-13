@@ -32,7 +32,7 @@ namespace PROfit {
 
     std::string convertToXRootD(std::string fname_orig){
         std::string fname_use = fname_orig;
-        if(fname_orig.find("pnfs")!=std::string::npos && false){
+        if(fname_orig.find("pnfs")!=std::string::npos ){
             std::string p = "/pnfs";
             std::string::size_type i = fname_orig.find(p);
             fname_orig.erase(i,p.length());
