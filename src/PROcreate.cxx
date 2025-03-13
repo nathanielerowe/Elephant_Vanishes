@@ -690,7 +690,8 @@ namespace PROfit {
 
 
             // loop over all entries
-            size_t to_print = std::min(50000,nevents / 5);
+            size_t to_print = nevents / 5;
+            if(to_print<50000)to_print=50000;
             for(long int i=0; i < nevents; ++i) {
                 if(i%to_print==0){
                     time_t time_passed = time(nullptr) - time_stamp;
