@@ -1,6 +1,7 @@
 #include "PROconfig.h"
 #include "PROdata.h"
 #include "PROlog.h"
+#include "PROmetric.h"
 #include "PROspec.h"
 #include "PROsyst.h"
 #include "PROcreate.h"
@@ -30,6 +31,9 @@
 
 #include <Eigen/Eigen>
 
+#include <Eigen/src/Core/Matrix.h>
+#include <LBFGSpp/Param.h>
+#include <cmath>
 #include <filesystem>
 #include <cstdlib>
 #include <exception>
@@ -45,6 +49,88 @@ using namespace PROfit;
 
 log_level_t GLOBAL_LEVEL = LOG_INFO;
 std::wostream *OSTREAM = &wcout;
+
+struct fc_out{
+    float chi2_syst, chi2_osc, dmsq, sinsq2tmm;
+    Eigen::VectorXf best_fit_syst, best_fit_osc, syst_throw;
+};
+
+struct fc_args {
+    const size_t todo;
+    std::vector<float>* dchi2s;
+    std::vector<fc_out>* out;
+    const PROconfig config;
+    const PROpeller prop;
+    const PROmetric *metric;
+    const Eigen::VectorXf phy_params;
+    const Eigen::MatrixXf L;
+    LBFGSpp::LBFGSBParam<float> param;
+    const int thread;
+    const bool binned;
+};
+
+void fc_worker(fc_args args) {
+    log<LOG_INFO>(L"%1% || FC for point %2%") % __func__ % args.phy_params;
+    std::random_device rd{};
+    std::mt19937 rng{rd()};
+    std::unique_ptr<PROmodel> model = get_model_from_string(args.config.m_model_tag, args.prop);
+    PROmetric *metric = args.metric->Clone();
+    PROchi::EvalStrategy strat = args.binned ? PROchi::BinnedChi2 : PROchi::EventByEvent;
+    Eigen::VectorXf throws = Eigen::VectorXf::Constant(metric->GetModel().nparams + metric->GetSysts().GetNSplines(), 0);
+    for(size_t i = 0; i < metric->GetModel().nparams; ++i) throws(i) = args.phy_params(i);
+    size_t nparams = metric->GetModel().nparams + metric->GetSysts().GetNSplines();
+    Eigen::VectorXf lb_osc = Eigen::VectorXf::Constant(nparams, -3.0);
+    Eigen::VectorXf ub_osc = Eigen::VectorXf::Constant(nparams, 3.0);
+    size_t nphys = metric->GetModel().nparams;
+    //set physics to correct values
+    for(size_t j=0; j<nphys; j++){
+        ub_osc(j) = metric->GetModel().ub(j);
+        lb_osc(j) = metric->GetModel().lb(j); 
+    }
+    //upper lower bounds for splines
+    for(size_t j = nphys; j < nparams; ++j) {
+        lb_osc(j) = metric->GetSysts().spline_lo[j-nphys];
+        ub_osc(j) = metric->GetSysts().spline_hi[j-nphys];
+    }
+    Eigen::VectorXf lb = lb_osc;
+    Eigen::VectorXf ub = ub_osc;
+    for(size_t i = 0; i < nphys; ++i) {
+        lb(i) = args.phy_params(i);
+        ub(i) = args.phy_params(i);
+    }
+    for(size_t u = 0; u < args.todo; ++u) {
+        log<LOG_INFO>(L"%1% | Thread #%2% Throw #%3%") % __func__ % args.thread % u;
+        std::normal_distribution<float> d;
+        Eigen::VectorXf throwC = Eigen::VectorXf::Constant(args.config.m_num_bins_total_collapsed, 0);
+        for(size_t i = 0; i < metric->GetSysts().GetNSplines(); i++)
+            throws(i+nphys) = d(rng);
+        for(size_t i = 0; i < args.config.m_num_bins_total_collapsed; i++)
+            throwC(i) = d(rng);
+        PROspec shifted = FillRecoSpectra(args.config, args.prop, metric->GetSysts(), *model, throws, strat);
+        PROspec newSpec = PROspec::PoissonVariation(PROspec(CollapseMatrix(args.config, shifted.Spec()) + args.L * throwC, CollapseMatrix(args.config, shifted.Error())));
+        PROdata data(newSpec.Spec(), newSpec.Error());
+
+        // No oscillations
+        std::uniform_int_distribution<uint32_t> dseed(0, std::numeric_limits<uint32_t>::max());
+        PROfitter fitter(ub, lb, args.param, dseed(rng));
+        float chi2_syst = fitter.Fit(*metric);
+
+        // With oscillations
+        PROfitter fitter_osc(ub_osc, lb_osc, args.param, dseed(rng));
+        float chi2_osc = fitter_osc.Fit(*metric); 
+
+        Eigen::VectorXf t = Eigen::VectorXf::Map(throws.data(), throws.size());
+
+        args.out->push_back({
+                chi2_syst, chi2_osc, 
+                std::pow(10.0f, fitter_osc.best_fit(0)), std::pow(10.0f, fitter_osc.best_fit(1)), 
+                fitter.best_fit, fitter_osc.best_fit.segment(2, nparams-2), t
+        });
+
+        args.dchi2s->push_back(std::abs(chi2_syst - chi2_osc ));
+    }
+    delete metric;
+}
 
 //some helper functions for PROplot
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
@@ -90,6 +176,8 @@ int main(int argc, char* argv[])
     std::string reweights_file;
     std::vector<std::string> mockreweights;
     std::vector<TH2D*> weighthists;
+
+    size_t nuniv;
 
     //Global Arguments for all PROfit enables subcommands.
     app.add_option("-x,--xml", xmlname, "Input PROfit XML configuration file.")->required();
@@ -141,6 +229,10 @@ int main(int argc, char* argv[])
     //PROplot, plot things
     CLI::App *proplot_command = app.add_subcommand("plot", "Make plots of CV, or injected point with error bars and covariance.");
     proplot_command->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
+
+    //PROfc, Feldmand-Cousins
+    CLI::App *profc_command = app.add_subcommand("fc", "Run Feldman-Cousins for this injected signal");
+    profc_command->add_option("-u,--universes", nuniv, "Number of Feldman Cousins universes to throw")->default_val(1000);
 
     //PROtest, test things
     CLI::App *protest_command = app.add_subcommand("protest", "Testing ground for rapid quick tests.");
@@ -219,6 +311,7 @@ int main(int argc, char* argv[])
             }
             for(size_t i = 0; i < osc_params.size(); ++i) {
                 pparams(i) = std::log10(osc_params[i]);
+                if(std::isinf(pparams(i))) pparams(i) = -10;
             }
         } else {
             for(size_t i = 0; i < model->nparams; ++i) {
@@ -928,8 +1021,92 @@ int main(int argc, char* argv[])
         }
 
         fout.Close();
+    }
 
+    //***********************************************************************
+    //***********************************************************************
+    //********************     Feldman-Cousins    ***************************
+    //***********************************************************************
+    //***********************************************************************
 
+    if(*profc_command) {
+        size_t FCthreads = nthread > nuniv ? nuniv : nthread;
+        Eigen::MatrixXf diag = FillCVSpectrum(config, prop, !eventbyevent).Spec().array().matrix().asDiagonal();
+        Eigen::MatrixXf full_cov = diag * systs.fractional_covariance * diag;
+        Eigen::LLT<Eigen::MatrixXf> llt(CollapseMatrix(config, full_cov));
+
+        std::vector<std::vector<float>> dchi2s;
+        dchi2s.reserve(FCthreads);
+        std::vector<std::vector<fc_out>> outs;
+        outs.reserve(FCthreads);
+        std::vector<std::thread> threads;
+        size_t todo = nuniv/FCthreads;
+        size_t addone = FCthreads - nuniv%FCthreads;
+        for(size_t i = 0; i < nthread; i++) {
+            dchi2s.emplace_back();
+            outs.emplace_back();
+            fc_args args{todo + (i >= addone), &dchi2s.back(), &outs.back(), config, prop, metric, pparams, llt.matrixL(), param, (int)i, !eventbyevent};
+            threads.emplace_back(fc_worker, args);
+        }
+        for(auto&& t: threads) {
+            t.join();
+        }
+
+        {
+            TFile fout((final_output_tag+"_FC.root").c_str(), "RECREATE");
+            fout.cd();
+            float chi2_osc, chi2_syst, best_dmsq, best_sinsq2t;
+            std::map<std::string, float> best_systs_osc, best_systs, syst_throw;
+            TTree tree("tree", "tree");
+            tree.Branch("chi2_osc", &chi2_osc); 
+            tree.Branch("chi2_syst", &chi2_syst); 
+            tree.Branch("best_dmsq", &best_dmsq); 
+            tree.Branch("best_sinsq2t", &best_sinsq2t); 
+            tree.Branch("best_systs_osc", &best_systs_osc); 
+            tree.Branch("best_systs", &best_systs); 
+            tree.Branch("syst_throw", &syst_throw);
+
+            for(const auto &out: outs) {
+                for(const auto &fco: out) {
+                    chi2_osc = fco.chi2_osc;
+                    chi2_syst = fco.chi2_syst;
+                    best_dmsq = fco.dmsq;
+                    best_sinsq2t = fco.sinsq2tmm;
+                    for(size_t i = 0; i < systs.GetNSplines(); ++i) {
+                        best_systs_osc[systs.spline_names[i]] = fco.best_fit_osc(i);
+                        best_systs[systs.spline_names[i]] = fco.best_fit_syst(i);
+                        syst_throw[systs.spline_names[i]] = fco.syst_throw(i);
+                    }
+                    tree.Fill();
+                }
+            }
+
+            tree.Write();
+        }
+        {
+            ofstream fcout(final_output_tag+"_FC.csv");
+            fcout << "chi2_osc,chi2_syst,best_dmsq,best_sinsq2t";
+            for(const std::string &name: systs.spline_names) {
+                fcout << ",best_" << name << "_osc,best_" << name << "," << name << "_throw";
+            }
+            fcout << "\r\n";
+
+            for(const auto &out: outs) {
+                for(const auto &fco: out) {
+                    fcout << fco.chi2_osc << "," << fco.chi2_syst << "," << fco.dmsq << "," << fco.sinsq2tmm;
+                    for(size_t i = 0; i < systs.GetNSplines(); ++i) {
+                        fcout << fco.best_fit_osc(i) << "," << fco.best_fit_syst(i) << "," << fco.syst_throw(i);
+                    }
+                    fcout << "\r\n";
+                }
+            }
+        }
+        std::vector<float> flattened_dchi2s;
+        for(const auto& v: dchi2s) for(const auto& dchi2: v) flattened_dchi2s.push_back(dchi2);
+        std::sort(flattened_dchi2s.begin(), flattened_dchi2s.end());
+        log<LOG_INFO>(L"%1% || 90%% Feldman-Cousins delta chi2 after throwing %2% universes is %3%") 
+            % __func__ % nuniv % flattened_dchi2s[0.9*flattened_dchi2s.size()];
+    }
 
 
         //***********************************************************************
@@ -937,7 +1114,6 @@ int main(int argc, char* argv[])
         //******************** TEST AREA TEST AREA     **************************
         //***********************************************************************
         //***********************************************************************
-    }
     if(*protest_command){
         log<LOG_INFO>(L"%1% || PROtest. Place anything here, a playground for testing things .") % __func__;
 
