@@ -33,6 +33,7 @@
 
 #include <Eigen/src/Core/Matrix.h>
 #include <LBFGSpp/Param.h>
+#include <cmath>
 #include <filesystem>
 #include <cstdlib>
 #include <exception>
@@ -307,6 +308,7 @@ int main(int argc, char* argv[])
             }
             for(size_t i = 0; i < osc_params.size(); ++i) {
                 pparams(i) = std::log10(osc_params[i]);
+                if(std::isinf(pparams(i))) pparams(i) = -10;
             }
         } else {
             for(size_t i = 0; i < model->nparams; ++i) {
