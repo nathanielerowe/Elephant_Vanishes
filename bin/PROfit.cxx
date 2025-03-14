@@ -69,6 +69,7 @@ struct fc_args {
 };
 
 void fc_worker(fc_args args) {
+    log<LOG_INFO>(L"%1% || FC for point %2%") % __func__ % args.phy_params;
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::unique_ptr<PROmodel> model = get_model_from_string(args.config.m_model_tag, args.prop);
@@ -1098,8 +1099,8 @@ int main(int argc, char* argv[])
         std::vector<float> flattened_dchi2s;
         for(const auto& v: dchi2s) for(const auto& dchi2: v) flattened_dchi2s.push_back(dchi2);
         std::sort(flattened_dchi2s.begin(), flattened_dchi2s.end());
-        log<LOG_INFO>(L"%1% || 90% Feldman-Cousins delta chi^2 after throwing %2% universes is %3%") 
-            % __func__ % nuniv % flattened_dchi2s[0.8*flattened_dchi2s.size()];
+        log<LOG_INFO>(L"%1% || 90%% Feldman-Cousins delta chi2 after throwing %2% universes is %3%") 
+            % __func__ % nuniv % flattened_dchi2s[0.9*flattened_dchi2s.size()];
     }
 
 
