@@ -486,7 +486,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
     c2->cd();
     c2->SetBottomMargin(0.25);
-    c2->SetRightMargin(0.5);
+    c2->SetRightMargin(0.05);
 
     log<LOG_DEBUG>(L"%1% || Are all lines the same : %2% %3% %4% %5% %6%") % __func__ % nBins % barvalues.size() % bfvalues.size() % values1_down.size() % values1_up.size() ;
 
