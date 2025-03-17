@@ -293,6 +293,7 @@ int main(int argc, char* argv[])
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(prop, config, systsstructs, shapeonly);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
+    std::unique_ptr<PROmodel> null_model = std::make_unique<NullModel>(prop);
 
     //Some eystematics might be ignored for this
     if(syst_list.size()) {
@@ -301,6 +302,7 @@ int main(int argc, char* argv[])
         systs = systs.excluding(systs_excluded);
     }
 
+    bool no_injected_signal = osc_params.size() == 0;
     //Pysics parameter input
         Eigen::VectorXf pparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
         if(osc_params.size()) {
@@ -309,19 +311,22 @@ int main(int argc, char* argv[])
                     % __func__ % model->nparams % osc_params.size();
                 exit(EXIT_FAILURE);
             }
+            bool all_zero = true;
             for(size_t i = 0; i < osc_params.size(); ++i) {
+                if(osc_params[i] != 0.0f) all_zero = false;
                 pparams(i) = std::log10(osc_params[i]);
                 if(std::isinf(pparams(i))) pparams(i) = -10;
             }
+            if(all_zero) no_injected_signal = true;
         } else {
             for(size_t i = 0; i < model->nparams; ++i) {
-                pparams(i) = model->default_val(i);
+                pparams(i) = model->default_val(i); 
             }
         }
 
         //Spline injection studies
         Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
-        for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
+        for(size_t i = 0; i < model->nparams; ++i) allparams(i) = pparams(i);
         for(const auto& [name, shift]: injected_systs) {
             log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
             auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
