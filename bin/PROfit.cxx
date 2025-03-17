@@ -61,7 +61,8 @@ struct fc_args {
     std::vector<fc_out>* out;
     const PROconfig config;
     const PROpeller prop;
-    const PROmetric *metric;
+    const PROsyst systs;
+    std::string chi2;
     const Eigen::VectorXf phy_params;
     const Eigen::MatrixXf L;
     LBFGSpp::LBFGSBParam<float> param;
@@ -74,46 +75,60 @@ void fc_worker(fc_args args) {
     std::random_device rd{};
     std::mt19937 rng{rd()};
     std::unique_ptr<PROmodel> model = get_model_from_string(args.config.m_model_tag, args.prop);
-    PROmetric *metric = args.metric->Clone();
+    std::unique_ptr<PROmodel> null_model = std::make_unique<NullModel>(args.prop);
+
     PROchi::EvalStrategy strat = args.binned ? PROchi::BinnedChi2 : PROchi::EventByEvent;
-    Eigen::VectorXf throws = Eigen::VectorXf::Constant(metric->GetModel().nparams + metric->GetSysts().GetNSplines(), 0);
-    for(size_t i = 0; i < metric->GetModel().nparams; ++i) throws(i) = args.phy_params(i);
-    size_t nparams = metric->GetModel().nparams + metric->GetSysts().GetNSplines();
+    Eigen::VectorXf throws = Eigen::VectorXf::Constant(model->nparams + args.systs.GetNSplines(), 0);
+    for(size_t i = 0; i < model->nparams; ++i) throws(i) = args.phy_params(i);
+    size_t nparams = model->nparams + args.systs.GetNSplines();
     Eigen::VectorXf lb_osc = Eigen::VectorXf::Constant(nparams, -3.0);
     Eigen::VectorXf ub_osc = Eigen::VectorXf::Constant(nparams, 3.0);
-    size_t nphys = metric->GetModel().nparams;
+    Eigen::VectorXf lb = Eigen::VectorXf::Constant(args.systs.GetNSplines(), -3.0);
+    Eigen::VectorXf ub = Eigen::VectorXf::Constant(args.systs.GetNSplines(), 3.0);
+    size_t nphys = model->nparams;
     //set physics to correct values
     for(size_t j=0; j<nphys; j++){
-        ub_osc(j) = metric->GetModel().ub(j);
-        lb_osc(j) = metric->GetModel().lb(j); 
+        ub_osc(j) = model->ub(j);
+        lb_osc(j) = model->lb(j); 
     }
     //upper lower bounds for splines
     for(size_t j = nphys; j < nparams; ++j) {
-        lb_osc(j) = metric->GetSysts().spline_lo[j-nphys];
-        ub_osc(j) = metric->GetSysts().spline_hi[j-nphys];
-    }
-    Eigen::VectorXf lb = lb_osc;
-    Eigen::VectorXf ub = ub_osc;
-    for(size_t i = 0; i < nphys; ++i) {
-        lb(i) = args.phy_params(i);
-        ub(i) = args.phy_params(i);
+        lb_osc(j) = args.systs.spline_lo[j-nphys];
+        ub_osc(j) = args.systs.spline_hi[j-nphys];
+        lb(j-nphys) = args.systs.spline_lo[j-nphys];
+        ub(j-nphys) = args.systs.spline_hi[j-nphys];
     }
     for(size_t u = 0; u < args.todo; ++u) {
         log<LOG_INFO>(L"%1% | Thread #%2% Throw #%3%") % __func__ % args.thread % u;
         std::normal_distribution<float> d;
         Eigen::VectorXf throwC = Eigen::VectorXf::Constant(args.config.m_num_bins_total_collapsed, 0);
-        for(size_t i = 0; i < metric->GetSysts().GetNSplines(); i++)
+        for(size_t i = 0; i < args.systs.GetNSplines(); i++)
             throws(i+nphys) = d(rng);
         for(size_t i = 0; i < args.config.m_num_bins_total_collapsed; i++)
             throwC(i) = d(rng);
-        PROspec shifted = FillRecoSpectra(args.config, args.prop, metric->GetSysts(), *model, throws, strat);
+        PROspec shifted = FillRecoSpectra(args.config, args.prop, args.systs, *model, throws, strat);
         PROspec newSpec = PROspec::PoissonVariation(PROspec(CollapseMatrix(args.config, shifted.Spec()) + args.L * throwC, CollapseMatrix(args.config, shifted.Error())));
         PROdata data(newSpec.Spec(), newSpec.Error());
+        //Metric Time
+        PROmetric *metric, *null_metric;
+        if(args.chi2 == "PROchi") {
+            metric = new PROchi("", args.config, args.prop, &args.systs, *model, data, !args.binned ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+            null_metric = new PROchi("", args.config, args.prop, &args.systs, *null_model, data, !args.binned ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+        } else if(args.chi2 == "PROCNP") {
+            metric = new PROCNP("", args.config, args.prop, &args.systs, *model, data, !args.binned ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+            null_metric = new PROCNP("", args.config, args.prop, &args.systs, *null_model, data, !args.binned ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+        } else if(args.chi2 == "Poisson") {
+            metric = new PROpoisson("", args.config, args.prop, &args.systs, *model, data, !args.binned ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+            null_metric = new PROpoisson("", args.config, args.prop, &args.systs, *null_model, data, !args.binned ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+        } else {
+            log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % args.chi2.c_str();
+            abort();
+        }
 
         // No oscillations
         std::uniform_int_distribution<uint32_t> dseed(0, std::numeric_limits<uint32_t>::max());
         PROfitter fitter(ub, lb, args.param, dseed(rng));
-        float chi2_syst = fitter.Fit(*metric);
+        float chi2_syst = fitter.Fit(*null_metric);
 
         // With oscillations
         PROfitter fitter_osc(ub_osc, lb_osc, args.param, dseed(rng));
@@ -128,8 +143,9 @@ void fc_worker(fc_args args) {
         });
 
         args.dchi2s->push_back(std::abs(chi2_syst - chi2_osc ));
+        delete metric;
+        delete null_metric;
     }
-    delete metric;
 }
 
 //some helper functions for PROplot
@@ -165,6 +181,8 @@ int main(int argc, char* argv[])
     std::vector<float> osc_params;
     std::map<std::string, float> injected_systs;
     std::vector<std::string> syst_list, systs_excluded;
+
+    bool systs_only_profile = false;
 
     float xlo, xhi, ylo, yhi;
     std::array<float, 2> xlims, ylims;
@@ -225,6 +243,7 @@ int main(int argc, char* argv[])
 
     //PROfile, make N profile'd chi^2 for each physics and nuisence parameters
     CLI::App *profile_command = app.add_subcommand("profile", "Make a 1D profiled chi2 for each physics and nuisence parameter.");
+    profile_command->add_flag("--syst-only", systs_only_profile, "Profile over nuisance parameters only");
 
     //PROplot, plot things
     CLI::App *proplot_command = app.add_subcommand("plot", "Make plots of CV, or injected point with error bars and covariance.");
@@ -293,6 +312,7 @@ int main(int argc, char* argv[])
     //Build a PROsyst to sort and analyze all systematics
     PROsyst systs(prop, config, systsstructs, shapeonly);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
+    std::unique_ptr<PROmodel> null_model = std::make_unique<NullModel>(prop);
 
     //Some eystematics might be ignored for this
     if(syst_list.size()) {
@@ -311,17 +331,18 @@ int main(int argc, char* argv[])
             }
             for(size_t i = 0; i < osc_params.size(); ++i) {
                 pparams(i) = std::log10(osc_params[i]);
-                if(std::isinf(pparams(i))) pparams(i) = -10;
+                //if(std::isinf(pparams(i))) pparams(i) = -10;
             }
         } else {
             for(size_t i = 0; i < model->nparams; ++i) {
-                pparams(i) = model->default_val(i);
+                pparams(i) = model->default_val(i); 
             }
         }
 
         //Spline injection studies
         Eigen::VectorXf allparams = Eigen::VectorXf::Constant(model->nparams + systs.GetNSplines(), 0);
-        for(int i = 0; i < pparams.size(); ++i) allparams(i) = pparams(i);
+        Eigen::VectorXf systparams = Eigen::VectorXf::Constant(systs.GetNSplines(), 0);
+        for(size_t i = 0; i < model->nparams; ++i) allparams(i) = pparams(i);
         for(const auto& [name, shift]: injected_systs) {
             log<LOG_INFO>(L"%1% || Injected syst: %2% shifted by %3%") % __func__ % name.c_str() % shift;
             auto it = std::find(systs.spline_names.begin(), systs.spline_names.end(), name);
@@ -331,6 +352,7 @@ int main(int argc, char* argv[])
             }
             int idx = std::distance(systs.spline_names.begin(), it);
             allparams(idx+model->nparams) = shift;
+            systparams(idx) = shift;
         }
 
     //Some logic for EITHER injecting fake/mock data of oscillated signal/syst shifts OR using real data
@@ -483,13 +505,16 @@ int main(int argc, char* argv[])
     }
 
     //Metric Time
-    PROmetric *metric;
+    PROmetric *metric, *null_metric;
     if(chi2 == "PROchi") {
         metric = new PROchi("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+        null_metric = new PROchi("", config, prop, &systs, *null_model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
     } else if(chi2 == "PROCNP") {
         metric = new PROCNP("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+        null_metric = new PROCNP("", config, prop, &systs, *null_model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
     } else if(chi2 == "Poisson") {
         metric = new PROpoisson("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+        null_metric = new PROpoisson("", config, prop, &systs, *null_model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
     } else {
         log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
         abort();
@@ -504,38 +529,35 @@ int main(int argc, char* argv[])
 
     if(*profile_command){
 
-
-        size_t nparams = 2 + systs.GetNSplines();
+        PROmetric *metric_to_use = systs_only_profile ? null_metric : metric;
+        size_t nparams = metric_to_use->GetModel().nparams + metric_to_use->GetSysts().GetNSplines();
+        size_t nphys = metric_to_use->GetModel().nparams;
         Eigen::VectorXf lb = Eigen::VectorXf::Constant(nparams, -3.0);
-        lb(0) = -2; lb(1) = -std::numeric_limits<float>::infinity();
         Eigen::VectorXf ub = Eigen::VectorXf::Constant(nparams, 3.0);
-        ub(0) = 2; ub(1) = 0;
-        for(size_t i = 2; i < nparams; ++i) {
-            lb(i) = systs.spline_lo[i-2];
-            ub(i) = systs.spline_hi[i-2];
+        for(size_t i = 0; i < nphys; ++i) {
+            lb(i) = metric_to_use->GetModel().lb(i);
+            ub(i) = metric_to_use->GetModel().ub(i);
+        }
+        for(size_t i = nphys; i < nparams; ++i) {
+            lb(i) = metric_to_use->GetSysts().spline_lo[i-nphys];
+            ub(i) = metric_to_use->GetSysts().spline_hi[i-nphys];
         }
         PROfitter fitter(ub, lb, param);
 
-        float chi2 = fitter.Fit(*metric); 
+        float chi2 = fitter.Fit(*metric_to_use); 
         Eigen::VectorXf best_fit = fitter.best_fit;
         Eigen::MatrixXf post_covar = fitter.Covariance();
 
         std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(config.m_num_bins_total_collapsed);
-
-        Eigen::VectorXf subvector1 = best_fit.segment(0, 2);
-        std::vector<float> fitparams(subvector1.data(), subvector1.data() + subvector1.size());
-
-        Eigen::VectorXf subvector2 = best_fit.segment(2, systs.GetNSplines());
-        std::vector<float> shifts(subvector2.data(), subvector2.data() + subvector2.size());
-
-        Eigen::VectorXf post_fit = CollapseMatrix(config, FillRecoSpectra(config, prop, systs, *model, best_fit, true).Spec());
+        Eigen::VectorXf post_fit = CollapseMatrix(config, FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true).Spec());
         TH1D post_hist("ph", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
         for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i) {
             post_hist.SetBinContent(i+1, post_fit(i));
         }
 
-        PROfile(config, systs, *model, *metric , myseed, param, final_output_tag+"_PROfile", true, nthread, best_fit, allparams);
-
+        PROfile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
+                final_output_tag+"_PROfile", !systs_only_profile, nthread, best_fit,
+                systs_only_profile ? systparams : allparams);
 
         //***********************************************************************
         //***********************************************************************
@@ -1045,7 +1067,7 @@ int main(int argc, char* argv[])
         for(size_t i = 0; i < nthread; i++) {
             dchi2s.emplace_back();
             outs.emplace_back();
-            fc_args args{todo + (i >= addone), &dchi2s.back(), &outs.back(), config, prop, metric, pparams, llt.matrixL(), param, (int)i, !eventbyevent};
+            fc_args args{todo + (i >= addone), &dchi2s.back(), &outs.back(), config, prop, systs, chi2, pparams, llt.matrixL(), param, (int)i, !eventbyevent};
             threads.emplace_back(fc_worker, args);
         }
         for(auto&& t: threads) {
