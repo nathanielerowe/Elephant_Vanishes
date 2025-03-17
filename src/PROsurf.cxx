@@ -506,6 +506,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     h1->SetTitle("");
     h1->Draw("A2");
     //h1->GetYaxis()->SetTitle("#sigma Shift");
+    onesig = *h1;
 
     float y_min = h1->GetMinimum();
     for (size_t i = 0; i < barvalues.size(); ++i) {

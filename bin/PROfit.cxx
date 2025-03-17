@@ -549,15 +549,37 @@ int main(int argc, char* argv[])
         Eigen::MatrixXf post_covar = fitter.Covariance();
 
         std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(config.m_num_bins_total_collapsed);
+        Eigen::VectorXf pre_fit = CollapseMatrix(config, FillCVSpectrum(config, prop, true).Spec());
         Eigen::VectorXf post_fit = CollapseMatrix(config, FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true).Spec());
+        TH1D data_hist("dh", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
+        TH1D pre_hist("prh", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
         TH1D post_hist("ph", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
         for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i) {
+            data_hist.SetBinContent(i+1, data.Spec()(i));
+            pre_hist.SetBinContent(i+1, pre_fit(i));
             post_hist.SetBinContent(i+1, post_fit(i));
         }
+        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
+        
+        TCanvas c;
+        pre_hist.SetLineWidth(3);
+        pre_hist.SetLineColor(kBlue);
+        pre_hist.Draw("hist");
+        err_band->SetFillColor(kRed);
+        err_band->SetFillStyle(3345);
+        err_band->Draw("2 same");
+        post_hist.SetLineWidth(3);
+        post_hist.SetLineColor(kGreen);
+        post_hist.Draw("hist same");
+        data_hist.Draw("E same");
+        c.Print((final_output_tag+"_PROfile_hist.pdf").c_str());
 
-        PROfile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
+        PROfile profile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
                 final_output_tag+"_PROfile", !systs_only_profile, nthread, best_fit,
                 systs_only_profile ? systparams : allparams);
+        TFile fout((final_output_tag+"_PROfile.root").c_str(), "RECREATE");
+        profile.onesig.Write("one_sigma_errs");
+        post_hist.Write("best_fit");
 
         //***********************************************************************
         //***********************************************************************
