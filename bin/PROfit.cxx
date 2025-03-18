@@ -19,6 +19,8 @@
 #include "CLI11.h"
 #include "LBFGSB.h"
 
+#include "TAttMarker.h"
+#include "THStack.h"
 #include "TStyle.h"
 #include "TH1D.h"
 #include "TH2D.h"
@@ -27,6 +29,7 @@
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TRatioPlot.h"
+#include "TPaveText.h"
 #include "TTree.h"
 
 #include <Eigen/Eigen>
@@ -153,6 +156,7 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, co
 std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config, const PROspec &cv);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false);
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, bool plot_cv_stack, TPaveText *text);
 
 int main(int argc, char* argv[])
 {
@@ -438,7 +442,8 @@ int main(int argc, char* argv[])
         Eigen::VectorXf data_vec = CollapseMatrix(config, data_spec.Spec());
         Eigen::VectorXf err_vec_sq = data_spec.Error().array().square();
         Eigen::VectorXf err_vec = CollapseMatrix(config, err_vec_sq).array().sqrt();
-        data = PROdata(data_vec, err_vec);
+        //data = PROdata(data_vec, err_vec);
+        data = PROdata(data_vec, data_vec.array().sqrt());
     }
 
     //Seed time
@@ -549,15 +554,31 @@ int main(int argc, char* argv[])
         Eigen::MatrixXf post_covar = fitter.Covariance();
 
         std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(config.m_num_bins_total_collapsed);
-        Eigen::VectorXf post_fit = CollapseMatrix(config, FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true).Spec());
+        PROspec cv = FillCVSpectrum(config, prop, true);
+        PROspec bf = FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true);
         TH1D post_hist("ph", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
+        TH1D pre_hist("prh", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
         for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i) {
-            post_hist.SetBinContent(i+1, post_fit(i));
+            post_hist.SetBinContent(i+1, bf.Spec()(i));
+            pre_hist.SetBinContent(i+1, cv.Spec()(i));
         }
+        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
+        
+        TPaveText chi2text(0.59, 0.50, 0.89, 0.59, "NDC");
+        chi2text.AddText(hname.c_str());
+        chi2text.SetFillColor(0);
+        chi2text.SetBorderSize(0);
+        chi2text.SetTextAlign(12);
+        plot_channels((final_output_tag+"_PROfile_hists.pdf"), config, cv, bf, data, err_band.get(), false, &chi2text);
 
-        PROfile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
+        PROfile profile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
                 final_output_tag+"_PROfile", !systs_only_profile, nthread, best_fit,
                 systs_only_profile ? systparams : allparams);
+        TFile fout((final_output_tag+"_PROfile.root").c_str(), "RECREATE");
+        profile.onesig.Write("one_sigma_errs");
+        pre_hist.Write("cv");
+        err_band->Write("prefit_errband");
+        post_hist.Write("best_fit");
 
         //***********************************************************************
         //***********************************************************************
@@ -1306,5 +1327,113 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
 
     }
     return ret;
+}
+
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, bool plot_cv_stack, TPaveText *text) {
+    TCanvas c;
+    c.Print((filename+"[").c_str());
+
+    std::map<std::string, std::unique_ptr<TH1D>> cvhists;
+    if(cv) cvhists = getCVHists(*cv, config);
+
+    Eigen::VectorXf bf_spec;
+    if(best_fit) {
+        bf_spec = CollapseMatrix(config, best_fit->Spec());
+    }
+
+    size_t global_subchannel_index = 0;
+    size_t global_channel_index = 0;
+    for(size_t mode = 0; mode < config.m_num_modes; ++mode) {
+        for(size_t det = 0; det < config.m_num_detectors; ++det) {
+            for(size_t channel = 0; channel < config.m_num_channels; ++channel) {
+                std::string hist_title = config.m_channel_plotnames[channel]+";"+config.m_channel_units[channel];
+                std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
+                leg->SetFillStyle(0);
+                leg->SetLineWidth(0);
+                TH1D cv_hist(std::to_string(global_channel_index).c_str(), hist_title.c_str(), config.m_channel_num_bins[global_channel_index], config.m_channel_bin_edges[global_channel_index].data());
+                cv_hist.SetLineWidth(3);
+                cv_hist.SetLineColor(kBlue);
+                cv_hist.SetFillStyle(0);
+                for(size_t bin = 0; bin < config.m_channel_num_bins[global_channel_index]; ++bin) {
+                    cv_hist.SetBinContent(bin+1, 0);
+                }
+                if(cv) {
+                    THStack *cvstack = NULL;
+                    if(plot_cv_stack) cvstack = new THStack(std::to_string(global_channel_index).c_str(), config.m_channel_plotnames[channel].c_str());
+                    for(size_t subchannel = 0; subchannel < config.m_num_subchannels[channel]; ++subchannel){
+                        const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
+                        if(plot_cv_stack) {
+                            cvstack->Add(cvhists[subchannel_name].get());
+                            leg->AddEntry(cvhists[subchannel_name].get(), config.m_subchannel_plotnames[channel][subchannel].c_str() ,"f");
+                        }
+                        cv_hist.Add(cvhists[subchannel_name].get());
+                        ++global_subchannel_index;
+                    }
+                    if(plot_cv_stack) {
+                        cvstack->SetMaximum(1.2*cvstack->GetMaximum());
+                        cvstack->Draw("hist");
+                    } else {
+                        cv_hist.SetMaximum(1.2*cv_hist.GetMaximum());
+                        leg->AddEntry(&cv_hist, "CV");
+                        cv_hist.Draw("hist");
+                    }
+                }
+
+                TGraphAsymmErrors *channel_errband = NULL;
+                if(errband) {
+                    channel_errband = new TGraphAsymmErrors(&cv_hist);
+                    int channel_start = config.GetCollapsedGlobalBinStart(global_channel_index);
+                    int channel_nbins = config.m_channel_num_bins[channel];
+                    for(int bin = 0; bin < channel_nbins; ++bin) {
+                        channel_errband->SetPointEYhigh(bin, (*errband)->GetErrorYhigh(bin+channel_start));
+                        channel_errband->SetPointEYlow(bin, (*errband)->GetErrorYlow(bin+channel_start));
+                    }
+                    channel_errband->SetFillColor(kRed);
+                    channel_errband->SetFillStyle(3345);
+                    leg->AddEntry(channel_errband, "#pm 1#sigma");
+                    channel_errband->Draw("2 same");
+                }
+
+                TH1D bf_hist(("bf"+std::to_string(global_channel_index)).c_str(), hist_title.c_str(), config.m_channel_num_bins[channel], config.m_channel_bin_edges[channel].data());
+                if(best_fit) {
+                    int channel_start = config.GetCollapsedGlobalBinStart(global_channel_index);
+                    int channel_nbins = config.m_channel_num_bins[channel];
+                    for(int bin = 0; bin < channel_nbins; ++bin) {
+                        bf_hist.SetBinContent(bin+1, bf_spec(bin+channel_start));
+                    }
+                    bf_hist.SetLineColor(kGreen);
+                    bf_hist.SetLineWidth(3);
+                    leg->AddEntry(&bf_hist, "Best Fit");
+                    if(cv) bf_hist.Draw("hist same");
+                    else bf_hist.Draw("hist");
+                }
+
+                TH1D data_hist;
+                if(data) {
+                    data_hist = data->toTH1D(config, global_channel_index);
+                    data_hist.SetLineColor(kBlack);
+                    data_hist.SetLineWidth(2);
+                    data_hist.SetMarkerStyle(kFullCircle);
+                    data_hist.SetMarkerColor(kBlack);
+                    data_hist.SetMarkerSize(1);
+                    leg->AddEntry(&data_hist, "Data");
+                    if(cv || best_fit) data_hist.Draw("PE1 same");
+                    else data_hist.Draw("E1P");
+                }
+
+                if(text) {
+                    text->Draw("same");
+                }
+                
+                leg->Draw("same");
+
+                c.Print(filename.c_str());
+
+                ++global_channel_index;
+            }
+        }
+    }
+
+    c.Print((filename+"]").c_str());
 }
 
