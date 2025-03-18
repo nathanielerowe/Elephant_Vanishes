@@ -554,15 +554,16 @@ int main(int argc, char* argv[])
         Eigen::MatrixXf post_covar = fitter.Covariance();
 
         std::string hname = "#chi^{2}/ndf = " + to_string(chi2) + "/" + to_string(config.m_num_bins_total_collapsed);
-        Eigen::VectorXf post_fit = CollapseMatrix(config, FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true).Spec());
+        PROspec cv = FillCVSpectrum(config, prop, true);
+        PROspec bf = FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true);
         TH1D post_hist("ph", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
+        TH1D pre_hist("prh", hname.c_str(), config.m_num_bins_total_collapsed, config.m_channel_bin_edges[0].data());
         for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i) {
-            post_hist.SetBinContent(i+1, post_fit(i));
+            post_hist.SetBinContent(i+1, bf.Spec()(i));
+            pre_hist.SetBinContent(i+1, cv.Spec()(i));
         }
         std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
         
-        PROspec cv = FillCVSpectrum(config, prop, true);
-        PROspec bf = FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true);
         TPaveText chi2text(0.59, 0.50, 0.89, 0.59, "NDC");
         chi2text.AddText(hname.c_str());
         chi2text.SetFillColor(0);
@@ -575,6 +576,8 @@ int main(int argc, char* argv[])
                 systs_only_profile ? systparams : allparams);
         TFile fout((final_output_tag+"_PROfile.root").c_str(), "RECREATE");
         profile.onesig.Write("one_sigma_errs");
+        pre_hist.Write("cv");
+        err_band->Write("prefit_errband");
         post_hist.Write("best_fit");
 
         //***********************************************************************
