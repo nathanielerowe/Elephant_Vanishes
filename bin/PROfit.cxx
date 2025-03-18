@@ -565,6 +565,9 @@ int main(int argc, char* argv[])
         PROspec bf = FillRecoSpectra(config, prop, metric_to_use->GetSysts(), metric_to_use->GetModel(), best_fit, true);
         TPaveText chi2text(0.59, 0.50, 0.89, 0.59, "NDC");
         chi2text.AddText(hname.c_str());
+        chi2text.SetFillColor(0);
+        chi2text.SetBorderSize(0);
+        chi2text.SetTextAlign(12);
         plot_channels((final_output_tag+"_PROfile_hists.pdf"), config, cv, bf, data, err_band.get(), false, &chi2text);
 
         PROfile profile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
