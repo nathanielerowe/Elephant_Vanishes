@@ -719,9 +719,9 @@ int main(int argc, char* argv[])
                         nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
 
                 if(statonly)
-                    brazil_band_surfaces.back().FillSurfaceStat(config, param, final_output_tag+"_Brazil_"+std::to_string(i)+"_statonly_surface.txt");
+                    brazil_band_surfaces.back().FillSurfaceStat(config, param, "");
                 else
-                    brazil_band_surfaces.back().FillSurface(param, final_output_tag+"_Brazil_"+std::to_string(i)+"_surface.txt",myseed,nthread);
+                    brazil_band_surfaces.back().FillSurface(param, "", myseed, nthread);
 
                 TH2D surf("surf", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
 
