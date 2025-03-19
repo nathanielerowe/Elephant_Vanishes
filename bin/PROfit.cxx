@@ -196,6 +196,7 @@ int main(int argc, char* argv[])
     std::string xlabel, ylabel;
     std::string xvar = "sinsq2thmm", yvar = "dmsq";
     bool run_brazil = false;
+    bool statonly_brazil = false;
 
     std::string reweights_file;
     std::vector<std::string> mockreweights;
@@ -247,6 +248,7 @@ int main(int argc, char* argv[])
     surface_command->add_flag("--logx,!--linx", logx, "Specify if x-axis is logarithmic or linear (default log)");
     surface_command->add_flag("--logy,!--liny", logy, "Specify if y-axis is logarithmic or linear (default log)");
     surface_command->add_flag("--brazil-band", run_brazil, "Run 1000 throws of stats+systs and draw 1 sigma and 2 sigma Brazil bands");
+    surface_command->add_flag("--stat-throws", statonly_brazil, "Only do stat throws for the Brazil band")->needs("--brazil-band");
 
     //PROfile, make N profile'd chi^2 for each physics and nuisence parameters
     CLI::App *profile_command = app.add_subcommand("profile", "Make a 1D profiled chi2 for each physics and nuisence parameter.");
@@ -692,7 +694,9 @@ int main(int argc, char* argv[])
             std::mt19937 rng(global_seed);
             std::normal_distribution<float> d;
             size_t nphys = metric->GetModel().nparams;
-            Eigen::MatrixXf L = metric->GetSysts().DecomposeFractionalCovariance(config, FillCVSpectrum(config, prop, true).Spec());
+            PROspec cv = FillCVSpectrum(config, prop, true);
+            PROspec collapsed_cv = PROspec(CollapseMatrix(config, cv.Spec()), CollapseMatrix(config, cv.Error()));
+            Eigen::MatrixXf L = metric->GetSysts().DecomposeFractionalCovariance(config, cv.Spec());
             for(size_t i = 0; i < 1000; ++i) {
                 Eigen::VectorXf throwp = pparams;
                 Eigen::VectorXf throwC = Eigen::VectorXf::Constant(config.m_num_bins_total_collapsed, 0);
@@ -701,7 +705,8 @@ int main(int argc, char* argv[])
                 for(size_t i = 0; i < config.m_num_bins_total_collapsed; i++)
                     throwC(i) = d(rng);
                 PROspec shifted = FillRecoSpectra(config, prop, metric->GetSysts(), metric->GetModel(), throwp, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
-                PROspec newSpec = PROspec::PoissonVariation(PROspec(CollapseMatrix(config, shifted.Spec()) + L * throwC, CollapseMatrix(config, shifted.Error())));
+                PROspec newSpec = statonly_brazil ? PROspec::PoissonVariation(collapsed_cv) :
+                    PROspec::PoissonVariation(PROspec(CollapseMatrix(config, shifted.Spec()) + L * throwC, CollapseMatrix(config, shifted.Error())));
                 PROdata data(newSpec.Spec(), newSpec.Error());
                 PROmetric *metric;
                 if(chi2 == "PROchi") {
