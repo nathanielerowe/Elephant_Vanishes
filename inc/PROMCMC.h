@@ -2,26 +2,29 @@
 #define PROMCMC_H
 
 #include "PROmetric.h"
+#include "PROsurf.h"
+#include "TGraphAsymmErrors.h"
 #include <Eigen/Eigen>
 #include <random>
 
 namespace PROfit {
 
+template<class Proposal_FN, class Target_FN>
 class Metropolis {
 private:
     std::mt19937 rng;
     std::uniform_real_distribution<float> uniform;
 
 public:
-    using target_fn = float (*)(Eigen::VectorXf &, PROmetric &);
-    using proposal_fn = Eigen::VectorXf (*)(Eigen::VectorXf &);
+    //using target_fn = float (*)(Eigen::VectorXf &, PROmetric &);
+    //using proposal_fn = Eigen::VectorXf (*)(Eigen::VectorXf &);
 
-    target_fn target;
-    proposal_fn proposal;
+    Target_FN target;
+    Proposal_FN proposal;
     Eigen::VectorXf current;
     PROmetric &metric;
 
-    Metropolis(target_fn target, proposal_fn proposal, Eigen::VectorXf &initial, PROmetric &metric) 
+    Metropolis(Target_FN target, Proposal_FN proposal, Eigen::VectorXf &initial, PROmetric &metric) 
         : target(target), proposal(proposal), current(initial), metric(metric) {
         std::random_device rd{};
         rng.seed(rd());
@@ -61,6 +64,23 @@ public:
             // Uniform for physics parameters?
         }
         return ret;
+    }
+
+    static auto proposal_from_profile(const PROfile &prof) { 
+        return [prof](const Eigen::VectorXf &current) {
+            static random_device rd{};
+            static mt19937 rng(rd());
+            std::normal_distribution<float> normal;
+            Eigen::VectorXf ret;
+            const TGraphAsymmErrors &p = prof.onesig;
+            for(int i = 0; i < p.GetN(); ++i) {
+                float val = normal(rng);
+                ret(i) = val > 0 ? p.GetPointY(i) + p.GetErrorYhigh(i) * val
+                                 : p.GetPointY(i) + p.GetErrorYlow(i) * val;
+
+            }
+            return ret;
+        };
     }
 
 };
