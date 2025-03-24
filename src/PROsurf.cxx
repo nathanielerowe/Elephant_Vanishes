@@ -56,7 +56,7 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, const LBFGSpp::LBFGSBPara
         for(size_t j = 0; j < nbinsy; j++) {
             Eigen::VectorXf physics_params{{(float)edges_y(j), (float)edges_x(i)}};
             float fx = (*local_metric)(physics_params, empty_vec, false);
-            if(fx < 1e9) min_chi = fx;
+            if(fx < min_chi) min_chi = fx;
             surface(i, j) = fx;
             if(!filename.empty()){
                 chi_file<<"\n"<<edges_x(i)<<" "<<edges_y(j)<<" "<<fx<<std::flush;
