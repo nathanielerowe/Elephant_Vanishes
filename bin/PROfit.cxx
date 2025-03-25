@@ -13,6 +13,7 @@
 #include "PROsurf.h"
 #include "PROfitter.h"
 #include "PROmodel.h"
+#include "PROMCMC.h"
 #include "PROtocall.h"
 #include "PROseed.h"
 
@@ -156,7 +157,8 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, co
 std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config, const PROspec &cv);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false);
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, bool plot_cv_stack, TPaveText *text);
+std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, bool scale = false);
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text);
 
 int main(int argc, char* argv[])
 {
@@ -563,13 +565,14 @@ int main(int argc, char* argv[])
             pre_hist.SetBinContent(i+1, cv.Spec()(i));
         }
         std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
+        std::unique_ptr<TGraphAsymmErrors> post_err_band = getPostFitErrorBand(config, prop, *metric_to_use, best_fit);
         
         TPaveText chi2text(0.59, 0.50, 0.89, 0.59, "NDC");
         chi2text.AddText(hname.c_str());
         chi2text.SetFillColor(0);
         chi2text.SetBorderSize(0);
         chi2text.SetTextAlign(12);
-        plot_channels((final_output_tag+"_PROfile_hists.pdf"), config, cv, bf, data, err_band.get(), false, &chi2text);
+        plot_channels((final_output_tag+"_PROfile_hists.pdf"), config, cv, bf, data, err_band.get(), post_err_band.get(), false, &chi2text);
 
         PROfile profile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
                 final_output_tag+"_PROfile", !systs_only_profile, nthread, best_fit,
@@ -578,6 +581,7 @@ int main(int argc, char* argv[])
         profile.onesig.Write("one_sigma_errs");
         pre_hist.Write("cv");
         err_band->Write("prefit_errband");
+        post_err_band->Write("postfit_errband");
         post_hist.Write("best_fit");
 
         //***********************************************************************
@@ -1329,7 +1333,48 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     return ret;
 }
 
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, bool plot_cv_stack, TPaveText *text) {
+std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, bool scale) {
+    Metropolis mh(simple_target{metric}, simple_proposal(metric), best_fit, metric);
+    std::vector<Eigen::VectorXf> specs;
+    const auto action = [&](const Eigen::VectorXf &value) {
+        specs.push_back(CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), value, true).Spec()));
+    };
+    size_t nerrorsample = 5000;
+    mh.run(10000, nerrorsample, action);
+    std::cout << "Spec size " << specs.size() << std::endl;
+
+    //TODO: Only works with 1 mode/detector/channel
+    Eigen::VectorXf cv = CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), best_fit, true).Spec());
+    std::vector<float> edges = config.GetChannelBinEdges(0);
+    std::vector<float> centers;
+    for(size_t i = 0; i < edges.size() - 1; ++i)
+        centers.push_back((edges[i+1] + edges[i])/2);
+    TH1D tmphist("th", "", cv.size(), edges.data());
+    for(int i = 0; i < cv.size(); ++i)
+        tmphist.SetBinContent(i+1, cv(i));
+    if(scale) tmphist.Scale(1, "width");
+    //std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
+    std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(&tmphist);
+    for(int i = 0; i < cv.size(); ++i) {
+        std::vector<float> binconts(specs.size());
+        for(size_t j = 0; j < specs.size(); ++j) {
+            binconts[j] = specs[j](i);
+        }
+        float scale_factor = tmphist.GetBinContent(i+1)/cv(i);
+        std::sort(binconts.begin(), binconts.end());
+        float ehi = std::abs((binconts[0.84*specs.size()] - cv(i))*scale_factor);
+        float elo = std::abs((cv(i) - binconts[0.16*specs.size()])*scale_factor);
+        ret->SetPointEYhigh(i, ehi);
+        ret->SetPointEYlow(i, elo);
+
+        log<LOG_DEBUG>(L"%1% || ErrorBand bin %2% %3% %4% %5% %6% %7%") % __func__ % i % cv(i) % ehi % elo % scale_factor % tmphist.GetBinContent(i+1);
+
+
+    }
+    return ret;
+}
+
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text) {
     TCanvas c;
     c.Print((filename+"[").c_str());
 
@@ -1406,6 +1451,21 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                     leg->AddEntry(&bf_hist, "Best Fit");
                     if(cv) bf_hist.Draw("hist same");
                     else bf_hist.Draw("hist");
+                }
+
+                TGraphAsymmErrors *post_channel_errband = NULL;
+                if(posterrband) {
+                    post_channel_errband = new TGraphAsymmErrors(&bf_hist);
+                    int channel_start = config.GetCollapsedGlobalBinStart(global_channel_index);
+                    int channel_nbins = config.m_channel_num_bins[channel];
+                    for(int bin = 0; bin < channel_nbins; ++bin) {
+                        post_channel_errband->SetPointEYhigh(bin, (*posterrband)->GetErrorYhigh(bin+channel_start));
+                        post_channel_errband->SetPointEYlow(bin, (*posterrband)->GetErrorYlow(bin+channel_start));
+                    }
+                    post_channel_errband->SetFillColor(kCyan);
+                    post_channel_errband->SetFillStyle(3345);
+                    leg->AddEntry(post_channel_errband, "post-fit #pm 1#sigma");
+                    post_channel_errband->Draw("2 same");
                 }
 
                 TH1D data_hist;
