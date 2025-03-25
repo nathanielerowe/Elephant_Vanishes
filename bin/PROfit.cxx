@@ -785,11 +785,11 @@ int main(int argc, char* argv[])
                     for(const auto &bbsurf: brazil_band_surfaces)
                         values.push_back(bbsurf.surface(i,j));
                     std::sort(values.begin(), values.end());
-                    surf02.SetBinContent(i+1, j+1, values[0.023 * values.size()]);
-                    surf16.SetBinContent(i+1, j+1, values[0.159 * values.size()]);
-                    surf50.SetBinContent(i+1, j+1, values[0.500 * values.size()]);
-                    surf84.SetBinContent(i+1, j+1, values[0.841 * values.size()]);
-                    surf98.SetBinContent(i+1, j+1, values[0.977 * values.size()]);
+                    surf02.SetBinContent(i+1, j+1, values[(size_t)(0.023 * values.size())]);
+                    surf16.SetBinContent(i+1, j+1, values[(size_t)(0.159 * values.size())]);
+                    surf50.SetBinContent(i+1, j+1, values[(size_t)(0.500 * values.size())]);
+                    surf84.SetBinContent(i+1, j+1, values[(size_t)(0.841 * values.size())]);
+                    surf98.SetBinContent(i+1, j+1, values[(size_t)(0.977 * values.size())]);
                 }
             }
             
