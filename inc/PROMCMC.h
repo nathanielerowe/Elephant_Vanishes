@@ -5,6 +5,8 @@
 #include "PROsurf.h"
 #include "TGraphAsymmErrors.h"
 #include <Eigen/Eigen>
+#include <Eigen/src/Core/Matrix.h>
+#include <algorithm>
 #include <random>
 
 namespace PROfit {
@@ -16,9 +18,6 @@ private:
     std::uniform_real_distribution<float> uniform;
 
 public:
-    //using target_fn = float (*)(Eigen::VectorXf &, PROmetric &);
-    //using proposal_fn = Eigen::VectorXf (*)(Eigen::VectorXf &);
-
     Target_FN target;
     Proposal_FN proposal;
     Eigen::VectorXf current;
@@ -32,7 +31,7 @@ public:
 
     bool step() {
         Eigen::VectorXf p = proposal(current);
-        float acceptance = std::min(1.0f, target(p, metric)/target(current, metric));
+        float acceptance = std::min(1.0f, target(p)/target(current) * proposal.P(current, p)/proposal.P(p, current));
         float u = uniform(rng);
         if(u <= acceptance) {
             current = p;
@@ -50,39 +49,54 @@ public:
         }
     }
 
-    static float simple_target(Eigen::VectorXf &value, PROmetric &metric) {
-        return std::exp(-0.5f*metric(value, value, false));
-    }
+    struct simple_target {
+        PROmetric &metric;
 
-    static Eigen::VectorXf simple_proposal(Eigen::VectorXf &current) {
-        static std::random_device rd{};
-        static std::mt19937 rng(rd());
-        std::normal_distribution<float> nd;
-        Eigen::VectorXf ret = current;
-        for(int i = 0; i < ret.size(); ++i) {
-            // Gaussian proposal here
-            // Uniform for physics parameters?
+        float operator()(Eigen::VectorXf &value) {
+            return std::exp(-0.5f*metric(value, value, false));
         }
-        return ret;
-    }
+    };
 
-    static auto proposal_from_profile(const PROfile &prof) { 
-        return [prof](const Eigen::VectorXf &current) {
-            static random_device rd{};
-            static mt19937 rng(rd());
-            std::normal_distribution<float> normal;
-            Eigen::VectorXf ret;
-            const TGraphAsymmErrors &p = prof.onesig;
-            for(int i = 0; i < p.GetN(); ++i) {
-                float val = normal(rng);
-                ret(i) = val > 0 ? p.GetPointY(i) + p.GetErrorYhigh(i) * val
-                                 : p.GetPointY(i) + p.GetErrorYlow(i) * val;
+    struct simple_proposal {
+        PROmetric &metric;
+        float width;
+        std::random_device rd;
+        std::mt19937 rng;
 
+        simple_proposal(PROmetric &metric, float width = 0.2) 
+            : metric(metric), width(width) {
+            rng.seed(rd());
+        }
+
+        Eigen::VectorXf operator()(Eigen::VectorXf &current) {
+            Eigen::VectorXf ret = current;
+            int nparams = metric.GetModel().nparams;
+            for(int i = 0; i < ret.size(); ++i) {
+                if(i < nparams) {
+                    std::uniform_real_distribution<float> ud(metric.GetModel().lb(i), metric.GetModel().ub(i));
+                    ret(i) = ud(rng);
+                } else {
+                    std::normal_distribution<float> nd(current(i), width);
+                    float proposed_value = nd(rng);
+                    ret(i) = std::clamp(proposed_value, metric.GetSysts().spline_lo[i-nparams], metric.GetSysts().spline_hi[i-nparams]);
+                }
             }
             return ret;
-        };
-    }
+        }
 
+        float P(Eigen::VectorXf &value, Eigen::VectorXf &given) {
+            float prob = 1.0;
+            for(int i = 0; i < value.size(); ++i) {
+                if(i < metric.GetModel().nparams) {
+                    prob *= 1.0f / (metric.GetModel().ub(i) - metric.GetModel().lb(i));
+                } else {
+                    prob *= (1.0f / std::sqrt(2 * M_PI * width * width))
+                            * std::exp(-(value(i) - given(i))*(value(i) - given(i))/(2 * width * width));
+                }
+            }
+            return prob;
+        }
+    };
 };
 
 }
