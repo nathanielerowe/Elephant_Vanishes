@@ -2,10 +2,7 @@
 #define PROMCMC_H
 
 #include "PROmetric.h"
-#include "PROsurf.h"
-#include "TGraphAsymmErrors.h"
 #include <Eigen/Eigen>
-#include <Eigen/src/Core/Matrix.h>
 #include <algorithm>
 #include <cmath>
 #include <random>
