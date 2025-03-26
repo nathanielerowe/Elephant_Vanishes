@@ -1463,7 +1463,7 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
     std::vector<int> fixed_pars;
     for(size_t i = 0; i < metric.GetModel().nparams; ++i) fixed_pars.push_back(i);
 
-    Metropolis mh(simple_target{metric}, simple_proposal(metric, 0.2, fixed_pars), best_fit, metric);
+    Metropolis mh(simple_target{metric}, simple_proposal(metric, 0.2, fixed_pars), best_fit);
 
     for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
         posteriors.emplace_back("", (";"+config.m_mcgen_variation_plotname_map.at(metric.GetSysts().spline_names[i])).c_str(), 60, -3, 3);

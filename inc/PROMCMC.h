@@ -22,10 +22,9 @@ public:
     Target_FN target;
     Proposal_FN proposal;
     Eigen::VectorXf current;
-    PROmetric &metric;
 
-    Metropolis(Target_FN target, Proposal_FN proposal, const Eigen::VectorXf &initial, PROmetric &metric) 
-        : target(target), proposal(proposal), current(initial), metric(metric) {
+    Metropolis(Target_FN target, Proposal_FN proposal, const Eigen::VectorXf &initial) 
+        : target(target), proposal(proposal), current(initial) {
         std::random_device rd{};
         rng.seed(rd());
     }
