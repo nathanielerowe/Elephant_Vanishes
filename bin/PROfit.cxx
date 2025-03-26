@@ -1334,14 +1334,31 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
 }
 
 std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, bool scale) {
-    Metropolis mh(simple_target{metric}, simple_proposal(metric), best_fit, metric);
+    Metropolis mh(simple_target{metric}, simple_proposal(metric, 0.2, {0,1}), best_fit, metric);
     std::vector<Eigen::VectorXf> specs;
+    std::vector<TH1D> oned;
+    for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
+        oned.emplace_back("", (";"+config.m_mcgen_variation_plotname_map.at(metric.GetSysts().spline_names[i])).c_str(), 60, -3, 3);
+    TH2D twod("twod", ";sin^{2}2#theta_{#mu#mu};#Deltam^{2}", 100, -5, 0, 100, -2, 2);
+    Eigen::MatrixXf L = metric.GetSysts().
     const auto action = [&](const Eigen::VectorXf &value) {
         specs.push_back(CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), value, true).Spec()));
+        twod.Fill(value(1), value(0));
+        for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
+            oned[i].Fill(value(i+2));
     };
-    size_t nerrorsample = 5000;
+    size_t nerrorsample = 50000;
     mh.run(10000, nerrorsample, action);
     std::cout << "Spec size " << specs.size() << std::endl;
+    TCanvas c;
+    c.Print("metrolpolis_out.pdf[");
+    twod.Draw("colz");
+    c.Print("metrolpolis_out.pdf");
+    for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i) {
+        oned[i].Draw("hist");
+        c.Print("metrolpolis_out.pdf");
+    }
+    c.Print("metrolpolis_out.pdf]");
 
     //TODO: Only works with 1 mode/detector/channel
     Eigen::VectorXf cv = CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), best_fit, true).Spec());
