@@ -9,7 +9,7 @@
 
 namespace PROfit {
 
-template<class Proposal_FN, class Target_FN>
+template<class Target_FN, class Proposal_FN>
 class Metropolis {
 private:
     std::mt19937 rng;
