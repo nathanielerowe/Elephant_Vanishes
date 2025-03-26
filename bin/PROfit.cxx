@@ -45,6 +45,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -196,6 +197,11 @@ int main(int argc, char* argv[])
     bool statonly = false, logx=true, logy=true;
     std::string xlabel, ylabel;
     std::string xvar = "sinsq2thmm", yvar = "dmsq";
+    bool run_brazil = false;
+    bool statonly_brazil = false;
+    bool single_brazil = false;
+    bool only_brazil = false;
+    std::vector<std::string> brazil_throws;
 
     std::string reweights_file;
     std::vector<std::string> mockreweights;
@@ -246,6 +252,11 @@ int main(int argc, char* argv[])
     surface_command->add_option("--ylabel", ylabel, "Y-axis label");
     surface_command->add_flag("--logx,!--linx", logx, "Specify if x-axis is logarithmic or linear (default log)");
     surface_command->add_flag("--logy,!--liny", logy, "Specify if y-axis is logarithmic or linear (default log)");
+    surface_command->add_flag("--brazil-band", run_brazil, "Run 1000 throws of stats+systs and draw 1 sigma and 2 sigma Brazil bands");
+    surface_command->add_flag("--stat-throws", statonly_brazil, "Only do stat throws for the Brazil band")->needs("--brazil-band");
+    surface_command->add_flag("--single-throw", single_brazil, "Only run a single iteration of the Brazil band")->needs("--brazil-band");
+    surface_command->add_flag("--only-throw", only_brazil, "Only run Brazil band throws and not the nominal surface")->needs("--brazil-band");
+    surface_command->add_option("--from-many", brazil_throws, "Make Brazil band from many provided throws")->needs("--brazil-band");
 
     //PROfile, make N profile'd chi^2 for each physics and nuisence parameters
     CLI::App *profile_command = app.add_subcommand("profile", "Make a 1D profiled chi2 for each physics and nuisence parameter.");
@@ -624,10 +635,12 @@ int main(int argc, char* argv[])
         PROsurf surface(*metric, xaxis_idx, yaxis_idx, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
                 nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
 
-        if(statonly)
-            surface.FillSurfaceStat(config, param, final_output_tag+"_statonly_surface.txt");
-        else
-            surface.FillSurface(param, final_output_tag+"_surface.txt",myseed,nthread);
+        if(!only_brazil) {
+            if(statonly)
+                surface.FillSurfaceStat(config, param, final_output_tag+"_statonly_surface.txt");
+            else
+                surface.FillSurface(param, final_output_tag+"_surface.txt",myseed,nthread);
+        }
 
         std::vector<float> binedges_x, binedges_y;
         for(size_t i = 0; i < surface.nbinsx+1; i++)
@@ -651,43 +664,146 @@ int main(int argc, char* argv[])
 
         log<LOG_INFO>(L"%1% || Saving surface to %2% as TH2D named \"surf.\"") % __func__ % final_output_tag.c_str();
         TFile fout((final_output_tag+"_surf.root").c_str(), "RECREATE");
-        surf.Write();
-        float chi2;
-        int xbin, ybin;
-        std::map<std::string, float> best_fit;
-        TTree tree("tree", "BestFitTree");
-        tree.Branch("chi2", &chi2); 
-        tree.Branch("xbin", &xbin); 
-        tree.Branch("ybin", &ybin); 
-        tree.Branch("best_fit", &best_fit); 
+        if(!only_brazil) {
+            surf.Write();
+            float chisq;
+            int xbin, ybin;
+            std::map<std::string, float> best_fit;
+            TTree tree("tree", "BestFitTree");
+            tree.Branch("chi2", &chisq); 
+            tree.Branch("xbin", &xbin); 
+            tree.Branch("ybin", &ybin); 
+            tree.Branch("best_fit", &best_fit); 
 
-        for(const auto &res: surface.results) {
-            chi2 = res.chi2;
-            xbin = res.binx;
-            ybin = res.biny;
-            // If all fit points fail
-            if(!res.best_fit.size()) { tree.Fill(); continue; }
-            for(size_t i = 0; i < model->nparams; ++i) {
-                best_fit[model->param_names[i]] = res.best_fit(i);
+            for(const auto &res: surface.results) {
+                chisq = res.chi2;
+                xbin = res.binx;
+                ybin = res.biny;
+                // If all fit points fail
+                if(!res.best_fit.size()) { tree.Fill(); continue; }
+                for(size_t i = 0; i < model->nparams; ++i) {
+                    best_fit[model->param_names[i]] = res.best_fit(i);
+                }
+                for(size_t i = 0; i < systs.GetNSplines(); ++i) {
+                    best_fit[systs.spline_names[i]] = res.best_fit(i + model->nparams);
+                }
+                tree.Fill();
             }
-            for(size_t i = 0; i < systs.GetNSplines(); ++i) {
-                best_fit[systs.spline_names[i]] = res.best_fit(i + model->nparams);
-            }
-            tree.Fill();
+            // TODO: Should we save the spectra as TH1s?
+
+            tree.Write();
+
+            TCanvas c;
+            if(logy)
+                c.SetLogy();
+            if(logx)
+                c.SetLogx();
+            c.SetLogz();
+            surf.Draw("colz");
+            c.Print((final_output_tag+"_surface.pdf").c_str());
         }
-        // TODO: Should we save the spectra as TH1s?
 
-        tree.Write();
+        std::vector<PROsurf> brazil_band_surfaces;
+        if(run_brazil && brazil_throws.size() == 0) {
+            std::mt19937 rng(global_seed);
+            std::normal_distribution<float> d;
+            size_t nphys = metric->GetModel().nparams;
+            PROspec cv = FillCVSpectrum(config, prop, true);
+            PROspec collapsed_cv = PROspec(CollapseMatrix(config, cv.Spec()), CollapseMatrix(config, cv.Error()));
+            Eigen::MatrixXf L = metric->GetSysts().DecomposeFractionalCovariance(config, cv.Spec());
+            for(size_t i = 0; i < 1000; ++i) {
+                Eigen::VectorXf throwp = pparams;
+                Eigen::VectorXf throwC = Eigen::VectorXf::Constant(config.m_num_bins_total_collapsed, 0);
+                for(size_t i = 0; i < metric->GetSysts().GetNSplines(); i++)
+                    throwp(i+nphys) = d(rng);
+                for(size_t i = 0; i < config.m_num_bins_total_collapsed; i++)
+                    throwC(i) = d(rng);
+                PROspec shifted = FillRecoSpectra(config, prop, metric->GetSysts(), metric->GetModel(), throwp, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+                PROspec newSpec = statonly_brazil ? PROspec::PoissonVariation(collapsed_cv) :
+                    PROspec::PoissonVariation(PROspec(CollapseMatrix(config, shifted.Spec()) + L * throwC, CollapseMatrix(config, shifted.Error())));
+                PROdata data(newSpec.Spec(), newSpec.Error());
+                PROmetric *metric;
+                if(chi2 == "PROchi") {
+                    metric = new PROchi("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+                } else if(chi2 == "PROCNP") {
+                    metric = new PROCNP("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+                } else if(chi2 == "Poisson") {
+                    metric = new PROpoisson("", config, prop, &systs, *model, data, eventbyevent ? PROmetric::EventByEvent : PROmetric::BinnedChi2);
+                } else {
+                    log<LOG_ERROR>(L"%1% || Unrecognized chi2 function %2%") % __func__ % chi2.c_str();
+                    abort();
+                }
 
-        TCanvas c;
-        if(logy)
-            c.SetLogy();
-        if(logx)
-            c.SetLogx();
-        c.SetLogz();
-        surf.Draw("colz");
-        c.Print((final_output_tag+"_surface.pdf").c_str());
-        fout.Close();
+                brazil_band_surfaces.emplace_back(*metric, xaxis_idx, yaxis_idx, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+                        nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
+
+                if(statonly)
+                    brazil_band_surfaces.back().FillSurfaceStat(config, param, "");
+                else
+                    brazil_band_surfaces.back().FillSurface(param, "", myseed, nthread);
+
+                TH2D surf("surf", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+
+                for(size_t i = 0; i < surface.nbinsx; i++) {
+                    for(size_t j = 0; j < surface.nbinsy; j++) {
+                        surf.SetBinContent(i+1, j+1, brazil_band_surfaces.back().surface(i, j));
+                    }
+                }
+                surf.Write(("brazil_throw_surf_"+std::to_string(i)).c_str());
+
+                // WARNING: Metric reference stored in surface. DO NOT USE IT AFTER THIS POINT.
+                delete metric;
+                if(single_brazil) break;
+            }
+        } else if(run_brazil) { // if brazil_thows.size() > 0
+                for(const std::string &in: brazil_throws) {
+                    brazil_band_surfaces.emplace_back(*metric, xaxis_idx, yaxis_idx, nbinsx, logx ? PROsurf::LogAxis : PROsurf::LinAxis, xlo, xhi,
+                            nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
+
+                    TFile fin(in.c_str());
+                    // TODO: Check that axes and labels are the same
+                    TH2D *surf = fin.Get<TH2D>("surf");
+                    if(!surf) {
+                        log<LOG_ERROR>(L"%1% || Could not find a TH2D called 'surf' in the file %2%. Terminating.")
+                            % __func__ % in.c_str();
+                        return EXIT_FAILURE;
+                    }
+                    for(size_t i = 0; i < surface.nbinsx; ++i) {
+                        for(size_t j = 0; j < surface.nbinsy; ++j) {
+                            brazil_band_surfaces.back().surface(i,j) = surf->GetBinContent(i,j);
+                        }
+                    }
+                }
+        }
+
+        if(run_brazil && !single_brazil) {
+            TH2D surf16("surf16", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+            TH2D surf84("surf84", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+            TH2D surf98("surf98", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+            TH2D surf02("surf02", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+            TH2D surf50("surf50", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
+
+            for(size_t i = 0; i < surface.nbinsx; ++i) {
+                for(size_t j = 0; j < surface.nbinsy; ++j) {
+                    std::vector<float> values;
+                    for(const auto &bbsurf: brazil_band_surfaces)
+                        values.push_back(bbsurf.surface(i,j));
+                    std::sort(values.begin(), values.end());
+                    surf02.SetBinContent(i+1, j+1, values[(size_t)(0.023 * values.size())]);
+                    surf16.SetBinContent(i+1, j+1, values[(size_t)(0.159 * values.size())]);
+                    surf50.SetBinContent(i+1, j+1, values[(size_t)(0.500 * values.size())]);
+                    surf84.SetBinContent(i+1, j+1, values[(size_t)(0.841 * values.size())]);
+                    surf98.SetBinContent(i+1, j+1, values[(size_t)(0.977 * values.size())]);
+                }
+            }
+            
+            fout.cd();
+            surf02.Write();
+            surf16.Write();
+            surf50.Write();
+            surf84.Write();
+            surf98.Write();
+        }
 
         //***********************************************************************
         //***********************************************************************
