@@ -158,7 +158,7 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, co
 std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config, const PROspec &cv);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false);
-std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, bool scale = false);
+std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, bool scale = false);
 void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text);
 
 int main(int argc, char* argv[])
@@ -575,8 +575,9 @@ int main(int argc, char* argv[])
             post_hist.SetBinContent(i+1, bf.Spec()(i));
             pre_hist.SetBinContent(i+1, cv.Spec()(i));
         }
+        std::vector<TH1D> posteriors;
         std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
-        std::unique_ptr<TGraphAsymmErrors> post_err_band = getPostFitErrorBand(config, prop, *metric_to_use, best_fit);
+        std::unique_ptr<TGraphAsymmErrors> post_err_band = getPostFitErrorBand(config, prop, *metric_to_use, best_fit, posteriors);
         
         TPaveText chi2text(0.59, 0.50, 0.89, 0.59, "NDC");
         chi2text.AddText(hname.c_str());
@@ -584,6 +585,14 @@ int main(int argc, char* argv[])
         chi2text.SetBorderSize(0);
         chi2text.SetTextAlign(12);
         plot_channels((final_output_tag+"_PROfile_hists.pdf"), config, cv, bf, data, err_band.get(), post_err_band.get(), false, &chi2text);
+
+        TCanvas c;
+        c.Print((final_output_tag+"_postfit_posteriors.pdf[").c_str());
+        for(auto &h: posteriors) {
+            h.Draw("hist");
+            c.Print((final_output_tag+"_postfit_posteriors.pdf").c_str());
+        }
+        c.Print((final_output_tag+"_postfit_posteriors.pdf]").c_str());
 
         PROfile profile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
                 final_output_tag+"_PROfile", !systs_only_profile, nthread, best_fit,
@@ -1449,38 +1458,33 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     return ret;
 }
 
-std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, bool scale) {
-    Eigen::VectorXf cv = FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), best_fit, true).Spec();
-    Metropolis mh(simple_target{metric}, simple_proposal(metric, 0.2, {0,1}), best_fit, metric);
-    std::vector<Eigen::VectorXf> specs;
-    std::vector<TH1D> oned;
+std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, bool scale) {
+    // Fix physics parameters
+    std::vector<int> fixed_pars;
+    for(size_t i = 0; i < metric.GetModel().nparams; ++i) fixed_pars.push_back(i);
+
+    Metropolis mh(simple_target{metric}, simple_proposal(metric, 0.2, fixed_pars), best_fit, metric);
+
     for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
-        oned.emplace_back("", (";"+config.m_mcgen_variation_plotname_map.at(metric.GetSysts().spline_names[i])).c_str(), 60, -3, 3);
-    TH2D twod("twod", ";sin^{2}2#theta_{#mu#mu};#Deltam^{2}", 100, -5, 0, 100, -2, 2);
+        posteriors.emplace_back("", (";"+config.m_mcgen_variation_plotname_map.at(metric.GetSysts().spline_names[i])).c_str(), 60, -3, 3);
+
+    Eigen::VectorXf cv = FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), best_fit, true).Spec();
     Eigen::MatrixXf L = metric.GetSysts().DecomposeFractionalCovariance(config, cv);
     std::random_device rd{};
     std::mt19937 rng(rd());
     std::normal_distribution<float> nd;
+    Eigen::VectorXf throws = Eigen::VectorXf::Constant(config.m_num_bins_total_collapsed, 0);
+
+    std::vector<Eigen::VectorXf> specs;
     const auto action = [&](const Eigen::VectorXf &value) {
-        Eigen::VectorXf throws = Eigen::VectorXf::Constant(config.m_num_bins_total_collapsed, 0);
+        int nphys = metric.GetModel().nparams;
         for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i)
             throws(i) = nd(rng);
         specs.push_back(CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), value, true).Spec())+L*throws);
-        twod.Fill(value(1), value(0));
         for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
-            oned[i].Fill(value(i+2));
+            posteriors[i].Fill(value(i+nphys));
     };
     mh.run(10'000, 50'000, action);
-    std::cout << "Spec size " << specs.size() << std::endl;
-    TCanvas c;
-    c.Print("metrolpolis_out.pdf[");
-    twod.Draw("colz");
-    c.Print("metrolpolis_out.pdf");
-    for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i) {
-        oned[i].Draw("hist");
-        c.Print("metrolpolis_out.pdf");
-    }
-    c.Print("metrolpolis_out.pdf]");
 
     //TODO: Only works with 1 mode/detector/channel
     cv = CollapseMatrix(config, cv);
@@ -1492,7 +1496,6 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
     for(int i = 0; i < cv.size(); ++i)
         tmphist.SetBinContent(i+1, cv(i));
     if(scale) tmphist.Scale(1, "width");
-    //std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(cv.size(), centers.data(), cv.data());
     std::unique_ptr<TGraphAsymmErrors> ret = std::make_unique<TGraphAsymmErrors>(&tmphist);
     for(int i = 0; i < cv.size(); ++i) {
         std::vector<float> binconts(specs.size());
@@ -1505,10 +1508,7 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
         float elo = std::abs((cv(i) - binconts[0.16*specs.size()])*scale_factor);
         ret->SetPointEYhigh(i, ehi);
         ret->SetPointEYlow(i, elo);
-
         log<LOG_DEBUG>(L"%1% || ErrorBand bin %2% %3% %4% %5% %6% %7%") % __func__ % i % cv(i) % ehi % elo % scale_factor % tmphist.GetBinContent(i+1);
-
-
     }
     return ret;
 }
