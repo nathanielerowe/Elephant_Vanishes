@@ -1470,8 +1470,7 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
         for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
             oned[i].Fill(value(i+2));
     };
-    size_t nerrorsample = 50000;
-    mh.run(10000, nerrorsample, action);
+    mh.run(10'000, 50'000, action);
     std::cout << "Spec size " << specs.size() << std::endl;
     TCanvas c;
     c.Print("metrolpolis_out.pdf[");
@@ -1603,7 +1602,7 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                         post_channel_errband->SetPointEYlow(bin, (*posterrband)->GetErrorYlow(bin+channel_start));
                     }
                     post_channel_errband->SetFillColor(kCyan);
-                    post_channel_errband->SetFillStyle(3335);
+                    post_channel_errband->SetFillStyle(3354);
                     leg->AddEntry(post_channel_errband, "post-fit #pm 1#sigma");
                     post_channel_errband->Draw("2 same");
                 }

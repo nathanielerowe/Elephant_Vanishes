@@ -43,7 +43,11 @@ public:
 
     void run(size_t burnin, size_t steps, std::optional<std::function<void(const Eigen::VectorXf&)>> action = {}) {
         for(size_t i = 0; i < burnin; i++) {
-            step();
+            if constexpr(Proposal_FN::has_tune) {
+                proposal.tune(step());
+            } else {
+                step();
+            }
         }
         for(size_t i = 0; i < steps; i++) {
             if(step() && action) (*action)(current);
@@ -66,11 +70,17 @@ struct simple_proposal {
     float width;
     std::vector<int> fixed;
     std::mt19937 rng;
+    static constexpr bool has_tune = true;
+    std::vector<bool> accepted_list;
+    size_t tune_calls = 0;
+    float last_acceptance = -1;
+    float last_shift;
 
     simple_proposal(PROmetric &metric, float width = 0.2, std::vector<int> fixed = {}) 
-        : metric(metric), width(width), fixed(fixed) {
+        : metric(metric), width(width), fixed(fixed), last_shift(width) {
         std::random_device rd{};
         rng.seed(rd());
+        accepted_list = std::vector(1000, false);
     }
 
     Eigen::VectorXf operator()(Eigen::VectorXf &current) {
@@ -108,6 +118,28 @@ struct simple_proposal {
             }
         }
         return prob;
+    }
+
+    void tune(bool accepted) {
+        accepted_list[tune_calls % 1000] = accepted;
+        if(++tune_calls % 1000 == 0) {
+            float acceptance = std::count(accepted_list.begin(), accepted_list.end(), true) / 1000.0f;
+            if(acceptance < 0.25 || acceptance > 0.35) {
+                if(std::abs(acceptance - 0.3) < std::abs(last_acceptance - 0.3)) {
+                    if(last_acceptance < 0) {
+                        width *= 1.25; // Default first step
+                        last_shift = 0.25 * width;
+                    } else {
+                        width += last_shift;
+                    }
+                } else { // Moved too far
+                    width += -0.5 * last_shift;
+                    last_shift *= -0.5;
+                }
+            }
+            for(size_t i = 0; i < 1000; ++i) accepted_list[i] = false;
+            last_acceptance = acceptance;
+        }
     }
 };
 
