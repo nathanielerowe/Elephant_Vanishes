@@ -1450,15 +1450,22 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
 }
 
 std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, bool scale) {
+    Eigen::VectorXf cv = FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), best_fit, true).Spec();
     Metropolis mh(simple_target{metric}, simple_proposal(metric, 0.2, {0,1}), best_fit, metric);
     std::vector<Eigen::VectorXf> specs;
     std::vector<TH1D> oned;
     for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
         oned.emplace_back("", (";"+config.m_mcgen_variation_plotname_map.at(metric.GetSysts().spline_names[i])).c_str(), 60, -3, 3);
     TH2D twod("twod", ";sin^{2}2#theta_{#mu#mu};#Deltam^{2}", 100, -5, 0, 100, -2, 2);
-    Eigen::MatrixXf L = metric.GetSysts().
+    Eigen::MatrixXf L = metric.GetSysts().DecomposeFractionalCovariance(config, cv);
+    std::random_device rd{};
+    std::mt19937 rng(rd());
+    std::normal_distribution<float> nd;
     const auto action = [&](const Eigen::VectorXf &value) {
-        specs.push_back(CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), value, true).Spec()));
+        Eigen::VectorXf throws = Eigen::VectorXf::Constant(config.m_num_bins_total_collapsed, 0);
+        for(size_t i = 0; i < config.m_num_bins_total_collapsed; ++i)
+            throws(i) = nd(rng);
+        specs.push_back(CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), value, true).Spec())+L*throws);
         twod.Fill(value(1), value(0));
         for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
             oned[i].Fill(value(i+2));
@@ -1477,7 +1484,7 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
     c.Print("metrolpolis_out.pdf]");
 
     //TODO: Only works with 1 mode/detector/channel
-    Eigen::VectorXf cv = CollapseMatrix(config, FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), best_fit, true).Spec());
+    cv = CollapseMatrix(config, cv);
     std::vector<float> edges = config.GetChannelBinEdges(0);
     std::vector<float> centers;
     for(size_t i = 0; i < edges.size() - 1; ++i)
@@ -1596,7 +1603,7 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                         post_channel_errband->SetPointEYlow(bin, (*posterrband)->GetErrorYlow(bin+channel_start));
                     }
                     post_channel_errband->SetFillColor(kCyan);
-                    post_channel_errband->SetFillStyle(3345);
+                    post_channel_errband->SetFillStyle(3335);
                     leg->AddEntry(post_channel_errband, "post-fit #pm 1#sigma");
                     post_channel_errband->Draw("2 same");
                 }

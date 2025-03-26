@@ -64,10 +64,11 @@ struct simple_target {
 struct simple_proposal {
     PROmetric &metric;
     float width;
+    std::vector<int> fixed;
     std::mt19937 rng;
 
-    simple_proposal(PROmetric &metric, float width = 0.2) 
-        : metric(metric), width(width) {
+    simple_proposal(PROmetric &metric, float width = 0.2, std::vector<int> fixed = {}) 
+        : metric(metric), width(width), fixed(fixed) {
         std::random_device rd{};
         rng.seed(rd());
     }
@@ -76,6 +77,7 @@ struct simple_proposal {
         Eigen::VectorXf ret = current;
         int nparams = metric.GetModel().nparams;
         for(int i = 0; i < ret.size(); ++i) {
+            if(std::find(fixed.begin(), fixed.end(), i) != std::end(fixed)) continue;
             if(i < nparams) {
                 float lo = metric.GetModel().lb(i);
                 if(std::isinf(lo)) lo = -5;
@@ -95,6 +97,7 @@ struct simple_proposal {
     float P(Eigen::VectorXf &value, Eigen::VectorXf &given) {
         float prob = 1.0;
         for(int i = 0; i < value.size(); ++i) {
+            if(std::find(fixed.begin(), fixed.end(), i) != std::end(fixed)) continue;
             if(i < metric.GetModel().nparams) {
                 float diff = metric.GetModel().ub(i) - metric.GetModel().lb(i);
                 if(std::isinf(diff)) diff = 5;
