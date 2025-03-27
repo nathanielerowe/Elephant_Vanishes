@@ -408,7 +408,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
         if(std::isinf(hi)) hi = hi < 0 ? -5 : 5;
         std::vector<float> tmp = findMinAndBounds(g.get(),1.0, lo, hi);
         barvalues.push_back(float(count)+0.5);
-        barvalues_err.push_back(0.4);
+        barvalues_err.push_back(0.3);
         bfvalues.push_back(tmp[0]);
         values1_down.push_back(tmp[1]);
         values1_up.push_back(tmp[2]);
@@ -503,7 +503,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     delete c;
 
     //Next version
-    TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 40*nparams, 400);
+    TCanvas *c2 =  new TCanvas((filename+"1sigma").c_str(), (filename+"1sigma").c_str() , 20*nparams, 400);
     c2->cd();
     c2->SetBottomMargin(0.25);
     c2->SetRightMargin(0.05);
@@ -517,8 +517,8 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     h1->SetFillColor(kBlue-7);
     h1->SetStats(0);
     //h1->SetMinimum(min(-1.2,minVal*1.2));
-    h1->SetMinimum(minVal*1.2);
-    h1->SetMaximum(maxVal*1.2);
+    h1->SetMinimum(minVal*1.1);
+    h1->SetMaximum(maxVal*1.1);
 
     h1->GetXaxis()->SetNdivisions(barvalues.size());  // Set number of tick marks
     h1->GetXaxis()->SetLabelSize(0);  // Hide default numerical labels
@@ -527,6 +527,8 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     h1->Draw("A2");
     //h1->GetYaxis()->SetTitle("#sigma Shift");
     onesig = *h1;
+    h1->GetYaxis()->SetTitle("Posterior 1#sigma Error");
+    h1->GetYaxis()->SetTitleOffset(0.8);
 
     float y_min = h1->GetMinimum();
     for (size_t i = 0; i < barvalues.size(); ++i) {
@@ -555,6 +557,18 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
     l.SetLineColor(kBlack);
     l.SetLineWidth(1);
     l.Draw();
+    TLine l2(0,-1,nBins+0.5,-1);
+    l2.SetLineStyle(3);
+    l2.SetLineColor(kBlack);
+    l2.SetLineWidth(1);
+    l2.Draw();
+    TLine l3(0,1,nBins+0.5,1);
+    l3.SetLineStyle(3);
+    l3.SetLineColor(kBlack);
+    l3.SetLineWidth(1);
+    l3.Draw();
+
+
 
     for (int i = 0; i < nBins; ++i) {
         TMarker* initstar = new TMarker(i+0.5, init_seed[i], 29);
