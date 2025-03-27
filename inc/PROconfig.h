@@ -66,12 +66,15 @@ namespace PROfit{
       std::shared_ptr<TTreeFormula> branch_true_pdg_formula=nullptr;
       std::shared_ptr<TTreeFormula> branch_true_proton_mom_formula=nullptr;
       std::shared_ptr<TTreeFormula> branch_true_proton_costh_formula=nullptr;
+      std::vector<std::shared_ptr<TTreeFormula>> branch_other_values_formulas;
 
       std::string true_param_name;
       std::string true_L_name;
       std::string pdg_name;
       int model_rule;
       int include_systematics;
+
+      std::vector<std::string> other_param_names;
 
       bool hist_reweight;
       std::string true_proton_mom_name;
@@ -91,6 +94,20 @@ namespace PROfit{
       void SetTrueL(const std::string& true_L_def){true_L_name = true_L_def; return;}
       void SetModelRule(const std::string & model_rule_def){model_rule = std::stoi(model_rule_def); return;}
       void SetIncludeSystematics(int insyst){include_systematics = insyst; return;} 
+
+      void SetOtherParams(const std::string &other_parameter_def) { 
+          size_t start = 0;
+          while(start < other_parameter_def.size()) {
+              size_t colon = other_parameter_def.find_first_of(':', start);
+              if(colon == std::string::npos) {
+                  other_param_names.push_back(other_parameter_def.substr(start, other_parameter_def.size()-start));
+                  start = other_parameter_def.size();
+              } else {
+                  other_param_names.push_back(other_parameter_def.substr(start, colon - start));
+                  start = colon + 1;
+              }
+          }
+      }
       
       void SetReweight(bool inbool){ hist_reweight = inbool; return;}
       bool GetReweight() const {return hist_reweight;}
@@ -150,6 +167,9 @@ namespace PROfit{
       //Note: when called, if the corresponding TreeFormula is not linked to a TTree, value of ZERO (0) will be returned.
       template <typename T=float>
 	T GetTrueLeadProtonCosth() const;
+
+      template<typename T=float>
+    std::vector<T> GetOtherValues() const;
 
     };
 
@@ -247,9 +267,12 @@ namespace PROfit{
             std::vector<std::vector<float> > m_channel_truebin_edges;
             std::vector<std::vector<float> > m_channel_truebin_widths;
 
+            // Same but for "other" vars
+            std::vector<std::vector<size_t>> m_channel_num_other_bins;
+            std::vector<std::vector<std::vector<float>>> m_channel_other_bin_edges;
+            std::vector<std::vector<std::vector<float>>> m_channel_other_bin_widths;
 
             bool m_has_oscillation_patterns;
-
 
             //the xml names are the way we track which channels and subchannels we want to use later
             std::vector<std::string> m_mode_names; 			
@@ -261,6 +284,7 @@ namespace PROfit{
             std::vector<std::string> m_channel_names; 		
             std::vector<std::string> m_channel_plotnames; 		
             std::vector<std::string> m_channel_units; 		
+            std::vector<std::vector<std::string>> m_channel_other_units;
 
             std::vector<std::vector<std::string >> m_subchannel_names; 
             std::vector<std::vector<std::string >> m_subchannel_plotnames; 
@@ -275,9 +299,17 @@ namespace PROfit{
             size_t m_num_truebins_mode_block;
             size_t m_num_truebins_total;
 
+            size_t m_num_other_bins_detector_block;
+            size_t m_num_other_bins_mode_block;
+            size_t m_num_other_bins_total;
+
             size_t m_num_bins_detector_block_collapsed;
             size_t m_num_bins_mode_block_collapsed;
             size_t m_num_bins_total_collapsed;
+
+            size_t m_num_other_bins_detector_block_collapsed;
+            size_t m_num_other_bins_mode_block_collapsed;
+            size_t m_num_other_bins_total_collapsed;
 
             /* Eigen Matrix for collapsing subchannels->channels*/
             Eigen::MatrixXf collapsing_matrix;
@@ -449,6 +481,15 @@ namespace PROfit{
             else{
                             return static_cast<T>(branch_true_proton_costh_formula->EvalInstance());
             }
+        }
+
+    template <typename T>
+        std::vector<T> BranchVariable::GetOtherValues() const {
+            std::vector<T> ret;
+            for(const auto &formula: branch_other_values_formulas) {
+                ret.push_back(formula->EvalInstance());
+            }
+            return ret;
         }
 
     //----------- ABOVE: Definition of BranchVariable templated member function. END ---------------

@@ -389,6 +389,65 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 m_channel_truebin_widths.push_back(std::vector<float>());
             }
 
+            tinyxml2::XMLElement *pBinO = pChan->FirstChildElement("otherbins");
+            m_channel_num_other_bins.push_back({});
+            m_channel_other_bin_edges.push_back({});
+            m_channel_other_bin_widths.push_back({});
+            m_channel_other_units.push_back({});
+            while(pBinO){
+                const char* omin = pBinO->Attribute("min");
+                const char* omax = pBinO->Attribute("max");
+                const char* onbins = pBinO->Attribute("nbins");
+                const char* oedges = pBinO->Attribute("edges");
+                const char* ounits = pBinO->Attribute("units");
+                if(omin==NULL && omax==NULL && onbins==NULL && oedges == NULL) {
+                    log<LOG_DEBUG>(L"%1% || This variable has a NO other binning (or attribute min,max,nbins)  ") % __func__ ;
+                    m_channel_num_other_bins.back().push_back(0);
+                    m_channel_other_bin_edges.back().push_back(std::vector<float>());
+                    m_channel_other_bin_widths.back().push_back(std::vector<float>());
+                    m_channel_other_units.back().push_back("");
+                }else{
+                    log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning.   ") % __func__  ;
+
+                    int nbinsp;
+                    std::vector<float> binedge, binwidth;
+
+                    // use edges if defined, otherwise use min-max-nbins 
+                    if(oedges != NULL){
+                        std::stringstream other_iss(oedges);
+                        float number;
+                        while (other_iss >> number){
+                            binedge.push_back(number);
+                        }
+
+                        nbinsp = binedge.size() - 1;
+                        for(int i = 0; i != nbinsp; ++i){
+                            binwidth.push_back(binedge[i+1] - binedge[i]);
+                        }
+
+                        log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with  %2% bins, Edges defined as %3%    ") % __func__ % nbinsp % binedge ;
+                    }else{
+                        float minp = strtod(omin, &end);
+                        float maxp = strtod(omax, &end);
+                        nbinsp = (int)strtod(onbins, &end);
+                        float step = (maxp-minp)/(float)nbinsp;
+                        for(int i=0; i<nbinsp; i++){
+                            binedge.push_back(minp+i*step);
+                        }
+                        binedge.push_back(maxp);
+                        binwidth.resize(nbinsp, step);
+                        log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning with min %2%, max %3% and nbins %4%   ") % __func__ % minp % maxp % nbinsp ;
+                        log<LOG_DEBUG>(L"%1% || Which corresponds to edges %2%   ") % __func__ % binedge ;
+                    }
+
+                    m_channel_num_other_bins.back().push_back(nbinsp);
+                    m_channel_other_bin_edges.back().push_back(binedge);
+                    m_channel_other_bin_widths.back().push_back(binwidth);
+                    m_channel_other_units.back().push_back(ounits ? ounits : "");
+                }
+                pBinO = pBinO->NextSiblingElement("otherbins");
+            }
+
             // Now loop over all this channels subchanels. Not the names must be UNIQUE!!
             tinyxml2::XMLElement *pSubChan;
             m_subchannel_bool.push_back({});
@@ -630,6 +689,9 @@ int PROconfig::LoadFromXML(const std::string &filename){
 
                 if(pBranch->Attribute("true_param_name")) {
                     TEMP_branch_variables.back()->SetTrueParam(pBranch->Attribute("true_param_name"));
+                }
+                if(pBranch->Attribute("other_param_names")) {
+                    TEMP_branch_variables.back()->SetOtherParams(pBranch->Attribute("other_param_names"));
                 }
                 if(pBranch->Attribute("pdg_name")) {
                     TEMP_branch_variables.back()->SetPDG(pBranch->Attribute("pdg_name"));
