@@ -330,7 +330,7 @@ int main(int argc, char* argv[])
     PROsyst systs(prop, config, systsstructs.front(), shapeonly);
     std::vector<PROsyst> other_systs;
     for(size_t i = 0; i < config.m_num_other_vars; ++i)
-        other_systs.emplace_back(prop, config, systsstructs.at(i+1), shapeonly);
+        other_systs.emplace_back(prop, config, systsstructs.at(i+1), shapeonly, i);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
     std::unique_ptr<PROmodel> null_model = std::make_unique<NullModel>(prop);
 

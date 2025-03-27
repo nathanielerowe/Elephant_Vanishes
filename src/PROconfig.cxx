@@ -1585,6 +1585,43 @@ void PROconfig::construct_collapsing_matrix(){
             collapsing_matrix(Eigen::seqN(row_block_start, m_num_bins_detector_block), Eigen::seqN(col_block_start, m_num_bins_detector_block_collapsed)) = block_collapser;
         }
     }
+    for(size_t io = 0; io < m_num_other_vars; ++io) {
+        other_collapsing_matrices.push_back(Eigen::MatrixXf::Zero(m_num_other_bins_total[io], m_num_other_bins_total_collapsed[io]));
+        log<LOG_INFO>(L"%1% || Creating Other %2% Collapsing Matrix. m_num_bins_total, m_num_bins_total_collapsed:  %3%  %4%") % __func__ % io % m_num_other_bins_total[io] % m_num_other_bins_total_collapsed[io];
+
+        //construct the matrix by detector block
+        Eigen::MatrixXf block_collapser = Eigen::MatrixXf::Zero(m_num_other_bins_detector_block[io], m_num_other_bins_detector_block_collapsed[io]);
+
+        size_t channel_row_start = 0, channel_col_start = 0;
+        for(size_t ic =0; ic != m_num_channels; ++ic){
+
+            //first, build matrix for each channel block
+            size_t total_num_bins_channel = m_num_subchannels[ic] * m_channel_num_other_bins[ic][io];
+
+            Eigen::MatrixXf channel_collapser = Eigen::MatrixXf::Zero(total_num_bins_channel, m_channel_num_other_bins[ic][io]);
+            for(size_t col = 0; col != m_channel_num_other_bins[ic][io]; ++col){
+                for(size_t subch = 0; subch != m_num_subchannels[ic]; ++subch){
+                    size_t row = subch * m_channel_num_other_bins[ic][io] + col;
+                    channel_collapser(row, col) = 1.0;
+                }
+            }
+
+            // now, copy this matrix to detector block
+            block_collapser(Eigen::seqN(channel_row_start, total_num_bins_channel), Eigen::seqN(channel_col_start, m_channel_num_other_bins[ic][io])) = channel_collapser;
+            channel_row_start += total_num_bins_channel;
+            channel_col_start += m_channel_num_other_bins[ic][io];
+        }
+
+        //okay! now stuff every detector block size_to the final collapse matrix
+        for(size_t im = 0; im != m_num_modes; ++im){
+            for(size_t id =0; id != m_num_detectors; ++id){
+                size_t row_block_start = im * m_num_other_bins_mode_block[io] + id * m_num_other_bins_detector_block[io];
+                size_t col_block_start = im * m_num_other_bins_mode_block_collapsed[io] + id * m_num_other_bins_detector_block_collapsed[io];
+                other_collapsing_matrices.back()(Eigen::seqN(row_block_start, m_num_other_bins_detector_block[io]), Eigen::seqN(col_block_start, m_num_other_bins_detector_block_collapsed[io])) = block_collapser;
+            }
+        }
+
+    }
     return;
 }
 

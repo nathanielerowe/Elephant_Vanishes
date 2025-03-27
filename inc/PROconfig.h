@@ -2,6 +2,7 @@
 #define PROCONFIG_H_
 
 // STANDARD
+#include <Eigen/Eigen>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -315,6 +316,7 @@ namespace PROfit{
 
             /* Eigen Matrix for collapsing subchannels->channels*/
             Eigen::MatrixXf collapsing_matrix;
+            std::vector<Eigen::MatrixXf> other_collapsing_matrices;
 
             //This section entirely for montecarlo generation of a covariance matrix or PROspec 
             bool m_write_out_variation;
@@ -373,6 +375,8 @@ namespace PROfit{
              */
             inline 
                 Eigen::MatrixXf GetCollapsingMatrix() const {return collapsing_matrix; }
+            inline
+                Eigen::MatrixXf GetCollapsingMatrix(int other_index) const {return other_collapsing_matrices[other_index]; }
 
             /* Function: Calculate how big each mode block and decector block are, for any given number of channels/subchannels, before and after the collapse
              * Note: only consider mode/detector/channel/subchannels that are actually used 

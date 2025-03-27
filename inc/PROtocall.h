@@ -68,6 +68,12 @@ namespace PROfit{
     /* Function: given a full vector (that contains reco), collapse the vector */
     Eigen::VectorXf CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXf& full_vector);
 
+    /* Function: given a full matrix, collapse the matrix */
+    Eigen::MatrixXf CollapseMatrix(const PROconfig &inconfig, const Eigen::MatrixXf& full_matrix, int other_index);
+
+    /* Function: given a full vector (that contains reco), collapse the vector */
+    Eigen::VectorXf CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXf& full_vector, int other_index);
+
     std::string getIcon();
 
     template <typename T>

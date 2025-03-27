@@ -16,9 +16,6 @@ namespace PROfit{
 
 
     int FindLocalBin(const PROconfig &inconfig, float reco_value, int channel_index){
-
-                   
-        
         //find local bin 
         const std::vector<float>& bin_edges = inconfig.GetChannelBinEdges(channel_index);
         auto pos_iter = std::upper_bound(bin_edges.begin(), bin_edges.end(), reco_value);
@@ -51,7 +48,6 @@ namespace PROfit{
 
 
     int FindLocalTrueBin(const PROconfig &inconfig, float true_value, int channel_index){
-
         //find local bin 
         const std::vector<float>& bin_edges = inconfig.GetChannelTrueBinEdges(channel_index);
         auto pos_iter = std::upper_bound(bin_edges.begin(), bin_edges.end(), true_value);
@@ -131,8 +127,31 @@ namespace PROfit{
         return result_vector;
     }
 
+    Eigen::MatrixXf CollapseMatrix(const PROconfig &inconfig, const Eigen::MatrixXf& full_matrix, int other_index){
+        Eigen::MatrixXf collapsing_matrix = inconfig.GetCollapsingMatrix(other_index);
+        
+        int num_bin_before_collapse = collapsing_matrix.rows();
+        if(full_matrix.rows() != num_bin_before_collapse || full_matrix.cols() != num_bin_before_collapse){
+            log<LOG_ERROR>(L"%1% || Matrix dimension doesn't match expected size. Provided matrix: %2% x %3%. Expected matrix size: %4% x %5%") % __func__ % full_matrix.rows() % full_matrix.cols() % num_bin_before_collapse% num_bin_before_collapse;
+            log<LOG_ERROR>(L"Terminating.");
+            exit(EXIT_FAILURE);
+        }
 
-    
+        //log<LOG_DEBUG>(L"%1% || CT  %2% x %3%. Full matrix: %4% x %5% ") % __func__ % collapsing_matrix.transpose().rows() %  collapsing_matrix.transpose().cols() % full_matrix.rows() % full_matrix.cols();
+        Eigen::MatrixXf result_matrix   = collapsing_matrix.transpose()*full_matrix*collapsing_matrix;
+        return result_matrix;
+    }
+
+    Eigen::VectorXf CollapseMatrix(const PROconfig &inconfig, const Eigen::VectorXf& full_vector, int other_index){
+        Eigen::MatrixXf collapsing_matrix = inconfig.GetCollapsingMatrix(other_index);
+        if(full_vector.size() != collapsing_matrix.rows()){
+            log<LOG_ERROR>(L"%1% || Vector dimension doesn't match expected size. Provided vector size: %2% . Expected size: %3%") % __func__ % full_vector.size() % collapsing_matrix.rows();
+            log<LOG_ERROR>(L"Terminating.");
+            exit(EXIT_FAILURE);
+        }
+        Eigen::VectorXf result_vector = collapsing_matrix.transpose() * full_vector;
+        return result_vector;
+    }
 
     std::string getIcon(){
 
@@ -161,7 +180,4 @@ $::::::::::::::$$                  P::::::::P          R::::::R     R:::::R OO::
                                                                                                                                                                                     
                return icon;
     };
-                                                                                                                                                                                    
-                                                                                                                                                                                    
-
 };
