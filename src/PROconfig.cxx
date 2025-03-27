@@ -9,6 +9,7 @@ PROconfig::PROconfig(const std::string &xml, bool rate_only):
     m_num_detectors(0),
     m_num_channels(0),
     m_num_modes(0),
+    m_num_other_vars(0),
     m_num_bins_detector_block(0),
     m_num_bins_mode_block(0),
     m_num_bins_total(0),
@@ -501,8 +502,14 @@ int PROconfig::LoadFromXML(const std::string &filename){
             pChan = pChan->NextSiblingElement("channel");
         }
     }//end channel loop
-
-
+    // Assume all channels have the same number of "other" vars
+    m_num_other_vars = m_channel_other_bin_edges[0].size();
+    m_num_other_bins_total = std::vector<size_t>(m_num_other_vars, 0);
+    m_num_other_bins_total_collapsed = std::vector<size_t>(m_num_other_vars, 0);
+    m_num_other_bins_mode_block = std::vector<size_t>(m_num_other_vars, 0);
+    m_num_other_bins_mode_block_collapsed = std::vector<size_t>(m_num_other_vars, 0);
+    m_num_other_bins_detector_block = std::vector<size_t>(m_num_other_vars, 0);
+    m_num_other_bins_detector_block_collapsed = std::vector<size_t>(m_num_other_vars, 0);
 
     //Now onto mcgen, for CV specs or for covariance generation
     tinyxml2::XMLElement *pMC, *pWeiMaps, *pList, *pCorrelations, *pSpec, *pShapeOnlyMap;
@@ -1020,15 +1027,27 @@ void PROconfig::CalcTotalBins(){
         m_num_bins_detector_block += m_num_subchannels[i]*m_channel_num_bins[i];
         m_num_truebins_detector_block += m_num_subchannels[i]*m_channel_num_truebins[i];
         m_num_bins_detector_block_collapsed += m_channel_num_bins[i];
+        for(size_t io = 0; io < m_num_other_vars; ++io) {
+            m_num_other_bins_detector_block[io] += m_num_subchannels[i]*m_channel_num_other_bins[i][io];
+            m_num_other_bins_detector_block_collapsed[io] += m_channel_num_other_bins[i][io];
+        }
     }
 
     m_num_bins_mode_block = m_num_bins_detector_block *  m_num_detectors;
     m_num_truebins_mode_block = m_num_truebins_detector_block *  m_num_detectors;
     m_num_bins_mode_block_collapsed = m_num_bins_detector_block_collapsed * m_num_detectors;
+    for(size_t io = 0; io < m_num_other_vars; ++io) {
+        m_num_other_bins_mode_block[io] = m_num_other_bins_detector_block[io] * m_num_detectors;
+        m_num_other_bins_mode_block_collapsed[io] = m_num_other_bins_detector_block_collapsed[io] * m_num_detectors;
+    }
 
     m_num_bins_total = m_num_bins_mode_block * m_num_modes;
     m_num_truebins_total = m_num_truebins_mode_block * m_num_modes;
     m_num_bins_total_collapsed = m_num_bins_mode_block_collapsed * m_num_modes;
+    for(size_t io = 0; io < m_num_other_vars; ++io) {
+        m_num_other_bins_total[io] = m_num_other_bins_mode_block[io] * m_num_modes;
+        m_num_other_bins_total_collapsed[io] = m_num_other_bins_mode_block_collapsed[io] * m_num_modes;
+    }
 
     this->generate_index_map();
     return;
@@ -1069,6 +1088,11 @@ size_t PROconfig::GetCollapsedGlobalBinStart(size_t channel_index) const{
 size_t PROconfig::GetGlobalTrueBinStart(size_t subchannel_index) const{
     size_t index = this->find_equal_index(m_vec_subchannel_index, subchannel_index);
     return m_vec_global_true_index_start[index];
+}
+
+size_t PROconfig::GetGlobalOtherBinStart(size_t subchannel_index, size_t other_index) const{
+    size_t index = this->find_equal_index(m_vec_subchannel_index, subchannel_index);
+    return m_vec_global_other_index_start[other_index][index];
 }
 
 size_t PROconfig::GetSubchannelIndexFromGlobalBin(size_t global_reco_index) const {
@@ -1114,6 +1138,29 @@ const std::vector<float>& PROconfig::GetChannelTrueBinEdges(size_t channel_index
     }
 
     return m_channel_truebin_edges[channel_index];
+}
+
+size_t PROconfig::GetChannelNOtherBins(size_t channel_index, size_t other_index) const{
+    if(channel_index >= m_num_channels){
+        log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
+        log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+    return m_channel_num_other_bins[channel_index][other_index];
+}
+
+const std::vector<float>& PROconfig::GetChannelOtherBinEdges(size_t channel_index, size_t other_index) const{
+
+    //check for out of bound
+    if(channel_index >= m_num_channels){
+        log<LOG_ERROR>(L"%1% || Given channel index: %2% is out of bound") % __func__ % channel_index;
+        log<LOG_ERROR>(L"%1% || Total number of channels : %2%") % __func__ % m_num_channels;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+
+    return m_channel_other_bin_edges[channel_index][other_index];
 }
 
 
@@ -1174,9 +1221,14 @@ void PROconfig::remove_unused_channel(){
         std::vector<std::vector<float>> temp_channel_truebin_edges(m_num_channels, std::vector<float>());
         std::vector<std::vector<float>> temp_channel_truebin_widths(m_num_channels, std::vector<float>());
 
+        std::vector<std::vector<size_t>> temp_channel_num_other_bins(m_num_channels);
+        std::vector<std::vector<std::vector<float>>> temp_channel_other_bin_edges(m_num_channels);
+        std::vector<std::vector<std::vector<float>>> temp_channel_other_bin_widths(m_num_channels);
+
         std::vector<std::string> temp_channel_names(m_num_channels);
         std::vector<std::string> temp_channel_plotnames(m_num_channels);
         std::vector<std::string> temp_channel_units(m_num_channels);
+        std::vector<std::vector<std::string>> temp_channel_other_units(m_num_channels);
         for(size_t i=0, chan_index = 0; i< m_channel_bool.size(); ++i){
             if(m_channel_bool[i]){
                 temp_channel_num_bins[chan_index] = m_channel_num_bins[i];
@@ -1190,6 +1242,11 @@ void PROconfig::remove_unused_channel(){
                 temp_channel_names[chan_index] = m_channel_names[i];
                 temp_channel_plotnames[chan_index] = m_channel_plotnames[i];
                 temp_channel_units[chan_index] = m_channel_units[i];
+
+                temp_channel_num_other_bins[chan_index] = m_channel_num_other_bins[i];
+                temp_channel_other_bin_edges[chan_index] = m_channel_other_bin_edges[i];
+                temp_channel_other_bin_widths[chan_index] = m_channel_other_bin_widths[i];
+                temp_channel_other_units[chan_index] = m_channel_other_units[i];
 
                 ++chan_index;
             }
@@ -1389,13 +1446,21 @@ void PROconfig::generate_index_map(){
     m_vec_channel_index.clear();
     m_vec_global_reco_index_start.clear();
     m_vec_global_true_index_start.clear();
+    m_vec_global_other_index_start.clear();
 
+    for(size_t io = 0; io < m_num_other_vars; ++io) {
+        m_vec_global_other_index_start.emplace_back();
+    }
 
     size_t global_subchannel_index = 0;
     for(size_t im = 0; im < m_num_modes; im++){
 
         size_t mode_bin_start = im*m_num_bins_mode_block;
         size_t mode_truebin_start = im*m_num_truebins_mode_block;
+        std::vector<size_t> mode_other_start;
+        for(size_t io = 0; io < m_num_other_vars; ++io) {
+            mode_other_start.push_back(im*m_num_other_bins_mode_block[io]);
+        }
 
         for(size_t id =0; id < m_num_detectors; id++){
 
@@ -1405,6 +1470,12 @@ void PROconfig::generate_index_map(){
             size_t detector_truebin_start = id*m_num_truebins_detector_block;
             size_t channel_truebin_start = 0;
 
+            std::vector<size_t> detector_other_start;
+            std::vector<size_t> channel_other_start;
+            for(size_t io = 0; io < m_num_other_vars; ++io) {
+                detector_other_start.push_back(im*m_num_other_bins_detector_block[io]);
+                channel_other_start.push_back(0);
+            }
 
             for(size_t ic = 0; ic < m_num_channels; ic++){
                 for(size_t sc = 0; sc < m_num_subchannels[ic]; sc++){
@@ -1419,10 +1490,18 @@ void PROconfig::generate_index_map(){
                     m_vec_global_reco_index_start.push_back(global_bin_index);
                     m_vec_global_true_index_start.push_back(global_truebin_index);
 
+                    for(size_t io = 0; io < m_num_other_vars; ++io) {
+                        size_t global_other_index = mode_other_start[io] + detector_other_start[io] + channel_other_start[io] + sc*m_channel_num_other_bins[ic][io];
+                        m_vec_global_other_index_start[io].push_back(global_other_index);
+                    }
+
                     ++global_subchannel_index;
                 }
                 channel_bin_start += m_channel_num_bins[ic]*m_num_subchannels[ic];
                 channel_truebin_start += m_channel_num_truebins[ic]*m_num_subchannels[ic];
+                for(size_t io = 0; io < m_num_other_vars; ++io) {
+                    channel_other_start[io] += 1;
+                }
             }
         }
     }

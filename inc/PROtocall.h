@@ -39,6 +39,19 @@ namespace PROfit{
     int FindGlobalTrueBin(const PROconfig &inconfig, float true_value, int subchannel_index);
     int FindGlobalTrueBin(const PROconfig &inconfig, float true_value, const std::string& subchannel_fullname);
 
+    /* Function: given a value for true variable, figure out which local bin in the histogram it belongs to
+     * Note: bin index start from 0, not 1
+     * Note: return value of -1 means the true value is out of range
+     */
+    int FindLocalOtherBin(const PROconfig &inconfig, float other_value, int channel_index, int other_index);
+
+    /* Function: given a value for truenstructed variable, figure out which global bin it belongs to
+     * Note: bin index start from 0, not 1
+     * Note: if  the true value is out of range, then return value of -1
+     */
+    int FindGlobalOtherBin(const PROconfig &inconfig, float other_value, int subchannel_index, int other_index);
+    int FindGlobalOtherBin(const PROconfig &inconfig, float other_value, const std::string& subchannel_fullname, int other_index);
+
 
     /* Function: given a global bin index in the full vector, return the index of the subchannle this bin belongs to
      * Parameter:

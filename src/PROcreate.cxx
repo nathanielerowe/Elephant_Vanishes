@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <iterator>
 #include <string>
 namespace PROfit {
 
@@ -498,6 +499,9 @@ namespace PROfit {
                     log<LOG_INFO>(L"%1% || Setting up leading proton momentum variable for this branch: %2%") % __func__ %  branch_variable->true_proton_mom_name.c_str();
                     branch_variable->branch_true_proton_costh_formula = std::make_shared<TTreeFormula>(("branch_costh_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_proton_costh_name.c_str(), chains[fid]);
                     log<LOG_INFO>(L"%1% || Setting up leading proton costh variable for this branch: %2%") % __func__ %  branch_variable->true_proton_costh_name.c_str();
+                }
+                for(const auto &name: branch_variable->other_param_names) {
+                    branch_variable->branch_other_values_formulas.push_back(std::make_shared<TTreeFormula>(("branch_other_form_"+std::to_string(fid) +"_" + std::to_string(ib)+"_"+name).c_str(), branch_variable->name.c_str(), chains[fid]));
                 }
 
 
@@ -1138,10 +1142,17 @@ namespace PROfit {
         float mc_weight = branch->GetMonteCarloWeight();
         mc_weight *= inconfig.m_plot_pot / mcpot;
 
+        std::vector<float> other_params = branch->GetOtherValues();
+
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 
         int model_rule = branch->GetModelRule();
 
+        std::vector<int> other_bin_indices;
+        for(size_t i = 0; i < other_params.size(); ++i) {
+            other_bin_indices.push_back(FindGlobalOtherBin(inconfig, other_params[i], subchannel_index, i));
+        }
+        
         if(global_bin < 0 )  //out of range
             return;
         if(global_true_bin < 0)
@@ -1158,6 +1169,7 @@ namespace PROfit {
         inprop.pmom.push_back((float)pmom);
         inprop.pcosth.push_back((float)pcosth);
         inprop.mcStatErr(global_bin) += 1;
+        inprop.other_bin_indices.push_back(other_bin_indices);
 
         if(!run_syst) return;
 

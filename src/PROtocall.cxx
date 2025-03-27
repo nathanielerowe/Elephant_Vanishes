@@ -65,6 +65,39 @@ namespace PROfit{
         return pos_iter - bin_edges.begin() - 1; 
     }
 
+    int FindLocalOtherBin(const PROconfig &inconfig, float other_value, int channel_index, int other_index) {
+        //find local bin 
+        const std::vector<float>& bin_edges = inconfig.GetChannelOtherBinEdges(channel_index, other_index);
+        auto pos_iter = std::upper_bound(bin_edges.begin(), bin_edges.end(), other_value);
+
+        //over/under-flow, don't care for now
+        if(pos_iter == bin_edges.end() || pos_iter == bin_edges.begin()){
+            log<LOG_DEBUG>(L"%1% || True value: %2% is in underflow or overflow bins, return bin of -1") % __func__ % other_value;
+            log<LOG_DEBUG>(L"%1% || Channel %2% has bin lower edge: %3% and bin upper edge: %4%") % __func__ % channel_index % *bin_edges.begin() % bin_edges.back();
+            return -1; 
+        }
+        return pos_iter - bin_edges.begin() - 1; 
+    }
+
+    int FindGlobalOtherBin(const PROconfig &inconfig, float other_value, int subchannel_index, int other_index) {
+        int global_bin_start = inconfig.GetGlobalOtherBinStart(subchannel_index, other_index);
+        int channel_index = inconfig.GetChannelIndex(subchannel_index);
+        if(inconfig.GetChannelNTrueBins(channel_index) == 0){
+            log<LOG_ERROR>(L"%1% || Subchannel %2% does not have true bins") % __func__ % subchannel_index;
+            log<LOG_ERROR>(L"%1% || Return global bin of -1") % __func__ ;
+            return -1;
+        }
+        int local_bin = FindLocalOtherBin(inconfig, other_value, channel_index, other_index);
+        return local_bin == -1 ? -1 : global_bin_start + local_bin;
+    }
+
+
+    int FindGlobalOtherBin(const PROconfig &inconfig, float other_value, const std::string& subchannel_fullname, int other_index) {
+        int subchannel_index = inconfig.GetSubchannelIndex(subchannel_fullname);
+        return FindGlobalOtherBin(inconfig, other_value, subchannel_index, other_index);
+    }
+
+
     int FindSubchannelIndexFromGlobalBin(const PROconfig &inconfig, int global_bin, bool reco_bin ){
         if(reco_bin)
             return inconfig.GetSubchannelIndexFromGlobalBin(global_bin);
