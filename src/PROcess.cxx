@@ -29,6 +29,15 @@ namespace PROfit {
         return myspectrum;
     }
 
+    PROspec FillOtherCVSpectrum(const PROconfig &inconfig, const PROpeller &inprop, size_t other_index){
+        PROspec myspectrum(inconfig.m_num_other_bins_total[other_index]);
+        for(size_t i = 0; i<inprop.trueLE.size(); ++i){
+            float add_w = inprop.added_weights[i]; 
+            myspectrum.Fill(inprop.other_bin_indices[other_index][i], add_w);
+        }
+        return myspectrum;
+    }
+
     PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROmodel &inmodel, const Eigen::VectorXf &params, bool binned){
         PROspec myspectrum(inconfig.m_num_bins_total);
         Eigen::VectorXf phys   = params.segment(0, inmodel.nparams);

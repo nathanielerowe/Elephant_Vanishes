@@ -1095,6 +1095,18 @@ size_t PROconfig::GetGlobalOtherBinStart(size_t subchannel_index, size_t other_i
     return m_vec_global_other_index_start[other_index][index];
 }
 
+size_t PROconfig::GetCollapsedGlobalOtherBinStart(size_t channel_index, size_t other_index) const{
+    if(channel_index >= m_num_channels) {
+        log<LOG_ERROR>(L"%1% || Requested bin start of channel %2%, but only %3% channels are known.")
+            % __func__ % channel_index % m_num_channels;
+        log<LOG_ERROR>(L"Terminating.");
+        exit(EXIT_FAILURE);
+    }
+    size_t index = 0;
+    for(size_t i = 0; i < channel_index; ++i) index += m_channel_num_other_bins[i][other_index];
+    return index;
+}
+
 size_t PROconfig::GetSubchannelIndexFromGlobalBin(size_t global_reco_index) const {
     size_t index = this->find_less_or_equal_index(m_vec_global_reco_index_start, global_reco_index); 
     return m_vec_subchannel_index[index];

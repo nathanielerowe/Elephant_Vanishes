@@ -60,7 +60,7 @@ public:
     /* Function: create PROspec of given size */
     PROdata(size_t num_bins);
 
-    TH1D toTH1D(const PROconfig& inconfig, int channel_index) const;
+    TH1D toTH1D(const PROconfig& inconfig, int channel_index, int other_index = -1) const;
 
     void toROOT(const PROconfig& inconfig, const std::string& output_name);
 

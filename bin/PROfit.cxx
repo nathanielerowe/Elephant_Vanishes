@@ -154,12 +154,12 @@ void fc_worker(fc_args args) {
 }
 
 //some helper functions for PROplot
-std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false);
+std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false, int other_index = -1);
 std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config, const PROspec &cv);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false);
 std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, bool scale = false);
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text);
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text, bool binwidth_scale = false, int other_index = -1);
 
 int main(int argc, char* argv[])
 {
@@ -828,47 +828,17 @@ int main(int argc, char* argv[])
         //***********************************************************************
     }
     if(*proplot_command){
-
-
-        TCanvas c;
-
-
-        c.Print((final_output_tag +"_PROplot_CV.pdf"+ "[").c_str(), "pdf");
         PROspec spec = FillCVSpectrum(config, prop, !eventbyevent);
+        plot_channels(final_output_tag+"_PROplot_CV.pdf", config, spec, {}, {}, {}, {}, true, NULL, binwidth_scale);
+        std::vector<PROspec> other_cvs;
+        for(size_t io = 0; io < config.m_num_other_vars; ++io) {
+            other_cvs.push_back(FillOtherCVSpectrum(config, prop, io));
+            plot_channels(final_output_tag+"_other_"+std::to_string(io)+"_PROplot_CV.pdf", config, other_cvs.back(), {}, {}, {}, {}, true, NULL, binwidth_scale, io);
+        }
 
         std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, binwidth_scale);
-        size_t global_subchannel_index = 0;
-        size_t global_channel_index = 0;
-        for(size_t im = 0; im < config.m_num_modes; im++){
-            for(size_t id =0; id < config.m_num_detectors; id++){
-                for(size_t ic = 0; ic < config.m_num_channels; ic++){
-                    std::unique_ptr<THStack> s = std::make_unique<THStack>((std::to_string(global_channel_index)).c_str(),(std::to_string(global_channel_index)).c_str());
-                    std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
-                    leg->SetFillStyle(0);
-                    leg->SetLineWidth(0);
-                    for(size_t sc = 0; sc < config.m_num_subchannels[ic]; sc++){
-                        const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
-                        s->Add(cv_hists[subchannel_name].get());
-                        leg->AddEntry(cv_hists[subchannel_name].get(), config.m_subchannel_plotnames[ic][sc].c_str() ,"f");
-                        ++global_subchannel_index;
-                    }
 
-                    s->Draw("hist");
-                    leg->Draw();
-
-                    s->SetTitle((config.m_mode_names[im]  +" "+ config.m_detector_names[id]+" "+ config.m_channel_names[ic]).c_str());
-                    s->GetXaxis()->SetTitle(config.m_channel_units[ic].c_str());
-                    if(binwidth_scale)
-                        s->GetYaxis()->SetTitle("Events/GeV");
-                    else
-                        s->GetYaxis()->SetTitle("Events");
-
-                    c.Print((final_output_tag+"_PROplot_CV.pdf").c_str(), "pdf");
-                }
-            }
-        }
-        c.Print((final_output_tag+"_PROplot_CV.pdf" + "]").c_str(), "pdf");
-
+        TCanvas c;
         if(osc_params.size()) {
 
             c.Print((final_output_tag +"_PROplot_Osc.pdf"+ "[").c_str(), "pdf");
@@ -982,8 +952,8 @@ int main(int argc, char* argv[])
         //errorband
         //
         c.Print((final_output_tag+"_PROplot_ErrorBand.pdf" + "[").c_str(), "pdf");
-        global_subchannel_index = 0;
-        global_channel_index = 0;
+        int global_subchannel_index = 0;
+        int global_channel_index = 0;
 
         std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale );
         for(size_t im = 0; im < config.m_num_modes; im++){
@@ -1308,7 +1278,7 @@ int main(int argc, char* argv[])
 
 //******************************** Functions to help plotting, move to a src later ************************************
 
-std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, const PROconfig& inconfig, bool scale) {
+std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, const PROconfig& inconfig, bool scale, int other_index) {
     std::map<std::string, std::unique_ptr<TH1D>> hists;  
 
     size_t global_subchannel_index = 0;
@@ -1320,7 +1290,7 @@ std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec &spec, con
                     const std::string& subchannel_name  = inconfig.m_fullnames[global_subchannel_index];
                     const std::string& color = inconfig.m_subchannel_colors[ic][sc];
                     int rcolor = color == "NONE" ? kRed - 7 : inconfig.HexToROOTColor(color);
-                    std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(spec.toTH1D(inconfig, global_subchannel_index));
+                    std::unique_ptr<TH1D> htmp = std::make_unique<TH1D>(spec.toTH1D(inconfig, global_subchannel_index, other_index));
                     htmp->SetLineWidth(1);
                     htmp->SetLineColor(kBlack);
                     htmp->SetFillColor(rcolor);
@@ -1520,37 +1490,42 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
     return ret;
 }
 
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text) {
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text, bool binwidth_scale, int other_index) {
     TCanvas c;
     c.Print((filename+"[").c_str());
 
     std::map<std::string, std::unique_ptr<TH1D>> cvhists;
-    if(cv) cvhists = getCVHists(*cv, config);
+    if(cv) cvhists = getCVHists(*cv, config, binwidth_scale, other_index);
 
     Eigen::VectorXf bf_spec;
     if(best_fit) {
-        bf_spec = CollapseMatrix(config, best_fit->Spec());
+        bf_spec = other_index < 0 ? CollapseMatrix(config, best_fit->Spec()) : CollapseMatrix(config, best_fit->Spec(), other_index);
     }
+
+    std::string ytitle = binwidth_scale ? "Events/GeV" : "Events";
 
     size_t global_subchannel_index = 0;
     size_t global_channel_index = 0;
     for(size_t mode = 0; mode < config.m_num_modes; ++mode) {
         for(size_t det = 0; det < config.m_num_detectors; ++det) {
             for(size_t channel = 0; channel < config.m_num_channels; ++channel) {
-                std::string hist_title = config.m_channel_plotnames[channel]+";"+config.m_channel_units[channel];
+                size_t channel_nbins = other_index < 0 ? config.m_channel_num_bins[channel] : config.m_channel_num_other_bins[channel][other_index];
+                std::string xtitle = other_index < 0 ? config.m_channel_units[channel] : config.m_channel_other_units[channel][other_index];
+                std::string hist_title = config.m_channel_plotnames[channel]+";"+xtitle+";"+ytitle;
                 std::unique_ptr<TLegend> leg = std::make_unique<TLegend>(0.59,0.89,0.59,0.89);
                 leg->SetFillStyle(0);
                 leg->SetLineWidth(0);
-                TH1D cv_hist(std::to_string(global_channel_index).c_str(), hist_title.c_str(), config.m_channel_num_bins[global_channel_index], config.m_channel_bin_edges[global_channel_index].data());
+                TH1D cv_hist(std::to_string(global_channel_index).c_str(), hist_title.c_str(), channel_nbins, config.m_channel_bin_edges[global_channel_index].data());
                 cv_hist.SetLineWidth(3);
                 cv_hist.SetLineColor(kBlue);
                 cv_hist.SetFillStyle(0);
                 for(size_t bin = 0; bin < config.m_channel_num_bins[global_channel_index]; ++bin) {
                     cv_hist.SetBinContent(bin+1, 0);
                 }
+                if(binwidth_scale) cv_hist.Scale(1, "width");
                 if(cv) {
                     THStack *cvstack = NULL;
-                    if(plot_cv_stack) cvstack = new THStack(std::to_string(global_channel_index).c_str(), config.m_channel_plotnames[channel].c_str());
+                    if(plot_cv_stack) cvstack = new THStack(std::to_string(global_channel_index).c_str(), hist_title.c_str());
                     for(size_t subchannel = 0; subchannel < config.m_num_subchannels[channel]; ++subchannel){
                         const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
                         if(plot_cv_stack) {
@@ -1573,9 +1548,8 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                 TGraphAsymmErrors *channel_errband = NULL;
                 if(errband) {
                     channel_errband = new TGraphAsymmErrors(&cv_hist);
-                    int channel_start = config.GetCollapsedGlobalBinStart(global_channel_index);
-                    int channel_nbins = config.m_channel_num_bins[channel];
-                    for(int bin = 0; bin < channel_nbins; ++bin) {
+                    int channel_start = other_index < 0 ? config.GetCollapsedGlobalBinStart(global_channel_index) : config.GetCollapsedGlobalOtherBinStart(global_channel_index, other_index);
+                    for(size_t bin = 0; bin < channel_nbins; ++bin) {
                         channel_errband->SetPointEYhigh(bin, (*errband)->GetErrorYhigh(bin+channel_start));
                         channel_errband->SetPointEYlow(bin, (*errband)->GetErrorYlow(bin+channel_start));
                     }
@@ -1585,11 +1559,10 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                     channel_errband->Draw("2 same");
                 }
 
-                TH1D bf_hist(("bf"+std::to_string(global_channel_index)).c_str(), hist_title.c_str(), config.m_channel_num_bins[channel], config.m_channel_bin_edges[channel].data());
+                TH1D bf_hist(("bf"+std::to_string(global_channel_index)).c_str(), hist_title.c_str(), channel_nbins, config.m_channel_bin_edges[channel].data());
                 if(best_fit) {
-                    int channel_start = config.GetCollapsedGlobalBinStart(global_channel_index);
-                    int channel_nbins = config.m_channel_num_bins[channel];
-                    for(int bin = 0; bin < channel_nbins; ++bin) {
+                    int channel_start = other_index < 0 ? config.GetCollapsedGlobalBinStart(global_channel_index) : config.GetCollapsedGlobalOtherBinStart(global_channel_index, other_index);
+                    for(size_t bin = 0; bin < channel_nbins; ++bin) {
                         bf_hist.SetBinContent(bin+1, bf_spec(bin+channel_start));
                     }
                     bf_hist.SetLineColor(kGreen);
@@ -1602,9 +1575,8 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                 TGraphAsymmErrors *post_channel_errband = NULL;
                 if(posterrband) {
                     post_channel_errband = new TGraphAsymmErrors(&bf_hist);
-                    int channel_start = config.GetCollapsedGlobalBinStart(global_channel_index);
-                    int channel_nbins = config.m_channel_num_bins[channel];
-                    for(int bin = 0; bin < channel_nbins; ++bin) {
+                    int channel_start = other_index < 0 ? config.GetCollapsedGlobalBinStart(global_channel_index) : config.GetCollapsedGlobalOtherBinStart(global_channel_index, other_index);
+                    for(size_t bin = 0; bin < channel_nbins; ++bin) {
                         post_channel_errband->SetPointEYhigh(bin, (*posterrband)->GetErrorYhigh(bin+channel_start));
                         post_channel_errband->SetPointEYlow(bin, (*posterrband)->GetErrorYlow(bin+channel_start));
                     }
@@ -1616,7 +1588,7 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
 
                 TH1D data_hist;
                 if(data) {
-                    data_hist = data->toTH1D(config, global_channel_index);
+                    data_hist = data->toTH1D(config, global_channel_index, other_index);
                     data_hist.SetLineColor(kBlack);
                     data_hist.SetLineWidth(2);
                     data_hist.SetMarkerStyle(kFullCircle);
