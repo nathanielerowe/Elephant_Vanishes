@@ -154,8 +154,8 @@ namespace PROfit{
     };
 
 
-    void saveSystStructVector(const std::vector<SystStruct> &structs, const std::string &filename);
-    void loadSystStructVector(std::vector<SystStruct> &structs, const std::string &filename);
+    void saveSystStructVector(const std::vector<std::vector<SystStruct>> &structs, const std::string &filename);
+    void loadSystStructVector(std::vector<std::vector<SystStruct>> &structs, const std::string &filename);
 
 
 
@@ -216,7 +216,7 @@ namespace PROfit{
 
     /* Function: Process spline weights and covariance matrices from uboone CAFAna output trees
     */
-    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<SystStruct>& syst_vector, PROpeller &inprop, bool noxrootd = false);
+    int PROcess_CAFAna(const PROconfig &inconfig, std::vector<std::vector<SystStruct>> &syst_vector, PROpeller &inprop, bool noxrootd = false);
 
 
     /* Function: given configuration, generate spectrum at central value. 
@@ -239,7 +239,7 @@ namespace PROfit{
      */
     void process_sbnfit_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>>& eventweight_map, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight);
 
-    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<SystStruct>& syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop);
+    void process_cafana_event(const PROconfig &inconfig, const std::shared_ptr<BranchVariable>& branch, const std::map<std::string, std::vector<eweight_type>*>& eventweight_map, float mcpot, int subchannel_index, std::vector<std::vector<SystStruct>> &syst_vector, const std::vector<float>& syst_additional_weight, PROpeller& inprop);
 
     std::string convertToXRootD(std::string fname_orig);
 

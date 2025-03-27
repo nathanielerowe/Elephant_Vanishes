@@ -5,6 +5,7 @@
 #include "PROserial.h"
 #include <Eigen/Eigen>
 // STANDARD
+#include <Eigen/src/Core/Matrix.h>
 #include <vector>
 #include <chrono>
 namespace PROfit{
@@ -33,6 +34,7 @@ namespace PROfit{
                     ar & hist;
                     ar & histLE;
                     ar & mcStatErr;
+                    ar & otherMCStatErr;
                     ar & hash;
                 }
 
@@ -73,6 +75,7 @@ namespace PROfit{
             Eigen::MatrixXf    hist;
             Eigen::VectorXf    histLE;
             Eigen::VectorXf    mcStatErr;
+            std::vector<Eigen::VectorXf> otherMCStatErr;
             uint32_t           hash;
 
             // boost serialize save to file

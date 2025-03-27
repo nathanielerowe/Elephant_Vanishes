@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
     PROpeller prop;
 
     //Initilize objects for systematics storage
-    std::vector<SystStruct> systsstructs;
+    std::vector<std::vector<SystStruct>> systsstructs;
 
     //input/output logic
     std::string propBinName = analysis_tag+"_prop.bin";
@@ -313,13 +313,13 @@ int main(int argc, char* argv[])
         prop.load(propBinName);
         loadSystStructVector(systsstructs, systBinName);
 
-        log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) are here. ") % __func__ %  config.hash % prop.hash % systsstructs[0].hash;
-        if(config.hash!=prop.hash && config.hash!=systsstructs.front().hash){
+        log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) are here. ") % __func__ %  config.hash % prop.hash % systsstructs[0][0].hash;
+        if(config.hash!=prop.hash && config.hash!=systsstructs.front().front().hash){
             if(force){
-                log<LOG_WARNING>(L"%1% || WARNING config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().hash;
+                log<LOG_WARNING>(L"%1% || WARNING config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().front().hash;
                 log<LOG_WARNING>(L"%1% || WARNING But we are forcing ahead, be SUPER clear and happy you understand what your doing.  ") % __func__;
             }else{
-                log<LOG_ERROR>(L"%1% || ERROR config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().hash;
+                log<LOG_ERROR>(L"%1% || ERROR config hash (%2%) and binary loaded PROpeller (%3%) or PROsyst hash(%4%) not compatable! ") % __func__ %  config.hash % prop.hash % systsstructs.front().front().hash;
                 return 1;
             }
         }
@@ -327,15 +327,22 @@ int main(int argc, char* argv[])
 
 
     //Build a PROsyst to sort and analyze all systematics
-    PROsyst systs(prop, config, systsstructs, shapeonly);
+    PROsyst systs(prop, config, systsstructs.front(), shapeonly);
+    std::vector<PROsyst> other_systs;
+    for(size_t i = 0; i < config.m_num_other_vars; ++i)
+        other_systs.emplace_back(prop, config, systsstructs.at(i+1), shapeonly);
     std::unique_ptr<PROmodel> model = get_model_from_string(config.m_model_tag, prop);
     std::unique_ptr<PROmodel> null_model = std::make_unique<NullModel>(prop);
 
     //Some eystematics might be ignored for this
     if(syst_list.size()) {
         systs = systs.subset(syst_list);
+        for(PROsyst &syst: other_systs)
+            syst = syst.subset(syst_list);
     } else if(systs_excluded.size()) {
         systs = systs.excluding(systs_excluded);
+        for(PROsyst &syst: other_systs)
+            syst = syst.excluding(systs_excluded);
     }
 
     //Pysics parameter input
