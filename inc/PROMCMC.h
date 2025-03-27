@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
-
+#include <optional>
 namespace PROfit {
 
 template<class Target_FN, class Proposal_FN>
