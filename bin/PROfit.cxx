@@ -1003,8 +1003,8 @@ int main(int argc, char* argv[])
                     err_band->Draw("A2P");
                     err_band->SetMinimum(0);
                     err_band->GetXaxis()->SetRangeUser(config.m_channel_bin_edges[global_channel_index].front(),config.m_channel_bin_edges[global_channel_index].back());
-
-                    TH1D hdat = data.toTH1D(config,global_channel_index);
+                    log<LOG_DEBUG>(L"%1% || ErrorBarPlot bin range %2% %3% for det %4% and chan %5% ") % __func__ % config.m_channel_bin_edges[global_channel_index].front() % config.m_channel_bin_edges[global_channel_index].back() % id % ic ;
+                    TH1D hdat = data.toTH1D(config, global_channel_index);
                     for(int k=0; k<=hdat.GetNbinsX(); k++){
                         hdat.SetBinError(k,sqrt(hdat.GetBinContent(k)));
                     }
@@ -1036,7 +1036,7 @@ int main(int argc, char* argv[])
 
 
                     c.Print((final_output_tag+"_PROplot_ErrorBand.pdf").c_str(), "pdf");
-
+                    global_channel_index++;
                 }
             }
         }
