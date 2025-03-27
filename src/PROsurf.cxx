@@ -432,7 +432,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
 
     //First plot
     int depth = std::ceil((nparams+model.nparams)/4.0);
-    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 400*4, 400*depth);
+    TCanvas *c =  new TCanvas(filename.c_str(), filename.c_str() , 350*4, 350*depth);
     c->Divide(4,depth);
 
 
@@ -441,11 +441,15 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
 
         c->cd(w+1+zoom_shift);
         std::string xval = w < model.nparams ? "Log_{10}(" + model.pretty_param_names[w]+")" :"#sigma Shift"  ;
-        std::string tit = names[w]+ ";"+xval+"; #Chi^{2}";
+        std::string tit = (w < model.nparams ? names[w] :config.m_mcgen_variation_plotname_map.at(names[w]))+ ";"+xval+"; #Chi^{2}";
         graphs[w]->SetTitle(tit.c_str());
         graphs[w]->Draw("AL");
         graphs[w]->SetLineWidth(2);
-        
+        graphs[w]->GetYaxis()->SetTitleSize(0.04);             
+        graphs[w]->GetYaxis()->SetLabelSize(0.04);            
+        graphs[w]->GetXaxis()->SetTitleSize(0.04);             
+        graphs[w]->GetXaxis()->SetLabelSize(0.04);            
+
         TLine* line = new TLine(graphs[w]->GetXaxis()->GetXmin(), 1, graphs[w]->GetXaxis()->GetXmax(), 1);
         line->SetLineStyle(3);  // Dotted line style (1 is solid, 2 is dashed, 3 is dotted)
         line->SetLineWidth(1);  // Thin line
@@ -463,36 +467,43 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
 
         if(w==model.nparams-1){
             //on past physics param, lets do a quick zoom, stepping back though the physics param
-            for(size_t zs = 0; zs<model.nparams; zs++){
+            for(int zs = model.nparams-1; zs>=0; zs--){
                 c->cd(w+1+zs+1);
-                std::unique_ptr<TGraph> graphClone = std::make_unique<TGraph>(*graphs[w-zs]);
+                TGraph * graphClone = new TGraph(*graphs[w-zs]);
                 graphClone->Draw("AL");
                 std::string newTitle = std::string(graphClone->GetTitle()) + " Zoomed 1#sigma";
                 graphClone->SetTitle(newTitle.c_str());
                 graphClone->SetLineColor(kViolet);
-                float vd = std::min(values1_down[w]*0.8,values1_up[w]*1.2) ;
-                float vu = std::max(values1_down[w]*0.8,values1_up[w]*1.2) ;
-                graphClone->GetXaxis()->SetLimits(vd,vu); 
-                graphClone->GetYaxis()->SetRangeUser(graphClone->Eval(vd), graphClone->Eval(vu) );
+                float vd = std::min(values1_down[w-zs],values1_up[w-zs]) ;
+                float vu = std::max(values1_down[w-zs],values1_up[w-zs]) ;
+                float pd = (vd>0 ? vd*0.9 : vd*1.1);
+                float pu = (vu >0 ? vu*1.1 : vu*0.9);
+                graphClone->GetXaxis()->SetLimits(pd,pu); 
+                graphClone->GetYaxis()->SetRangeUser(0, std::max(graphClone->Eval(pu),graphClone->Eval(pd))*1.1) ;
+                graphClone->GetYaxis()->SetTitleSize(0.04);             
+                graphClone->GetYaxis()->SetLabelSize(0.04);            
+                graphClone->GetXaxis()->SetTitleSize(0.04);             
+                graphClone->GetXaxis()->SetLabelSize(0.04);            
 
-                TLine *line1 = new TLine(vd, 1, vu, 1);
+                log<LOG_INFO>(L"%1% || Zoom boundaries X %2% %3% Y %4% %5%  ") % __func__ % pd % pu % 0.0 % (std::max(graphClone->Eval(pu),graphClone->Eval(pd))*1.1)  ;
+           
+                TLine *line1 = new TLine(pd, 1, pu, 1);
                 line1->SetLineStyle(3);  
                 line1->SetLineWidth(1);  
                 line1->SetLineColor(kBlack); 
                 line1->Draw();
 
-                TLine* line2 = new TLine(vd, graphs[w]->Eval(vd) ,vd, 0);
+                TLine* line2 = new TLine(vd, graphClone->Eval(vd) ,vd, 0);
                 line2->SetLineStyle(3);  
                 line2->SetLineWidth(1);  
                 line2->SetLineColor(kBlack); 
                 line2->Draw();
 
-                TLine *line3 = new TLine(vu, graphs[w]->Eval(vu) ,vu, 0);
+                TLine *line3 = new TLine(vu, graphClone->Eval(vu) ,vu, 0);
                 line3->SetLineStyle(3);  
                 line3->SetLineWidth(1);  
                 line3->SetLineColor(kBlack); 
                 line3->Draw();
-
             }
             zoom_shift=model.nparams;
         }
