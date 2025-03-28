@@ -501,8 +501,10 @@ namespace PROfit {
                     branch_variable->branch_true_proton_costh_formula = std::make_shared<TTreeFormula>(("branch_costh_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->true_proton_costh_name.c_str(), chains[fid]);
                     log<LOG_INFO>(L"%1% || Setting up leading proton costh variable for this branch: %2%") % __func__ %  branch_variable->true_proton_costh_name.c_str();
                 }
+                int other_count = 0;
                 for(const auto &name: branch_variable->other_param_names) {
-                    branch_variable->branch_other_values_formulas.push_back(std::make_shared<TTreeFormula>(("branch_other_form_"+std::to_string(fid) +"_" + std::to_string(ib)+"_"+name).c_str(), branch_variable->name.c_str(), chains[fid]));
+                    branch_variable->branch_other_values_formulas.push_back(std::make_shared<TTreeFormula>(("branch_other_form_"+std::to_string(fid) +"_" + std::to_string(ib)+"_"+std::to_string(other_count)).c_str(), name.c_str(), chains[fid]));
+                    other_count++;
                 }
 
 
@@ -1163,6 +1165,7 @@ namespace PROfit {
         mc_weight *= inconfig.m_plot_pot / mcpot;
 
         std::vector<float> other_params = branch->GetOtherValues();
+        log<LOG_DEBUG>(L"%1% || Found %2% other params in branch, but expected %3% vars") % __func__ % other_params.size() % inconfig.m_num_other_vars;
 
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 
@@ -1191,7 +1194,8 @@ namespace PROfit {
         inprop.mcStatErr(global_bin) += 1;
         inprop.other_bin_indices.push_back(other_bin_indices);
         for(size_t io = 0; io < inconfig.m_num_other_vars; ++io) {
-            inprop.otherMCStatErr[io](other_bin_indices[io]) += 1;
+            if(other_bin_indices[io] >= 0)
+                inprop.otherMCStatErr[io](other_bin_indices[io]) += 1;
         }
 
         if(!run_syst) return;
@@ -1223,13 +1227,16 @@ namespace PROfit {
             }else if(syst_obj.mode == "covariance"){
                 syst_obj.FillCV(global_bin, mc_weight);
                 for(size_t io = 0; io < inconfig.m_num_other_vars; ++io) {
-                    other_syst_objs[io]->FillCV(other_bin_indices[io], mc_weight);
+                    if(other_bin_indices[io] >= 0)
+                        other_syst_objs[io]->FillCV(other_bin_indices[io], mc_weight);
                 }
                 for(int iuni = 0; iuni < syst_obj.GetNUniverse(); ++iuni){
                     float sys_wei = run_syst ? additional_weight * static_cast<float>(map_iter->second->at(iuni) ) :  1.0;
                     syst_obj.FillUniverse(iuni, global_bin, mc_weight *sys_wei );
-                    for(size_t io = 0; io < inconfig.m_num_other_vars; ++io)
-                        other_syst_objs[io]->FillUniverse(iuni, other_bin_indices[io], mc_weight * sys_wei);
+                    for(size_t io = 0; io < inconfig.m_num_other_vars; ++io) {
+                        if(other_bin_indices[io] >= 0)
+                            other_syst_objs[io]->FillUniverse(iuni, other_bin_indices[io], mc_weight * sys_wei);
+                    }
                     //log<LOG_INFO>(L"%1% || BLARG_C  %2% %3% %4%") % __func__ % additional_weight % mc_weight % static_cast<float>(map_iter->second->at(iuni));
                 }
             }

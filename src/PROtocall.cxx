@@ -1,4 +1,5 @@
 #include "PROtocall.h"
+#include "PROlog.h"
 
 namespace PROfit{
 
@@ -78,8 +79,8 @@ namespace PROfit{
     int FindGlobalOtherBin(const PROconfig &inconfig, float other_value, int subchannel_index, int other_index) {
         int global_bin_start = inconfig.GetGlobalOtherBinStart(subchannel_index, other_index);
         int channel_index = inconfig.GetChannelIndex(subchannel_index);
-        if(inconfig.GetChannelNTrueBins(channel_index) == 0){
-            log<LOG_ERROR>(L"%1% || Subchannel %2% does not have true bins") % __func__ % subchannel_index;
+        if(inconfig.GetChannelNOtherBins(channel_index, other_index) == 0){
+            log<LOG_ERROR>(L"%1% || Subchannel %2% does not have other bins") % __func__ % subchannel_index;
             log<LOG_ERROR>(L"%1% || Return global bin of -1") % __func__ ;
             return -1;
         }

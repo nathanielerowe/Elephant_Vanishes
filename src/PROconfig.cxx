@@ -400,7 +400,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                 const char* omax = pBinO->Attribute("max");
                 const char* onbins = pBinO->Attribute("nbins");
                 const char* oedges = pBinO->Attribute("edges");
-                const char* ounits = pBinO->Attribute("units");
+                const char* ounits = pBinO->Attribute("unit");
                 if(omin==NULL && omax==NULL && onbins==NULL && oedges == NULL) {
                     log<LOG_DEBUG>(L"%1% || This variable has a NO other binning (or attribute min,max,nbins)  ") % __func__ ;
                     m_channel_num_other_bins.back().push_back(0);
@@ -408,7 +408,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     m_channel_other_bin_widths.back().push_back(std::vector<float>());
                     m_channel_other_units.back().push_back("");
                 }else{
-                    log<LOG_DEBUG>(L"%1% || This variable has a Truth Binning.   ") % __func__  ;
+                    log<LOG_DEBUG>(L"%1% || This variable has an Other Binning.   ") % __func__  ;
 
                     int nbinsp;
                     std::vector<float> binedge, binwidth;
@@ -698,6 +698,7 @@ int PROconfig::LoadFromXML(const std::string &filename){
                     TEMP_branch_variables.back()->SetTrueParam(pBranch->Attribute("true_param_name"));
                 }
                 if(pBranch->Attribute("other_param_names")) {
+                    log<LOG_DEBUG>(L"%1% || Found other_param_names %2%") % __func__ % pBranch->Attribute("other_param_names");
                     TEMP_branch_variables.back()->SetOtherParams(pBranch->Attribute("other_param_names"));
                 }
                 if(pBranch->Attribute("pdg_name")) {
@@ -1512,7 +1513,7 @@ void PROconfig::generate_index_map(){
                 channel_bin_start += m_channel_num_bins[ic]*m_num_subchannels[ic];
                 channel_truebin_start += m_channel_num_truebins[ic]*m_num_subchannels[ic];
                 for(size_t io = 0; io < m_num_other_vars; ++io) {
-                    channel_other_start[io] += 1;
+                    channel_other_start[io] += m_channel_num_other_bins[ic][io]*m_num_subchannels[ic];
                 }
             }
         }
