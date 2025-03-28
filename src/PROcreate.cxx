@@ -834,10 +834,7 @@ namespace PROfit {
         return 0;
     }
 
-
-
-
-    PROdata CreatePROdata(const PROconfig& inconfig){
+    std::vector<PROdata> CreatePROdata(const PROconfig& inconfig){
         float spec_pot = inconfig.m_plot_pot;
         log<LOG_INFO>(L"%1% || Start generating data spectrum") % __func__ ;
         log<LOG_INFO>(L"%1% || Spectrum will be generated with %2% POT") % __func__ % spec_pot;
@@ -921,6 +918,12 @@ namespace PROfit {
                 branch_variable->branch_formula = std::make_shared<TTreeFormula>(("branch_form_"+std::to_string(fid) +"_" + std::to_string(ib)).c_str(), branch_variable->name.c_str(), trees[fid]);
                 log<LOG_INFO>(L"%1% || Setting up reco variable for this branch: %2%") % __func__ %  branch_variable->name.c_str();
 
+                int other_count = 0;
+                for(const auto &name: branch_variable->other_param_names) {
+                    branch_variable->branch_other_values_formulas.push_back(std::make_shared<TTreeFormula>(("branch_other_form_"+std::to_string(fid) +"_" + std::to_string(ib)+"_"+std::to_string(other_count)).c_str(), name.c_str(), trees[fid]));
+                    other_count++;
+                }
+
                 //grab monte carlo weight
                 if(inconfig.m_mcgen_additional_weight_bool[fid][ib]){
                     branch_variable->branch_monte_carlo_weight_formula  =  std::make_shared<TTreeFormula>(("branch_add_weight_"+std::to_string(fid)+"_" + std::to_string(ib)).c_str(),inconfig.m_mcgen_additional_weight_name[fid][ib].c_str(),trees[fid]);
@@ -931,7 +934,10 @@ namespace PROfit {
         } // end fid
 
         time_t start_time = time(nullptr);
-        PROdata data(inconfig.m_num_bins_total);
+        std::vector<PROdata> data;
+        data.emplace_back(inconfig.m_num_bins_total);
+        for(size_t io = 0; io < inconfig.m_num_other_vars; ++io)
+            data.emplace_back(inconfig.m_num_other_bins_total[io]);
         log<LOG_INFO>(L"%1% || Start reading the files..") % __func__;
         for(int fid=0; fid < num_files; ++fid) {
             const auto& fn = inconfig.m_mcgen_file_name.at(fid);
@@ -961,6 +967,7 @@ namespace PROfit {
                     float reco_value = branches[ib]->GetValue<float>();
                     float additional_weight = branches[ib]->GetMonteCarloWeight();
                     additional_weight *= pot_scale[fid];
+                    std::vector<float> other_params = branches[ib]->GetOtherValues();
 
                     if(additional_weight == 0) //skip on event failing cuts
                         continue;
@@ -970,10 +977,18 @@ namespace PROfit {
                     if(global_bin < 0 )  //out of range
                         continue;
 
+                    std::vector<int> other_bin_indices;
+                    for(size_t i = 0; i < other_params.size(); ++i) {
+                        other_bin_indices.push_back(FindGlobalOtherBin(inconfig, other_params[i], channel_index[ib], i));
+                    }
+
                     if(i%100==0)	
                         log<LOG_DEBUG>(L"%1% || Subchannel %2% -- Reco variable value: %3%, MC event weight: %4%, correponds to global bin: %5%") % __func__ %  channel_index[ib] % reco_value % additional_weight % global_bin;
 
-                    data.Fill(global_bin, additional_weight);
+                    data[0].Fill(global_bin, additional_weight);
+                    for(size_t io = 0; io < inconfig.m_num_other_vars; ++io)
+                        if(other_bin_indices[io] >= 0)
+                            data[io+1].Fill(other_bin_indices[io], additional_weight);
                 }  //end of branch loop
             } //end of entry loop
         } //end of file loop
@@ -1165,7 +1180,6 @@ namespace PROfit {
         mc_weight *= inconfig.m_plot_pot / mcpot;
 
         std::vector<float> other_params = branch->GetOtherValues();
-        log<LOG_DEBUG>(L"%1% || Found %2% other params in branch, but expected %3% vars") % __func__ % other_params.size() % inconfig.m_num_other_vars;
 
         int global_bin = FindGlobalBin(inconfig, reco_value, subchannel_index);
         int global_true_bin = run_syst ? FindGlobalTrueBin(inconfig, true_value, subchannel_index) : 0 ;//seems werid, but restricts ALL cosmics to one bin. 

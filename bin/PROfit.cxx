@@ -412,12 +412,23 @@ int main(int argc, char* argv[])
             log<LOG_INFO>(L"%1% || Processing Data Spectrum and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
 
             //Process the CAF files to grab and fill spectrum directly
-            data = CreatePROdata(dataconfig);
-            data.save(dataconfig,dataBinName);
+            std::vector<PROdata> alldata = CreatePROdata(dataconfig);
+            PROdata::saveVector(dataconfig, alldata, dataBinName);
+            data = alldata[0];
+            //data.save(dataconfig,dataBinName);
+            for(size_t io = 0; io < dataconfig.m_num_other_vars; ++io)
+                other_data.push_back(alldata[io+1]);
+
             log<LOG_INFO>(L"%1% || Done processing Data from XML defined root files, and saving to binary output also: %2%") % __func__ % dataBinName.c_str();
         }else{
             log<LOG_INFO>(L"%1% || Loading Data from precalc binary input: %2%") % __func__ % dataBinName.c_str();
-            data.load(dataBinName);
+            //data.load(dataBinName);
+            std::vector<PROdata> alldata;
+            PROdata::loadVector(alldata, dataBinName);
+            data = alldata[0];
+            //data.save(dataconfig,dataBinName);
+            for(size_t io = 0; io < dataconfig.m_num_other_vars; ++io)
+                other_data.push_back(alldata[io+1]);
 
             log<LOG_INFO>(L"%1% || Done loading. Config hash (%2%) and binary loaded Data (%3%) hash are here. ") % __func__ %  dataconfig.hash % data.hash;
             if(dataconfig.hash!=data.hash){

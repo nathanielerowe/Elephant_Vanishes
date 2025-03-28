@@ -224,7 +224,7 @@ namespace PROfit{
      */
     PROspec CreatePROspecCV(const PROconfig& configin);
 
-    PROdata CreatePROdata(const PROconfig& configin);
+    std::vector<PROdata> CreatePROdata(const PROconfig& configin);
 
 
     /* Function: assume currently reading one entry of a file, update systematic variation spectrum 
