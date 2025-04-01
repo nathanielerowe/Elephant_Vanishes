@@ -28,7 +28,7 @@ public:
 
     bool step() {
         Eigen::VectorXf p = proposal(current);
-        float acceptance = std::min(1.0f, target(p)/target(current) * proposal.P(current, p)/proposal.P(p, current));
+        float acceptance = proposal.within_bound(p) ? std::min(1.0f, target(p)/target(current) * proposal.P(current, p)/proposal.P(p, current)) : 0;
         float u = uniform(rng);
         if(u <= acceptance) {
             current = p;
@@ -85,35 +85,71 @@ struct simple_proposal {
         for(int i = 0; i < ret.size(); ++i) {
             if(std::find(fixed.begin(), fixed.end(), i) != std::end(fixed)) continue;
             if(i < nparams) {
+                // TODO: How to use width with a uniform distribution
                 float lo = metric.GetModel().lb(i);
                 if(std::isinf(lo)) lo = -5;
                 float hi = metric.GetModel().ub(i);
                 if(std::isinf(hi)) hi = 5;
                 std::uniform_real_distribution<float> ud(lo, hi);
                 ret(i) = ud(rng);
+            } else if(metric.GetSysts().spline_lo[i-nparams] == 0) {
+                // Currently there's some weird behavior with the 0-1 systematics
+                // which using a uniform distribution seems to fix
+                // TODO: How to use width with a uniform distribution
+                float lo = metric.GetSysts().spline_lo[i-nparams];
+                float hi = metric.GetSysts().spline_hi[i-nparams];
+                std::uniform_real_distribution<float> ud(lo, hi);
+                ret(i) = ud(rng);
             } else {
                 std::normal_distribution<float> nd(current(i), width);
                 float proposed_value = nd(rng);
-                ret(i) = std::clamp(proposed_value, metric.GetSysts().spline_lo[i-nparams], metric.GetSysts().spline_hi[i-nparams]);
+                ret(i) = proposed_value;
+                //ret(i) = std::clamp(proposed_value, metric.GetSysts().spline_lo[i-nparams], metric.GetSysts().spline_hi[i-nparams]);
             }
         }
         return ret;
     }
 
-    float P(Eigen::VectorXf &value, Eigen::VectorXf &given) {
+    float P(const Eigen::VectorXf &value, const Eigen::VectorXf &given) {
         float prob = 1.0;
+        int nparams = metric.GetModel().nparams;
         for(int i = 0; i < value.size(); ++i) {
             if(std::find(fixed.begin(), fixed.end(), i) != std::end(fixed)) continue;
-            if(i < metric.GetModel().nparams) {
+            if(i < nparams) {
                 float diff = metric.GetModel().ub(i) - metric.GetModel().lb(i);
                 if(std::isinf(diff)) diff = 5;
                 prob *= 1.0f / diff;
             } else {
-                prob *= (1.0f / std::sqrt(2 * M_PI * width * width))
-                        * std::exp(-(value(i) - given(i))*(value(i) - given(i))/(2 * width * width));
+                if(value(i) <= metric.GetSysts().spline_lo[i-nparams] || value(i) >= metric.GetSysts().spline_hi[i-nparams] || 
+                   given(i) <= metric.GetSysts().spline_lo[i-nparams] || given(i) >= metric.GetSysts().spline_hi[i-nparams]) {
+                    // Due to bounds, use CDF to get total probability value is <= bound
+                    // Symmetry makes this work for upper bound as well
+                    float v = std::clamp(value(i), metric.GetSysts().spline_lo[i-nparams], metric.GetSysts().spline_hi[i-nparams]);
+                    float g = std::clamp(given(i), metric.GetSysts().spline_lo[i-nparams], metric.GetSysts().spline_hi[i-nparams]);
+                    prob *= 0.5f * (1.0f + std::erff((v - g)/(std::sqrtf(2.0f)*width)));
+                    //prob = 0;
+                } else {
+                    prob *= (1.0f / std::sqrt(2 * M_PI * width * width))
+                            * std::exp(-(value(i) - given(i))*(value(i) - given(i))/(2 * width * width));
+                }
             }
         }
         return prob;
+    }
+
+    bool within_bound(Eigen::VectorXf &value) {
+        int nparams = metric.GetModel().nparams;
+        for(int i = 0; i < value.size(); ++i) {
+            if(std::find(fixed.begin(), fixed.end(), i) != std::end(fixed)) continue;
+            if(i < nparams) {
+                if(value(i) > metric.GetModel().ub(i) || value(i) < metric.GetModel().lb(i))
+                    return false;
+            } else {
+                if(value(i) < metric.GetSysts().spline_lo[i-nparams] || value(i) > metric.GetSysts().spline_hi[i-nparams])
+                    return false;
+            }
+        }
+        return true;
     }
 
     void tune(bool accepted) {
