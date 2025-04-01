@@ -161,7 +161,15 @@ std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst,
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, uint32_t seed, bool scale = false, int other_index = -1);
 std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, uint32_t seed, bool scale = false);
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text, bool binwidth_scale, int other_index = -1);
+
+enum class PlotOptions {
+    Default = 0,
+    CVasStack = 1 << 0,
+    AreaNormalized = 1 << 1,
+    BinWidthScaled = 1 << 2,
+};
+
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, TPaveText *text, PlotOptions opt = PlotOptions::Default);
 
 int main(int argc, char* argv[])
 {
@@ -185,7 +193,7 @@ int main(int argc, char* argv[])
     int global_seed = -1;
     std::string log_file = "";
 
-    bool with_splines = false, binwidth_scale = false;
+    bool with_splines = false, binwidth_scale = false, area_normalized = false;
 
     std::vector<float> osc_params;
     std::map<std::string, float> injected_systs;
@@ -267,6 +275,7 @@ int main(int argc, char* argv[])
     //PROplot, plot things
     CLI::App *proplot_command = app.add_subcommand("plot", "Make plots of CV, or injected point with error bars and covariance.");
     proplot_command->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
+    proplot_command->add_flag("--area-norm", area_normalized, "Make area normalized histograms.");
 
     //PROfc, Feldmand-Cousins
     CLI::App *profc_command = app.add_subcommand("fc", "Run Feldman-Cousins for this injected signal");
@@ -1471,7 +1480,7 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
         for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
             posteriors[i].Fill(value(i+nphys));
     };
-    mh.run(10'000, 50'000, action);
+    mh.run(100'000, 500'000, action);
 
     //TODO: Only works with 1 mode/detector/channel
     cv = CollapseMatrix(config, cv);
