@@ -8,16 +8,20 @@
 
 namespace PROfit {
 
+struct PROfitterConfig {
+    LBFGSpp::LBFGSBParam<float> param;
+    int n_multistart = 1250, n_localfit = 5;
+};
+
 class PROfitter {
 public:
     Eigen::VectorXf ub, lb, best_fit;
-    LBFGSpp::LBFGSBParam<float> param;
+    PROfitterConfig fitconfig;
     LBFGSpp::LBFGSBSolver<float> solver;
-    int n_multistart = 1250, n_localfit = 5;
     uint32_t seed;
 
-    PROfitter(const Eigen::VectorXf ub, const Eigen::VectorXf lb, const LBFGSpp::LBFGSBParam<float> &param = {}, uint32_t inseed = 0)
-        : ub(ub), lb(lb), param(param), solver(param), seed(inseed) {}
+    PROfitter(const Eigen::VectorXf ub, const Eigen::VectorXf lb, PROfitterConfig fitconfig = {}, uint32_t inseed = 0)
+        : ub(ub), lb(lb), fitconfig(fitconfig), solver(fitconfig.param), seed(inseed) {}
 
     float Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt = Eigen::VectorXf());
 
