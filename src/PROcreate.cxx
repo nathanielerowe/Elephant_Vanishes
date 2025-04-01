@@ -1251,7 +1251,7 @@ namespace PROfit {
                 }
 
                 for(int is = 0; is < syst_obj.GetNUniverse(); ++is){
-                    log<LOG_DEBUG>(L"%1% || NORMBLARG  %2% %3% %4% %5%") % __func__ % is % norm_shift_percentage % (1+syst_obj.knobval[is]*norm_shift_percentage)  % syst_obj.knobval[is];
+                    //log<LOG_DEBUG>(L"%1% || NORMBLARG  %2% %3% %4% %5% : gb %6%") % __func__ % is % norm_shift_percentage % (1+syst_obj.knobval[is]*norm_shift_percentage)  % syst_obj.knobval[is] % global_bin;
                     syst_obj.FillUniverse(is, global_true_bin, mc_weight * additional_weight *(1+syst_obj.knobval[is]*norm_shift_percentage) );
                 }
                 continue;
