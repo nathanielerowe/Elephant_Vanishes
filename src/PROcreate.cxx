@@ -654,7 +654,7 @@ namespace PROfit {
 
                    size_t colonPos = sys_name.find(':');
                     if (colonPos == std::string::npos) {
-                        log<LOG_ERROR>(L"%1% || ERROR, you asked for a norm spline systematic but its not in NAME:percentate format %2%") % __func__  % sysname.c_str();
+                        log<LOG_ERROR>(L"%1% || ERROR, you asked for a norm spline systematic but its not in NAME:percentate format %2%") % __func__  % sys_name.c_str();
                         exit(EXIT_FAILURE);
                     }
                     
@@ -1245,7 +1245,7 @@ namespace PROfit {
                 }
             } else  if( syst_obj.mode == "norm") {
                 syst_obj.FillCV(global_true_bin, mc_weight);
-                float norm_shift_percentage = 1.0;
+                float norm_shift_percentage = 0.0;
                 if( std::find(syst_obj.norm_bins.begin(), syst_obj.norm_bins.end(),global_bin)!=syst_obj.norm_bins.end()){
                     norm_shift_percentage =  syst_obj.norm_value;
                 }
