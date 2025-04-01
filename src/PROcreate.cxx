@@ -596,6 +596,16 @@ namespace PROfit {
             }
         }
 
+        //Do we have any norm spline systeatics?
+        if(inconfig.m_num_variation_type_norm>0){
+            for(auto& allow_sys : inconfig.m_mcgen_variation_type_map){
+                if(allow_sys.second=="norm"){
+                    map_systematic_num_universe[allow_sys.first] = 7;
+                }
+            }
+        }
+
+
         size_t total_num_systematics = map_systematic_num_universe.size();
         log<LOG_INFO>(L"%1% || Found %2% unique variations") % __func__ % total_num_systematics;
         for(auto& sys_pair : map_systematic_num_universe){
@@ -630,10 +640,16 @@ namespace PROfit {
             }
             if(sys_mode == "flat"){
 
-                log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for a flat norm systematic. Processing a such. ") % __func__ % sys_name.c_str();
+                log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for a flat covariance systematic. Processing a such. ") % __func__ % sys_name.c_str();
 
             }
-
+            if(sys_mode == "norm") {
+                log<LOG_INFO>(L"%1% || Systematic variation %2% is a match for a spline norm systematic. Processing a such. ") % __func__ % sys_name.c_str();
+                map_systematic_knob_vals[sys_name] = {-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f};
+                syst_vector.back().knob_index = map_systematic_knob_vals[sys_name];
+                syst_vector.back().knobval = syst_vector.back().knob_index;
+                std::sort(syst_vector.back().knobval.begin(), syst_vector.back().knobval.end());
+            }
 
             for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
                 if (inconfig.m_mcgen_weightmaps_uses[i] && sys_name.find(inconfig.m_mcgen_weightmaps_patterns[i]) != std::string::npos) {
@@ -661,7 +677,7 @@ namespace PROfit {
         for(auto& s : syst_vector){
             if(s.mode=="flat")
                 continue;	
-            s.CreateSpecs(s.mode == "spline" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
+            s.CreateSpecs(s.mode == "spline" || s.mode == "norm" ? inconfig.m_num_truebins_total : inconfig.m_num_bins_total);	
         }
 
         inprop.mcStatErr = Eigen::VectorXf::Constant(inconfig.m_num_bins_total, 0);
@@ -1178,9 +1194,10 @@ namespace PROfit {
                         if(syst_obj.knobval[u] == syst_obj.knob_index[is]) break;
                     syst_obj.FillUniverse(u, global_true_bin, mc_weight * additional_weight * static_cast<float>(map_iter->second->at(is)));
                     //log<LOG_INFO>(L"%1% || BLARG_S  %2% %3% %4%") % __func__ % additional_weight % mc_weight % static_cast<float>(map_iter->second->at(is));
-
                 }
+
                 continue;
+
             }else if(syst_obj.mode == "covariance"){
 
                 syst_obj.FillCV(global_bin, mc_weight);
@@ -1189,8 +1206,16 @@ namespace PROfit {
                     syst_obj.FillUniverse(iuni, global_bin, mc_weight *sys_wei );
                     //log<LOG_INFO>(L"%1% || BLARG_C  %2% %3% %4%") % __func__ % additional_weight % mc_weight % static_cast<float>(map_iter->second->at(iuni));
                 }
+            } else  if( syst_obj.mode == "norm") {
+                syst_obj.FillCV(global_true_bin, mc_weight);
+                //Get the value here?
+                float norm_shift_percentage = 0.02;
+                for(int is = 0; is < syst_obj.GetNUniverse(); ++is){
+                    log<LOG_DEBUG>(L"%1% || NORMBLARG  %2% %3% %4% %5%") % __func__ % is % norm_shift_percentage % (1+syst_obj.knobval[is]*norm_shift_percentage)  % syst_obj.knobval[is];
+                    syst_obj.FillUniverse(is, global_true_bin, mc_weight * additional_weight *(1+syst_obj.knobval[is]*norm_shift_percentage) );
+                }
+                continue;
             }
-
         }
 
 
