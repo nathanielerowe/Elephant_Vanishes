@@ -600,6 +600,8 @@ namespace PROfit {
         if(inconfig.m_num_variation_type_norm>0){
             for(auto& allow_sys : inconfig.m_mcgen_variation_type_map){
                 if(allow_sys.second=="norm"){
+
+ 
                     map_systematic_num_universe[allow_sys.first] = 7;
                 }
             }
@@ -649,6 +651,41 @@ namespace PROfit {
                 syst_vector.back().knob_index = map_systematic_knob_vals[sys_name];
                 syst_vector.back().knobval = syst_vector.back().knob_index;
                 std::sort(syst_vector.back().knobval.begin(), syst_vector.back().knobval.end());
+
+                   size_t colonPos = sys_name.find(':');
+                    if (colonPos == std::string::npos) {
+                        log<LOG_ERROR>(L"%1% || ERROR, you asked for a norm spline systematic but its not in NAME:percentate format %2%") % __func__  % sysname.c_str();
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    std::string wild = sys_name.substr(0, colonPos);
+                    std::string sflat_percent  = sys_name.substr(colonPos + 1);
+                    float flat_percent = std::stof(sflat_percent);
+
+                    log<LOG_INFO>(L"%1% || Wildcard %2% (and percent %3%) which matches: ") % __func__  % wild.c_str() % flat_percent;
+                    std::vector<std::string> flatnames;
+                    for(auto & name: inconfig.m_fullnames){
+                            if(name.find(wild)!=std::string::npos){
+                                flatnames.push_back(name); 
+                            }
+                    }
+                    log<LOG_INFO>(L"%1% || %2% . ") % __func__  % flatnames;
+
+                    std::vector<int> flatbins;
+                    for(auto &name: flatnames){
+                        size_t is = inconfig.GetSubchannelIndex(name);     
+                        size_t ic = inconfig.GetChannelIndex(is);     
+
+                        size_t start = inconfig.GetGlobalBinStart(is); 
+                        for(size_t b = 0; b < inconfig.m_channel_num_bins[ic] ; b++){
+                            flatbins.push_back((int)(start+b));
+                        }
+                    }
+                    log<LOG_INFO>(L"%1% || and fills bins  %2%  .") % __func__  %  flatbins;
+
+                syst_vector.back().norm_bins=flatbins;
+                syst_vector.back().norm_value = flat_percent;
+
             }
 
             for(size_t i = 0 ; i != inconfig.m_mcgen_weightmaps_patterns.size(); ++i){
@@ -1208,8 +1245,11 @@ namespace PROfit {
                 }
             } else  if( syst_obj.mode == "norm") {
                 syst_obj.FillCV(global_true_bin, mc_weight);
-                //Get the value here?
-                float norm_shift_percentage = 0.02;
+                float norm_shift_percentage = 1.0;
+                if( std::find(syst_obj.norm_bins.begin(), syst_obj.norm_bins.end(),global_bin)!=syst_obj.norm_bins.end()){
+                    norm_shift_percentage =  syst_obj.norm_value;
+                }
+
                 for(int is = 0; is < syst_obj.GetNUniverse(); ++is){
                     log<LOG_DEBUG>(L"%1% || NORMBLARG  %2% %3% %4% %5%") % __func__ % is % norm_shift_percentage % (1+syst_obj.knobval[is]*norm_shift_percentage)  % syst_obj.knobval[is];
                     syst_obj.FillUniverse(is, global_true_bin, mc_weight * additional_weight *(1+syst_obj.knobval[is]*norm_shift_percentage) );
