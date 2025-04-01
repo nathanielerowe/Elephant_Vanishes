@@ -5,6 +5,7 @@
 #include <Eigen/Eigen>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <random>
 #include <optional>
 namespace PROfit {
@@ -14,16 +15,16 @@ class Metropolis {
 private:
     std::mt19937 rng;
     std::uniform_real_distribution<float> uniform;
+    uint32_t seed;
 
 public:
     Target_FN target;
     Proposal_FN proposal;
     Eigen::VectorXf current;
 
-    Metropolis(Target_FN target, Proposal_FN proposal, const Eigen::VectorXf &initial) 
-        : target(target), proposal(proposal), current(initial) {
-        std::random_device rd{};
-        rng.seed(rd());
+    Metropolis(Target_FN target, Proposal_FN proposal, const Eigen::VectorXf &initial, uint32_t seed) 
+        : seed(seed), target(target), proposal(proposal), current(initial) {
+        rng.seed(seed);
     }
 
     bool step() {
@@ -63,6 +64,7 @@ struct simple_target {
 
 struct simple_proposal {
     PROmetric &metric;
+    uint32_t seed;
     float width;
     std::vector<int> fixed;
     std::mt19937 rng;
@@ -72,10 +74,8 @@ struct simple_proposal {
     float last_acceptance = -1;
     float last_shift;
 
-    simple_proposal(PROmetric &metric, float width = 0.2, std::vector<int> fixed = {}) 
-        : metric(metric), width(width), fixed(fixed), last_shift(width) {
-        std::random_device rd{};
-        rng.seed(rd());
+    simple_proposal(PROmetric &metric, uint32_t seed, float width = 0.2, std::vector<int> fixed = {}) 
+        : metric(metric), seed(seed), width(width), fixed(fixed), rng(seed), last_shift(width) {
         accepted_list = std::vector(1000, false);
     }
 
