@@ -75,7 +75,7 @@ void PROsurf::FillSurfaceStat(const PROconfig &config, const LBFGSpp::LBFGSBPara
     delete local_metric;
 }
 
-std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBFGSpp::LBFGSBParam<float> &param, int start, int end, bool with_osc, const Eigen::VectorXf& init_seed, uint32_t seed) {
+std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBFGSpp::LBFGSBParam<float> &param, int start, int end, float minchi, bool with_osc, const Eigen::VectorXf& init_seed, uint32_t seed) {
 
     std::vector<profOut> outs;
     // Make a local copy for this thread
@@ -141,7 +141,7 @@ std::vector<profOut> PROfile::PROfilePointHelper(const PROsyst *systs, const LBF
             }else{
                 fx = fitter.Fit(*local_metric);
             }
-            output.knob_chis.push_back(fx);
+            output.knob_chis.push_back(fx - minchi);
             last_bf = fitter.best_fit;
 
 
@@ -318,7 +318,7 @@ std::vector<float> findMinAndBounds(TGraph *g, float val, float lo, float hi) {
 }
 
 
-PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &model, PROmetric &metric, PROseed &proseed, const LBFGSpp::LBFGSBParam<float> &param, std::string filename, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed, const Eigen::VectorXf & true_params) : metric(metric) {
+PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &model, PROmetric &metric, PROseed &proseed, const LBFGSpp::LBFGSBParam<float> &param, std::string filename, float minchi, bool with_osc, int nThreads, const Eigen::VectorXf & init_seed, const Eigen::VectorXf & true_params) : metric(metric) {
     LBFGSpp::LBFGSBSolver<float> solver(param);
     int nparams = systs.GetNSplines() + model.nparams*with_osc;
     std::vector<float> physics_params; 
@@ -357,7 +357,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
         int start = t * chunkSize;
         int end = (t == nThreads - 1) ? loopSize : start + chunkSize;
         futures.emplace_back(std::async(std::launch::async, [&, start, end]() {
-                    return this->PROfilePointHelper(&systs, param, start, end,with_osc,init_seed, proseed.getThreadSeeds()->at(t));
+                    return this->PROfilePointHelper(&systs, param, start, end, minchi, with_osc, init_seed, proseed.getThreadSeeds()->at(t));
                     }));
 
     }
@@ -441,7 +441,7 @@ PROfile::PROfile(const PROconfig &config, const PROsyst &systs, const PROmodel &
 
         c->cd(w+1+zoom_shift);
         std::string xval = w < model.nparams ? "Log_{10}(" + model.pretty_param_names[w]+")" :"#sigma Shift"  ;
-        std::string tit = (w < model.nparams ? names[w] :config.m_mcgen_variation_plotname_map.at(names[w]))+ ";"+xval+"; #Chi^{2}";
+        std::string tit = (w < model.nparams ? names[w] :config.m_mcgen_variation_plotname_map.at(names[w]))+ ";"+xval+"; #Delta#Chi^{2}";
         graphs[w]->SetTitle(tit.c_str());
         graphs[w]->Draw("AL");
         graphs[w]->SetLineWidth(2);
