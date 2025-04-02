@@ -1644,6 +1644,8 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                     data_hist.SetMarkerColor(kBlack);
                     data_hist.SetMarkerSize(1);
                     leg->AddEntry(&data_hist, "Data");
+                    if(bool(opt&PlotOptions::BinWidthScaled))
+                        data_hist.Scale(1, "width");
                     if(cv || best_fit) data_hist.Draw("PE1 same");
                     else data_hist.Draw("E1P");
                 }
