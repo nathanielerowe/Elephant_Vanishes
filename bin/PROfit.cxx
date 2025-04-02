@@ -534,7 +534,7 @@ int main(int argc, char* argv[])
         }
     }
     try {
-        fitconfig.param.check_param();
+        fitconfig.print();
     } catch(std::invalid_argument &except) {
         log<LOG_ERROR>(L"%1% || Invalid L-BFGS-B parameters: %2%") % __func__ % except.what();
         log<LOG_ERROR>(L"Terminating.");
