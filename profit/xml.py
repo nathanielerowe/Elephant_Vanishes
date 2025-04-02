@@ -52,6 +52,15 @@ class PROXMLVariation:
         s.text = self.name
 
 @dataclass
+class PROXMLDetector:
+    name: str
+
+    def to_xml(self):
+        e = ET.Element("detector")
+        e.set("name", self.name)
+        return e
+
+@dataclass
 class PROXMLModelRule:
     name: str
     index: int
@@ -136,8 +145,8 @@ class PROXMLMCFile:
 @dataclass
 class PROXMLMaker:
     mode: str
-    detector: str
     model: PROXMLModel
+    detector: list[PROXMLDetector] = field(default_factory=list)
     channel: list[PROXMLChannel] = field(default_factory=list)
     plotpot: float = 2e20
     allow_variation_list: list[PROXMLVariation] = field(default_factory=list)
@@ -151,9 +160,8 @@ class PROXMLMaker:
         e_mode.set("name", self.mode)
         elements.append(e_mode)
 
-        e_detector = ET.Element("detector")
-        e_detector.set("name", self.detector)
-        elements.append(e_detector)
+        for d in self.detector:
+            elements.append(d.to_xml())
 
         for c in self.channel:
             elements.append(c.to_xml())

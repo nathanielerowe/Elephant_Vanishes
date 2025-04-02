@@ -100,7 +100,7 @@ class build_ext_wcmake(build_ext):
         # example of build args
         build_args = [
             '--config', config,
-            '-j', '%i' % njob()
+            '-j', '%i' % 1 
         ]
 
         os.chdir(str(build_temp))

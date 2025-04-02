@@ -32,12 +32,7 @@ endif()
 ##### Some Dependancies ######
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
-FetchContent_Declare(
-    eigen
-    SYSTEM
-    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git 
-    GIT_TAG        3.4.0
-    )
+
 FetchContent_Declare(
     lbfgspp
     SYSTEM
@@ -56,7 +51,7 @@ FetchContent_Declare(
     GIT_TAG        d0149638e0f89b6c5b001d202f65273705ec7117
     )
 endif()
-FetchContent_MakeAvailable(eigen)
+
 FetchContent_MakeAvailable(lbfgspp)
 
 FetchContent_Declare(
@@ -65,6 +60,14 @@ FetchContent_Declare(
     GIT_TAG        9.0.0
     )
 FetchContent_MakeAvailable(tinyxml2)
+
+FetchContent_Declare(
+    eigen
+    SYSTEM
+    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git 
+    GIT_TAG        3.4.0
+    )
+FetchContent_MakeAvailable(eigen)
 
 #./configure --prefix=$MPICH_DIR/mpich-install --disable-f08 --disable-collalgo-tests
 #ExternalProject_Add(mpich

@@ -16,7 +16,7 @@
 #include "PROtocall.h"
 #include "PROsyst.h"
 #include "PROlog.h"
-#include "PROsc.h"
+#include "PROmodel.h"
 #include "PROcess.h"
 #include "PROsurf.h"
 #include "PROfitter.h"
@@ -439,8 +439,8 @@ PYBIND11_MODULE(_profit, m) {
 
     // PROsurf
     py::class_<PROfit::PROsurf>(m, "PROsurf")
-        .def(py::init<size_t, const Eigen::VectorXf &, size_t, const Eigen::VectorXf &>())
-        .def(py::init<size_t, PROfit::PROsurf::LogLin, float, float, size_t, PROfit::PROsurf::LogLin, float, float>())
+        .def(py::init<PROfit::PROmetric, size_t, size_t, size_t, const Eigen::VectorXf &, size_t, const Eigen::VectorXf &>())
+        .def(py::init<PROfit::PROmetric, size_t, size_t, size_t, PROfit::PROsurf::LogLin, float, float, size_t, PROfit::PROsurf::LogLin, float, float>())
         .def(py::init<const PROfit::PROsurf &>())
         .def(py::init([](const Eigen::VectorXf &xe, const Eigen::VectorXf &ye) {return PROfit::PROsurf(xe.size()-1, xe, ye.size()-1, ye);}))
         .def("FillSurfaceStat", &PROfit::PROsurf::FillSurfaceStat)
@@ -484,7 +484,7 @@ PYBIND11_MODULE(_profit, m) {
 
     // PROfitter
     py::class_<PROfit::PROfitter>(m, "PROfitter")
-        .def(py::init<const Eigen::VectorXf, const Eigen::VectorXf, const LBFGSpp::LBFGSBParam<float>&>(), py::keep_alive<0, 3>())
+        .def(py::init<const Eigen::VectorXf, const Eigen::VectorXf, const PROfit::PROfitterConfig>(), py::keep_alive<0, 3>())
         .def(py::init<const PROfit::PROfitter&>())
         .def("Fit", &PROfit::PROfitter::Fit)
         .def("FinalGradient", &PROfit::PROfitter::FinalGradient)
@@ -499,6 +499,10 @@ PYBIND11_MODULE(_profit, m) {
         .def_readonly("lb",  &PROfit::PROfitter::lb)
         .def_readonly("param",  &PROfit::PROfitter::param)
         .def_readonly("best_fit",  &PROfit::PROfitter::best_fit);
+
+    // PROfitterConfig
+    py::class_<PROfit::PROfitterConfig>(m, "PROfitterConfig")
+        .def(py::init<const LBFGSpp::LBFGSBParam<float>&, const int, const int >());
 
     // LBFGSBParam for PROfitter
     py::class_<LBFGSpp::LBFGSBParam<float>>(m, "LBFGSBParam")
