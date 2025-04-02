@@ -1033,11 +1033,11 @@ int main(int argc, char* argv[])
         chi2text.SetFillColor(0);
         chi2text.SetBorderSize(0);
         chi2text.SetTextAlign(12);
-        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale, dseed(main_rng));
+        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs,  dseed(main_rng),binwidth_scale);
         plot_channels(final_output_tag+"_PROplot_ErrorBand.pdf", config, spec, {}, data, err_band.get(), {}, &chi2text, opt);
         std::vector<std::unique_ptr<TGraphAsymmErrors>> other_err_bands;
         for(size_t io = 0; io < config.m_num_other_vars; ++io) {
-            other_err_bands.push_back(getErrorBand(config, prop, other_systs[io], binwidth_scale, dseed(main_rng), io));
+            other_err_bands.push_back(getErrorBand(config, prop, other_systs[io],  dseed(main_rng),binwidth_scale,, io));
             plot_channels(final_output_tag+"_PROplot_other_"+std::to_string(io)+"_ErrorBand.pdf", config, other_cvs[io], {}, other_data[io], 
                     other_err_bands.back().get(), {}, NULL, opt, io);
         }
