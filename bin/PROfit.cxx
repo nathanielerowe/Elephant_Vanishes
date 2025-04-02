@@ -161,7 +161,31 @@ std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst,
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
 std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, uint32_t seed, bool scale = false, int other_index = -1);
 std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, uint32_t seed, bool scale = false);
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text, bool binwidth_scale, int other_index = -1);
+
+enum class PlotOptions {
+    Default = 0,
+    CVasStack = 1 << 0,
+    AreaNormalized = 1 << 1,
+    BinWidthScaled = 1 << 2,
+};
+
+PlotOptions operator|(PlotOptions a, PlotOptions b) {
+    return static_cast<PlotOptions>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+PlotOptions operator|=(PlotOptions &a, PlotOptions b) {
+    return a = a | b;
+}
+
+PlotOptions operator&(PlotOptions a, PlotOptions b) {
+    return static_cast<PlotOptions>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+PlotOptions operator&=(PlotOptions &a, PlotOptions b) {
+    return a = a & b;
+}
+
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, TPaveText *text, PlotOptions opt = PlotOptions::Default, int other_index = -1);
 
 int main(int argc, char* argv[])
 {
@@ -185,7 +209,7 @@ int main(int argc, char* argv[])
     int global_seed = -1;
     std::string log_file = "";
 
-    bool with_splines = false, binwidth_scale = false;
+    bool with_splines = false, binwidth_scale = false, area_normalized = false;
 
     std::vector<float> osc_params;
     std::map<std::string, float> injected_systs;
@@ -267,6 +291,7 @@ int main(int argc, char* argv[])
     //PROplot, plot things
     CLI::App *proplot_command = app.add_subcommand("plot", "Make plots of CV, or injected point with error bars and covariance.");
     proplot_command->add_flag("--with-splines", with_splines, "Include graphs of splines in output.");
+    proplot_command->add_flag("--area-norm", area_normalized, "Make area normalized histograms.");
 
     //PROfc, Feldmand-Cousins
     CLI::App *profc_command = app.add_subcommand("fc", "Run Feldman-Cousins for this injected signal");
@@ -632,7 +657,7 @@ int main(int argc, char* argv[])
         chi2text.SetFillColor(0);
         chi2text.SetBorderSize(0);
         chi2text.SetTextAlign(12);
-        plot_channels((final_output_tag+"_PROfile_hists.pdf"), config, cv, bf, data, err_band.get(), post_err_band.get(), false, &chi2text, false);
+        plot_channels((final_output_tag+"_PROfile_hists.pdf"), config, cv, bf, data, err_band.get(), post_err_band.get(), &chi2text);
 
         TCanvas c;
         c.Print((final_output_tag+"_postfit_posteriors.pdf[").c_str());
@@ -870,11 +895,14 @@ int main(int argc, char* argv[])
     }
     if(*proplot_command){
         PROspec spec = FillCVSpectrum(config, prop, !eventbyevent);
-        plot_channels(final_output_tag+"_PROplot_CV.pdf", config, spec, {}, {}, {}, {}, true, NULL, binwidth_scale);
+        PlotOptions opt = PlotOptions::CVasStack;
+        if(binwidth_scale) opt |= PlotOptions::BinWidthScaled;
+        if(area_normalized) opt |= PlotOptions::AreaNormalized;
+        plot_channels(final_output_tag+"_PROplot_CV.pdf", config, spec, {}, {}, {}, {}, NULL, opt);
         std::vector<PROspec> other_cvs;
         for(size_t io = 0; io < config.m_num_other_vars; ++io) {
             other_cvs.push_back(FillOtherCVSpectrum(config, prop, io));
-            plot_channels(final_output_tag+"_other_"+std::to_string(io)+"_PROplot_CV.pdf", config, other_cvs.back(), {}, {}, {}, {}, true, NULL, binwidth_scale, io);
+            plot_channels(final_output_tag+"_other_"+std::to_string(io)+"_PROplot_CV.pdf", config, other_cvs.back(), {}, {}, {}, {}, NULL, opt, io);
         }
 
         std::map<std::string, std::unique_ptr<TH1D>> cv_hists = getCVHists(spec, config, binwidth_scale);
@@ -1006,12 +1034,12 @@ int main(int argc, char* argv[])
         chi2text.SetBorderSize(0);
         chi2text.SetTextAlign(12);
         std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale, dseed(main_rng));
-        plot_channels(final_output_tag+"_PROplot_ErrorBand.pdf", config, spec, {}, data, err_band.get(), {}, true, &chi2text, binwidth_scale);
+        plot_channels(final_output_tag+"_PROplot_ErrorBand.pdf", config, spec, {}, data, err_band.get(), {}, &chi2text, opt);
         std::vector<std::unique_ptr<TGraphAsymmErrors>> other_err_bands;
         for(size_t io = 0; io < config.m_num_other_vars; ++io) {
             other_err_bands.push_back(getErrorBand(config, prop, other_systs[io], binwidth_scale, dseed(main_rng), io));
             plot_channels(final_output_tag+"_PROplot_other_"+std::to_string(io)+"_ErrorBand.pdf", config, other_cvs[io], {}, other_data[io], 
-                    other_err_bands.back().get(), {}, true, NULL, binwidth_scale, io);
+                    other_err_bands.back().get(), {}, NULL, opt, io);
         }
 
         if (!mockreweights.empty()) {
@@ -1501,19 +1529,19 @@ std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, 
     return ret;
 }
 
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text, bool binwidth_scale, int other_index) {
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, TPaveText *text, PlotOptions opt, int other_index) {
     TCanvas c;
     c.Print((filename+"[").c_str());
 
     std::map<std::string, std::unique_ptr<TH1D>> cvhists;
-    if(cv) cvhists = getCVHists(*cv, config, binwidth_scale, other_index);
+    if(cv) cvhists = getCVHists(*cv, config, (bool)(opt & PlotOptions::BinWidthScaled), other_index);
 
     Eigen::VectorXf bf_spec;
     if(best_fit) {
         bf_spec = other_index < 0 ? CollapseMatrix(config, best_fit->Spec()) : CollapseMatrix(config, best_fit->Spec(), other_index);
     }
 
-    std::string ytitle = binwidth_scale ? "Events/GeV" : "Events";
+    std::string ytitle = bool(opt&PlotOptions::BinWidthScaled) ? "Events/GeV" : "Events";
 
     size_t global_subchannel_index = 0;
     size_t global_channel_index = 0;
@@ -1534,20 +1562,29 @@ void plot_channels(const std::string &filename, const PROconfig &config, std::op
                 for(size_t bin = 0; bin < channel_nbins; ++bin) {
                     cv_hist.SetBinContent(bin+1, 0);
                 }
-                if(binwidth_scale) cv_hist.Scale(1, "width");
                 if(cv) {
                     THStack *cvstack = NULL;
-                    if(plot_cv_stack) cvstack = new THStack(std::to_string(global_channel_index).c_str(), hist_title.c_str());
+                    if(bool(opt&PlotOptions::CVasStack)) cvstack = new THStack(std::to_string(global_channel_index).c_str(), hist_title.c_str());
                     for(size_t subchannel = 0; subchannel < config.m_num_subchannels[channel]; ++subchannel){
                         const std::string& subchannel_name  = config.m_fullnames[global_subchannel_index];
-                        if(plot_cv_stack) {
+                        if(bool(opt&PlotOptions::CVasStack)) {
                             cvstack->Add(cvhists[subchannel_name].get());
                             leg->AddEntry(cvhists[subchannel_name].get(), config.m_subchannel_plotnames[channel][subchannel].c_str() ,"f");
                         }
                         cv_hist.Add(cvhists[subchannel_name].get());
                         ++global_subchannel_index;
                     }
-                    if(plot_cv_stack) {
+                    if(bool(opt&PlotOptions::AreaNormalized)) {
+                        float integral = cv_hist.Integral();
+                        cv_hist.Scale(1 / integral);
+                        if(bool(opt&PlotOptions::CVasStack)) {
+                            TList *stlists = (TList*)cvstack->GetHists();
+                            for(const auto&& obj: *stlists){
+                                ((TH1*)obj)->Scale(1/integral);
+                            }
+                        }
+                    }
+                    if(bool(opt&PlotOptions::CVasStack)) {
                         cvstack->SetMaximum(1.2*cvstack->GetMaximum());
                         cvstack->Draw("hist");
                     } else {
