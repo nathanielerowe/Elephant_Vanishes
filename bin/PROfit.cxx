@@ -1237,7 +1237,7 @@ int main(int argc, char* argv[])
         for(size_t i = 0; i < nthread; i++) {
             dchi2s.emplace_back();
             outs.emplace_back();
-            fc_args args{todo + (i >= addone), &dchi2s.back(), &outs.back(), config, prop, systs, chi2, pparams, llt.matrixL(), fitconfig, (int)i, !eventbyevent};
+            fc_args args{todo + (i >= addone), &dchi2s.back(), &outs.back(), config, prop, systs, chi2, pparams, llt.matrixL(), fitconfig,(*myseed.getThreadSeeds())[i], (int)i, !eventbyevent};
 
             threads.emplace_back(fc_worker, args);
         }
