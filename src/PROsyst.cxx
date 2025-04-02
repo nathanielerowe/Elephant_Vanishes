@@ -14,7 +14,7 @@ namespace PROfit {
         shape_only = shapeonly;
         for(const auto& syst: systs) {
             log<LOG_DEBUG>(L"%1% || syst mode: %2%") % __func__ % syst.mode.c_str();
-            if(syst.mode == "spline") {
+            if(syst.mode == "spline" || syst.mode == "norm") {
                 FillSpline(syst);
                 spline_names.push_back(syst.systname); 
                 spline_lo.push_back(syst.knobval[0]);

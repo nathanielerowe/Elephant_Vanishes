@@ -38,11 +38,13 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <LBFGSpp/Param.h>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <memory>
 #include <random>
@@ -70,15 +72,15 @@ struct fc_args {
     std::string chi2;
     const Eigen::VectorXf phy_params;
     const Eigen::MatrixXf L;
-    LBFGSpp::LBFGSBParam<float> param;
+    PROfitterConfig fitconfig;
+    uint32_t seed;
     const int thread;
     const bool binned;
 };
 
 void fc_worker(fc_args args) {
     log<LOG_INFO>(L"%1% || FC for point %2%") % __func__ % args.phy_params;
-    std::random_device rd{};
-    std::mt19937 rng{rd()};
+    std::mt19937 rng{args.seed};
     std::unique_ptr<PROmodel> model = get_model_from_string(args.config.m_model_tag, args.prop);
     std::unique_ptr<PROmodel> null_model = std::make_unique<NullModel>(args.prop);
 
@@ -132,11 +134,11 @@ void fc_worker(fc_args args) {
 
         // No oscillations
         std::uniform_int_distribution<uint32_t> dseed(0, std::numeric_limits<uint32_t>::max());
-        PROfitter fitter(ub, lb, args.param, dseed(rng));
+        PROfitter fitter(ub, lb, args.fitconfig, dseed(rng));
         float chi2_syst = fitter.Fit(*null_metric);
 
         // With oscillations
-        PROfitter fitter_osc(ub_osc, lb_osc, args.param, dseed(rng));
+        PROfitter fitter_osc(ub_osc, lb_osc, args.fitconfig, dseed(rng));
         float chi2_osc = fitter_osc.Fit(*metric); 
 
         Eigen::VectorXf t = Eigen::VectorXf::Map(throws.data(), throws.size());
@@ -157,9 +159,9 @@ void fc_worker(fc_args args) {
 std::map<std::string, std::unique_ptr<TH1D>> getCVHists(const PROspec & spec, const PROconfig& inconfig, bool scale = false, int other_index = -1);
 std::map<std::string, std::unique_ptr<TH2D>> covarianceTH2D(const PROsyst &syst, const PROconfig &config, const PROspec &cv);
 std::map<std::string, std::vector<std::pair<std::unique_ptr<TGraph>,std::unique_ptr<TGraph>>>> getSplineGraphs(const PROsyst &systs, const PROconfig &config);
-std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale = false, int other_index = -1);
-std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, bool scale = false);
-void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text, bool binwidth_scale = false, int other_index = -1);
+std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, uint32_t seed, bool scale = false, int other_index = -1);
+std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, uint32_t seed, bool scale = false);
+void plot_channels(const std::string &filename, const PROconfig &config, std::optional<PROspec> cv, std::optional<PROspec> best_fit, std::optional<PROdata> data, std::optional<TGraphAsymmErrors*> errband, std::optional<TGraphAsymmErrors*> posterrband, bool plot_cv_stack, TPaveText *text, bool binwidth_scale, int other_index = -1);
 
 int main(int argc, char* argv[])
 {
@@ -489,20 +491,23 @@ int main(int argc, char* argv[])
 
     //Seed time
     PROseed myseed(nthread, global_seed);
+    uint32_t main_seed = (*myseed.getThreadSeeds())[0];
+    std::mt19937 main_rng(main_seed);
+    std::uniform_int_distribution<uint32_t> dseed(0, std::numeric_limits<uint32_t>::max());
     
     //Some global minimizer params
-    LBFGSpp::LBFGSBParam<float> param;  
-    param.epsilon = 1e-6;
-    param.max_iterations = 100;
-    param.max_linesearch = 250;
-    param.delta = 1e-6;
+    PROfitterConfig fitconfig;
+    fitconfig.param.epsilon = 1e-6;
+    fitconfig.param.max_iterations = 100;
+    fitconfig.param.max_linesearch = 250;
+    fitconfig.param.delta = 1e-6;
     for(const auto &[param_name, value]: fit_options) {
         if(param_name == "epsilon") {
-            param.epsilon = value;
+            fitconfig.param.epsilon = value;
         } else if(param_name == "delta") {
-            param.delta = value;
+            fitconfig.param.delta = value;
         } else if(param_name == "m") {
-            param.m = value;
+            fitconfig.param.m = value;
             if(value < 3) {
                 log<LOG_WARNING>(L"%1% || Number of corrections to approximate inverse Hessian in"
                                  L" L-BFGS-B is recommended to be at least 3, provided value is %2%."
@@ -510,40 +515,54 @@ int main(int argc, char* argv[])
                     % __func__ % value;
             }
         } else if(param_name == "epsilon_rel") {
-            param.epsilon_rel = value;
+            fitconfig.param.epsilon_rel = value;
         } else if(param_name == "past") {
-            param.past = value;
+            fitconfig.param.past = value;
             if(value == 0) {
                 log<LOG_WARNING>(L"%1% || L-BFGS-B 'past' parameter set to 0. This will disable delta convergence test")
                     % __func__;
             }
         } else if(param_name == "max_iterations") {
-            param.max_iterations = value;
+            fitconfig.param.max_iterations = value;
         } else if(param_name == "max_submin") {
-            param.max_submin = value;
+            fitconfig.param.max_submin = value;
         } else if(param_name == "max_linesearch") {
-            param.max_linesearch = value;
+            fitconfig.param.max_linesearch = value;
         } else if(param_name == "min_step") {
-            param.min_step = value;
+            fitconfig.param.min_step = value;
             log<LOG_WARNING>(L"%1% || Modifying the minimum step size in the line search to be %2%."
                              L" This is not usually needed according to the LBFGSpp documentation.")
                 % __func__ % value;
         } else if(param_name == "max_step") {
-            param.max_step = value;
+            fitconfig.param.max_step = value;
             log<LOG_WARNING>(L"%1% || Modifying the maximum step size in the line search to be %2%."
                              L" This is not usually needed according to the LBFGSpp documentation.")
                 % __func__ % value;
         } else if(param_name == "ftol") {
-            param.ftol = value;
+            fitconfig.param.ftol = value;
         } else if(param_name == "wolfe") {
-            param.wolfe = value;
+            fitconfig.param.wolfe = value;
+        } else if(param_name == "n_multistart") {
+            fitconfig.n_multistart = value;
+            if(fitconfig.n_multistart < 1) {
+                log<LOG_ERROR>(L"%1% || Expected to run at least 1 multistart point. Provided value is %2%.")
+                    % __func__ % value;
+                return 1;
+            }
+        } else if(param_name == "n_localfit") {
+            fitconfig.n_localfit = value;
+            if(fitconfig.n_localfit < 1) {
+                log<LOG_ERROR>(L"%1% || Expected to run at least 1 local fit point. Provided value is %2%.")
+                    % __func__ % value;
+                return 1;
+            }
         } else {
             log<LOG_WARNING>(L"%1% || Unrecognized LBFGSB parameter %2%. Will ignore.") 
                 % __func__ % param_name.c_str();
         }
     }
     try {
-        param.check_param();
+        fitconfig.print();
     } catch(std::invalid_argument &except) {
         log<LOG_ERROR>(L"%1% || Invalid L-BFGS-B parameters: %2%") % __func__ % except.what();
         log<LOG_ERROR>(L"Terminating.");
@@ -588,7 +607,8 @@ int main(int argc, char* argv[])
             lb(i) = metric_to_use->GetSysts().spline_lo[i-nphys];
             ub(i) = metric_to_use->GetSysts().spline_hi[i-nphys];
         }
-        PROfitter fitter(ub, lb, param);
+        PROfitter fitter(ub, lb, fitconfig);
+
 
         float chi2 = fitter.Fit(*metric_to_use); 
         Eigen::VectorXf best_fit = fitter.best_fit;
@@ -604,8 +624,8 @@ int main(int argc, char* argv[])
             pre_hist.SetBinContent(i+1, cv.Spec()(i));
         }
         std::vector<TH1D> posteriors;
-        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs);
-        std::unique_ptr<TGraphAsymmErrors> post_err_band = getPostFitErrorBand(config, prop, *metric_to_use, best_fit, posteriors);
+        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, dseed(main_rng));
+        std::unique_ptr<TGraphAsymmErrors> post_err_band = getPostFitErrorBand(config, prop, *metric_to_use, best_fit, posteriors, dseed(main_rng));
         
         TPaveText chi2text(0.59, 0.50, 0.89, 0.59, "NDC");
         chi2text.AddText(hname.c_str());
@@ -622,8 +642,8 @@ int main(int argc, char* argv[])
         }
         c.Print((final_output_tag+"_postfit_posteriors.pdf]").c_str());
 
-        PROfile profile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, param, 
-                final_output_tag+"_PROfile", !systs_only_profile, nthread, best_fit,
+        PROfile profile(config, metric_to_use->GetSysts(), metric_to_use->GetModel(), *metric_to_use, myseed, fitconfig, 
+                final_output_tag+"_PROfile", chi2, !systs_only_profile, nthread, best_fit,
                 systs_only_profile ? systparams : allparams);
         TFile fout((final_output_tag+"_PROfile.root").c_str(), "RECREATE");
         profile.onesig.Write("one_sigma_errs");
@@ -674,9 +694,9 @@ int main(int argc, char* argv[])
 
         if(!only_brazil) {
             if(statonly)
-                surface.FillSurfaceStat(config, param, final_output_tag+"_statonly_surface.txt");
+                surface.FillSurfaceStat(config, fitconfig, final_output_tag+"_statonly_surface.txt");
             else
-                surface.FillSurface(param, final_output_tag+"_surface.txt",myseed,nthread);
+                surface.FillSurface(fitconfig, final_output_tag+"_surface.txt",myseed,nthread);
         }
 
         std::vector<float> binedges_x, binedges_y;
@@ -742,7 +762,7 @@ int main(int argc, char* argv[])
 
         std::vector<PROsurf> brazil_band_surfaces;
         if(run_brazil && brazil_throws.size() == 0) {
-            std::mt19937 rng(global_seed);
+            std::mt19937 rng(dseed(main_rng));
             std::normal_distribution<float> d;
             size_t nphys = metric->GetModel().nparams;
             PROspec cv = FillCVSpectrum(config, prop, true);
@@ -775,9 +795,9 @@ int main(int argc, char* argv[])
                         nbinsy, logy ? PROsurf::LogAxis : PROsurf::LinAxis, ylo, yhi);
 
                 if(statonly)
-                    brazil_band_surfaces.back().FillSurfaceStat(config, param, "");
+                    brazil_band_surfaces.back().FillSurfaceStat(config, fitconfig, "");
                 else
-                    brazil_band_surfaces.back().FillSurface(param, "", myseed, nthread);
+                    brazil_band_surfaces.back().FillSurface(fitconfig, "", myseed, nthread);
 
                 TH2D surf("surf", (";"+xlabel+";"+ylabel).c_str(), surface.nbinsx, binedges_x.data(), surface.nbinsy, binedges_y.data());
 
@@ -985,11 +1005,11 @@ int main(int argc, char* argv[])
         chi2text.SetFillColor(0);
         chi2text.SetBorderSize(0);
         chi2text.SetTextAlign(12);
-        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale );
+        std::unique_ptr<TGraphAsymmErrors> err_band = getErrorBand(config, prop, systs, binwidth_scale, dseed(main_rng));
         plot_channels(final_output_tag+"_PROplot_ErrorBand.pdf", config, spec, {}, data, err_band.get(), {}, true, &chi2text, binwidth_scale);
         std::vector<std::unique_ptr<TGraphAsymmErrors>> other_err_bands;
         for(size_t io = 0; io < config.m_num_other_vars; ++io) {
-            other_err_bands.push_back(getErrorBand(config, prop, other_systs[io], binwidth_scale, io));
+            other_err_bands.push_back(getErrorBand(config, prop, other_systs[io], binwidth_scale, dseed(main_rng), io));
             plot_channels(final_output_tag+"_PROplot_other_"+std::to_string(io)+"_ErrorBand.pdf", config, other_cvs[io], {}, other_data[io], 
                     other_err_bands.back().get(), {}, true, NULL, binwidth_scale, io);
         }
@@ -1178,7 +1198,8 @@ int main(int argc, char* argv[])
         for(size_t i = 0; i < nthread; i++) {
             dchi2s.emplace_back();
             outs.emplace_back();
-            fc_args args{todo + (i >= addone), &dchi2s.back(), &outs.back(), config, prop, systs, chi2, pparams, llt.matrixL(), param, (int)i, !eventbyevent};
+            fc_args args{todo + (i >= addone), &dchi2s.back(), &outs.back(), config, prop, systs, chi2, pparams, llt.matrixL(), fitconfig,(*myseed.getThreadSeeds())[i], (int)i, !eventbyevent};
+
             threads.emplace_back(fc_worker, args);
         }
         for(auto&& t: threads) {
@@ -1382,7 +1403,7 @@ getSplineGraphs(const PROsyst &systs, const PROconfig &config) {
     return spline_graphs;
 }
 
-std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, bool scale, int other_index) {
+std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const PROpeller &prop, const PROsyst &syst, uint32_t seed, bool scale, int other_index) {
     //TODO: Only works with 1 mode/detector/channel
     Eigen::VectorXf cv = other_index < 0 ? CollapseMatrix(config, FillCVSpectrum(config, prop, true).Spec()) :
         CollapseMatrix(config, FillOtherCVSpectrum(config, prop, other_index).Spec(), other_index);
@@ -1394,8 +1415,10 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     for(size_t i = 0; i < edges.size() - 1; ++i)
         centers.push_back((edges[i+1] + edges[i])/2);
     std::vector<Eigen::VectorXf> specs;
+    std::mt19937 rng(seed);
+    std::uniform_int_distribution<uint32_t> dseed(0, std::numeric_limits<uint32_t>::max());
     for(size_t i = 0; i < nerrorsample; ++i)
-        specs.push_back(FillSystRandomThrow(config, prop, syst, other_index).Spec());
+        specs.push_back(FillSystRandomThrow(config, prop, syst, dseed(rng), other_index).Spec());
     //specs.push_back(CollapseMatrix(config, FillSystRandomThrow(config, prop, syst).Spec()));
     TH1D tmphist("th", "", cv.size(), edges.data());
     for(int i = 0; i < cv.size(); ++i)
@@ -1421,20 +1444,21 @@ std::unique_ptr<TGraphAsymmErrors> getErrorBand(const PROconfig &config, const P
     return ret;
 }
 
-std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, bool scale) {
+std::unique_ptr<TGraphAsymmErrors> getPostFitErrorBand(const PROconfig &config, const PROpeller &prop, PROmetric &metric, const Eigen::VectorXf &best_fit, std::vector<TH1D> &posteriors, uint32_t seed, bool scale) {
     // Fix physics parameters
     std::vector<int> fixed_pars;
     for(size_t i = 0; i < metric.GetModel().nparams; ++i) fixed_pars.push_back(i);
 
-    Metropolis mh(simple_target{metric}, simple_proposal(metric, 0.2, fixed_pars), best_fit);
+    std::mt19937 rng(seed);
+    std::uniform_int_distribution<uint32_t> dseed(0, std::numeric_limits<uint32_t>::max());
+
+    Metropolis mh(simple_target{metric}, simple_proposal(metric, dseed(rng), 0.2, fixed_pars), best_fit, dseed(rng));
 
     for(size_t i = 0; i < metric.GetSysts().GetNSplines(); ++i)
         posteriors.emplace_back("", (";"+config.m_mcgen_variation_plotname_map.at(metric.GetSysts().spline_names[i])).c_str(), 60, -3, 3);
 
     Eigen::VectorXf cv = FillRecoSpectra(config, prop, metric.GetSysts(), metric.GetModel(), best_fit, true).Spec();
     Eigen::MatrixXf L = metric.GetSysts().DecomposeFractionalCovariance(config, cv);
-    std::random_device rd{};
-    std::mt19937 rng(rd());
     std::normal_distribution<float> nd;
     Eigen::VectorXf throws = Eigen::VectorXf::Constant(config.m_num_bins_total_collapsed, 0);
 

@@ -43,7 +43,7 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
     std::normal_distribution<float> d;
     std::uniform_real_distribution<float> d_uni(-2.0, 2.0);
 
-    std::vector<std::vector<float>> latin_samples = latin_hypercube_sampling(n_multistart, ub.size(), d_uni,rng);
+    std::vector<std::vector<float>> latin_samples = latin_hypercube_sampling(fitconfig.n_multistart, ub.size(), d_uni,rng);
 
     //Rescale the latin hypercube now at -2 to 2, scale to real bounds.
     for(std::vector<float> &pt: latin_samples) {
@@ -59,10 +59,10 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
         }
     }
     std::vector<float> chi2s_multistart;
-    chi2s_multistart.reserve(n_multistart);
+    chi2s_multistart.reserve(fitconfig.n_multistart);
 
-    log<LOG_INFO>(L"%1% || Starting MultiGlobal runs : %2%") % __func__ % n_multistart ;
-    for(int s = 0; s < n_multistart; s++){
+    log<LOG_INFO>(L"%1% || Starting MultiGlobal runs : %2%") % __func__ % fitconfig.n_multistart ;
+    for(int s = 0; s < fitconfig.n_multistart; s++){
         Eigen::VectorXf x = Eigen::Map<Eigen::VectorXf>(latin_samples[s].data(), latin_samples[s].size());
         Eigen::VectorXf grad = Eigen::VectorXf::Constant(x.size(), 0);
 	log<LOG_DEBUG>(L"%1% || vectors set up") % __func__ ;	
@@ -75,20 +75,20 @@ float PROfitter::Fit(PROmetric &metric, const Eigen::VectorXf &seed_pt ) {
     std::vector<int> best_multistart = sorted_indices(chi2s_multistart);    
 
     std::string local_fits = "";
-    for(int i = 0; i < n_localfit; ++i) {
+    for(int i = 0; i < fitconfig.n_localfit; ++i) {
         local_fits += " " + std::to_string(chi2s_multistart[best_multistart[i]]);
     }
-    log<LOG_INFO>(L"%1% || Ending MultiGlobal. Best %2% are:%3%") % __func__ % n_localfit % local_fits.c_str();
+    log<LOG_INFO>(L"%1% || Ending MultiGlobal. Best %2% are:%3%") % __func__ % fitconfig.n_localfit % local_fits.c_str();
     log<LOG_DEBUG>(L"%1% || Best Points is  : %2% ") % __func__ % latin_samples[best_multistart[0]];
 
     std::vector<float> chi2s_localfits;
-    chi2s_localfits.reserve(n_localfit);
+    chi2s_localfits.reserve(fitconfig.n_localfit);
     float chimin = 9999999;
 
     int niter=0;
         float fx;
-    log<LOG_INFO>(L"%1% || Starting Local Gradients runs : %2%") % __func__ % n_localfit ;
-    for(int s = 0; s < n_localfit; s++){
+    log<LOG_INFO>(L"%1% || Starting Local Gradients runs : %2%") % __func__ % fitconfig.n_localfit ;
+    for(int s = 0; s < fitconfig.n_localfit; s++){
         //Get the nth
         Eigen::VectorXf x = Eigen::Map<Eigen::VectorXf>( latin_samples[best_multistart[s]].data(), latin_samples[best_multistart[s]].size());   
         try {

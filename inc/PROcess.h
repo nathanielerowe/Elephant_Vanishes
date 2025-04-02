@@ -2,6 +2,7 @@
 #define PROCESS_H
 
 #include <Eigen/Eigen>
+#include <cstdint>
 
 // PROfit include 
 #include "PROconfig.h"
@@ -26,7 +27,7 @@ namespace PROfit{
 
     PROspec FillRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROmodel &inmodel, const Eigen::VectorXf &params, bool binned = true);
     PROspec FillOtherRecoSpectra(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, const PROmodel &inmodel, const Eigen::VectorXf &params, size_t other_index);
-    PROspec FillSystRandomThrow(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, int other_index = -1);
+    PROspec FillSystRandomThrow(const PROconfig &inconfig, const PROpeller &inprop, const PROsyst &insyst, uint32_t seed, int other_index = -1);
 };
 
 #endif
